@@ -73,6 +73,26 @@ function flattenDiagramRows(data) {
   return rows;
 }
 
+function getLevelStyle(level) {
+  if (level === "Purpose") {
+    return { fill: "FCE4EC", text: "881337" };
+  }
+
+  if (level.startsWith("Primary Driver")) {
+    return { fill: "DBEAFE", text: "1D4ED8" };
+  }
+
+  if (level.startsWith("Secondary Driver")) {
+    return { fill: "FEF3C7", text: "92400E" };
+  }
+
+  if (level.startsWith("Change Idea")) {
+    return { fill: "FFEDD5", text: "C2410C" };
+  }
+
+  return { fill: "F1F5F9", text: "334155" };
+}
+
 function safeText(text = "") {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -480,6 +500,7 @@ function App() {
         HeadingLevel,
         ImageRun,
         Packer,
+        PageBreak,
         Paragraph,
         Table,
         TableCell,
@@ -521,27 +542,35 @@ function App() {
           ),
         }),
         ...rows.map(
-          (row) =>
+          (row) => {
+            const palette = getLevelStyle(row.level);
+            return (
             new TableRow({
               children: [
                 new TableCell({
                   width: { size: 18, type: WidthType.PERCENTAGE },
+                  shading: { fill: palette.fill },
                   children: makeCellParagraphs(row.level, true),
                 }),
                 new TableCell({
                   width: { size: 30, type: WidthType.PERCENTAGE },
+                  shading: { fill: "FFFFFF" },
                   children: makeCellParagraphs(row.title),
                 }),
                 new TableCell({
                   width: { size: 34, type: WidthType.PERCENTAGE },
+                  shading: { fill: "F8FAFC" },
                   children: makeCellParagraphs(row.kpi),
                 }),
                 new TableCell({
                   width: { size: 18, type: WidthType.PERCENTAGE },
+                  shading: { fill: "FFFFFF" },
                   children: makeCellParagraphs(row.parent),
                 }),
               ],
             })
+          );
+          }
         ),
       ];
 
@@ -563,7 +592,7 @@ function App() {
                 ? [
                     new Paragraph({
                       spacing: { after: 120 },
-                      children: [new TextRun({ text: "Diagram", bold: true })],
+                      children: [new TextRun({ text: "Diagram", bold: true, color: "334155" })],
                     }),
                     new Paragraph({
                       spacing: { after: 320 },
@@ -578,11 +607,36 @@ function App() {
                         }),
                       ],
                     }),
+                    new Paragraph({
+                      spacing: { after: 240 },
+                      alignment: AlignmentType.CENTER,
+                      children: [
+                        new TextRun({
+                          text: "Visual summary for presentation use",
+                          italics: true,
+                          color: "64748B",
+                        }),
+                      ],
+                    }),
                   ]
                 : []),
               new Paragraph({
+                children: [new PageBreak()],
+              }),
+              new Paragraph({
                 spacing: { after: 120 },
+                heading: HeadingLevel.HEADING_2,
                 children: [new TextRun({ text: "Summary Table", bold: true })],
+              }),
+              new Paragraph({
+                spacing: { after: 180 },
+                children: [
+                  new TextRun({
+                    text: "Structured view for editing, review, and document submission",
+                    color: "64748B",
+                    italics: true,
+                  }),
+                ],
               }),
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
