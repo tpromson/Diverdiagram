@@ -373,7 +373,7 @@ function App() {
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="h-[82vh] space-y-4 overflow-auto rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh] lg:overflow-auto">
             <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
               <TextAreaField label="Purpose" value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
               <div className="mt-3">
@@ -436,7 +436,7 @@ function App() {
             ))}
           </section>
 
-          <section className="h-[82vh] rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold">Output</h2>
               <div className="flex rounded-2xl bg-slate-100 p-1">
@@ -456,15 +456,15 @@ function App() {
             </div>
 
             {view === "preview" ? (
-              <div className="h-[73vh] overflow-auto rounded-3xl border border-slate-200 bg-white p-4">
+              <div className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-white p-4 lg:h-[73vh]">
                 {renderError ? (
                   <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
                 ) : (
-                  <div className="min-w-max" dangerouslySetInnerHTML={{ __html: svg }} />
+                  <div className="diagram-preview" dangerouslySetInnerHTML={{ __html: svg }} />
                 )}
               </div>
             ) : (
-              <pre className="h-[73vh] overflow-auto rounded-3xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
+              <pre className="min-h-[20rem] overflow-auto rounded-3xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100 lg:h-[73vh]">
                 {mermaidCode}
               </pre>
             )}
