@@ -155,6 +155,24 @@ function inferNodeType(heading = "", value = "") {
   return "unknown";
 }
 
+function escapeLooseXmlChars(text = "") {
+  return String(text)
+    .replace(/&(?!#?\w+;)/g, "&amp;")
+    .replace(/</g, "&lt;");
+}
+
+function sanitizeMermaidCode(code = "") {
+  return String(code).replace(/(\["?)([\s\S]*?)("\])/g, (_match, prefix, inner, suffix) => {
+    const normalizedInner = inner
+      .replace(/<br\s*\/?>/gi, "<br/>")
+      .split("\n")
+      .map((line) => escapeLooseXmlChars(line))
+      .join("\n");
+
+    return `${prefix}${normalizedInner}${suffix}`;
+  });
+}
+
 function parseNodeDefinitions(code) {
   const nodeMap = new Map();
   const nodePattern = /([A-Za-z0-9_]+)\["([\s\S]*?)"\]/g;
@@ -415,6 +433,7 @@ function App() {
 
     async function renderDiagram() {
       try {
+        const sanitizedCode = sanitizeMermaidCode(codeInput);
         if (!mermaidRef.current) {
           const { default: mermaid } = await import("mermaid");
           mermaidRef.current = mermaid;
@@ -434,7 +453,7 @@ function App() {
           mermaidInitialized.current = true;
         }
 
-        const result = await mermaidRef.current.render(`driver-diagram-${id}`, codeInput);
+        const result = await mermaidRef.current.render(`driver-diagram-${id}`, sanitizedCode);
         if (!cancelled) {
           setSvg(result.svg);
           setRenderError("");
@@ -598,7 +617,7 @@ function App() {
   };
 
   const copyMermaid = async () => {
-    await navigator.clipboard.writeText("```mermaid\n" + codeInput + "\n```");
+    await navigator.clipboard.writeText("```mermaid\n" + sanitizeMermaidCode(codeInput) + "\n```");
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
@@ -641,7 +660,7 @@ function App() {
       .replace(/<br(\s[^>]*)?>/gi, (_match, attrs = "") => `<br${attrs.trim() ? attrs : ""}/>`); 
 
   const downloadMermaid = () => {
-    const blob = new Blob([codeInput], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([sanitizeMermaidCode(codeInput)], { type: "text/plain;charset=utf-8" });
     triggerBlobDownload(blob, "driver-diagram.mmd");
   };
 
@@ -878,9 +897,11 @@ function App() {
 
   const applyCodeToForm = () => {
     try {
-      const parsed = parseMermaidCode(codeInput);
+      const normalizedCode = sanitizeMermaidCode(codeInput);
+      const parsed = parseMermaidCode(normalizedCode);
       codeSourceRef.current = "code";
       setData(parsed);
+      setCodeInput(normalizedCode);
       setCodeSyncError("");
       setCodeSyncMessage("Form updated from Mermaid code.");
     } catch (error) {
@@ -891,7 +912,7 @@ function App() {
 
   const handleCodeInputChange = (value) => {
     codeSourceRef.current = "code";
-    setCodeInput(value);
+    setCodeInput(sanitizeMermaidCode(value));
     setCodeSyncMessage("");
     if (codeSyncError) {
       setCodeSyncError("");
