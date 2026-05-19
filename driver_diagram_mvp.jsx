@@ -31,6 +31,48 @@ const defaultData = {
   ],
 };
 
+function flattenDiagramRows(data) {
+  const rows = [
+    {
+      level: "Purpose",
+      title: data.purpose.title,
+      kpi: data.purpose.kpi,
+      parent: "-",
+    },
+  ];
+
+  data.primaryDrivers.forEach((pd, pi) => {
+    const primaryLabel = `Primary Driver ${pi + 1}`;
+    rows.push({
+      level: primaryLabel,
+      title: pd.title,
+      kpi: pd.kpi,
+      parent: "Purpose",
+    });
+
+    pd.secondaryDrivers.forEach((sd, si) => {
+      const secondaryLabel = `Secondary Driver ${pi + 1}.${si + 1}`;
+      rows.push({
+        level: secondaryLabel,
+        title: sd.title,
+        kpi: sd.kpi,
+        parent: primaryLabel,
+      });
+
+      sd.changeIdeas.forEach((ci, cii) => {
+        rows.push({
+          level: `Change Idea ${pi + 1}.${si + 1}.${cii + 1}`,
+          title: ci.title,
+          kpi: ci.kpi,
+          parent: secondaryLabel,
+        });
+      });
+    });
+  });
+
+  return rows;
+}
+
 function safeText(text = "") {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -66,6 +108,7 @@ function TextAreaField({ label, value, onChange, icon }) {
 function App() {
   const [data, setData] = useState(defaultData);
   const [copied, setCopied] = useState(false);
+  const [exportingDocx, setExportingDocx] = useState(false);
   const [view, setView] = useState("preview");
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
@@ -349,6 +392,113 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadDocx = async () => {
+    try {
+      setExportingDocx(true);
+      const {
+        AlignmentType,
+        Document,
+        HeadingLevel,
+        Packer,
+        Paragraph,
+        Table,
+        TableCell,
+        TableRow,
+        TextRun,
+        WidthType,
+      } = await import("docx");
+
+      const makeCellParagraphs = (text, bold = false) => {
+        const lines = String(text || "")
+          .split("\n")
+          .filter((line) => line.trim().length > 0);
+
+        return (lines.length ? lines : [""]).map(
+          (line) =>
+            new Paragraph({
+              spacing: { after: 80 },
+              children: [new TextRun({ text: line, bold })],
+            })
+        );
+      };
+
+      const rows = flattenDiagramRows(data);
+      const tableRows = [
+        new TableRow({
+          tableHeader: true,
+          children: ["Level", "Title", "KPI", "Parent"].map(
+            (heading) =>
+              new TableCell({
+                width: { size: 25, type: WidthType.PERCENTAGE },
+                shading: { fill: "E2E8F0" },
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: heading, bold: true })],
+                  }),
+                ],
+              })
+          ),
+        }),
+        ...rows.map(
+          (row) =>
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 18, type: WidthType.PERCENTAGE },
+                  children: makeCellParagraphs(row.level, true),
+                }),
+                new TableCell({
+                  width: { size: 30, type: WidthType.PERCENTAGE },
+                  children: makeCellParagraphs(row.title),
+                }),
+                new TableCell({
+                  width: { size: 34, type: WidthType.PERCENTAGE },
+                  children: makeCellParagraphs(row.kpi),
+                }),
+                new TableCell({
+                  width: { size: 18, type: WidthType.PERCENTAGE },
+                  children: makeCellParagraphs(row.parent),
+                }),
+              ],
+            })
+        ),
+      ];
+
+      const doc = new Document({
+        sections: [
+          {
+            children: [
+              new Paragraph({
+                heading: HeadingLevel.HEADING_1,
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: "Driver Diagram Summary", bold: true })],
+              }),
+              new Paragraph({
+                spacing: { after: 240 },
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun(data.purpose.title || "Driver Diagram")],
+              }),
+              new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: tableRows,
+              }),
+            ],
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "driver-diagram.docx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingDocx(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -367,6 +517,13 @@ function App() {
               </button>
               <button onClick={downloadSvg} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
                 <Download size={16} /> .svg
+              </button>
+              <button
+                onClick={downloadDocx}
+                disabled={exportingDocx}
+                className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+              >
+                <Download size={16} /> {exportingDocx ? "Exporting..." : ".docx"}
               </button>
             </div>
           </div>
