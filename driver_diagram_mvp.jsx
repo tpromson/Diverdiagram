@@ -1,17 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import mermaid from "mermaid";
 import { Plus, Trash2, Copy, Download, Target, Layers, GitBranch, Lightbulb, BarChart3, Eye, Code2 } from "lucide-react";
-
-mermaid.initialize({
-  startOnLoad: false,
-  securityLevel: "loose",
-  theme: "base",
-  themeVariables: {
-    fontFamily: "Inter, ui-sans-serif, system-ui",
-    primaryBorderColor: "#cbd5e1",
-    lineColor: "#64748b",
-  },
-});
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -45,9 +33,17 @@ const defaultData = {
 
 function safeText(text = "") {
   return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/`/g, "'")
     .replace(/"/g, "'")
     .replace(/[\[\]{}]/g, "")
-    .replace(/\n/g, "<br/>");
+    .replace(/\\/g, "\\\\");
+}
+
+function formatNodeLabel(heading, value) {
+  return `"\`${heading}\n${safeText(value)}\`"`;
 }
 
 function TextAreaField({ label, value, onChange, icon }) {
@@ -74,6 +70,8 @@ function App() {
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
   const renderId = useRef(0);
+  const mermaidRef = useRef(null);
+  const mermaidInitialized = useRef(false);
 
   const mermaidCode = useMemo(() => {
     const lines = [
@@ -81,8 +79,8 @@ function App() {
       "",
       "    subgraph P0[\" \"]",
       "        direction TB",
-      `        Purpose[\"🎯 Purpose<br/>${safeText(data.purpose.title)}\"]`,
-      `        PKPI[\"📊 Outcome KPI<br/>${safeText(data.purpose.kpi)}\"]`,
+      `        Purpose[${formatNodeLabel("Purpose", data.purpose.title)}]`,
+      `        PKPI[${formatNodeLabel("Outcome KPI", data.purpose.kpi)}]`,
       "    end",
       "",
     ];
@@ -93,8 +91,8 @@ function App() {
       lines.push(`    Purpose --> ${p}`);
       lines.push(`    subgraph ${p}G[\" \"]`);
       lines.push("        direction TB");
-      lines.push(`        ${p}[\"Primary Driver ${i + 1}<br/>${safeText(pd.title)}\"]`);
-      lines.push(`        ${pk}[\"📊 KPI<br/>${safeText(pd.kpi)}\"]`);
+      lines.push(`        ${p}[${formatNodeLabel(`Primary Driver ${i + 1}`, pd.title)}]`);
+      lines.push(`        ${pk}[${formatNodeLabel("KPI", pd.kpi)}]`);
       lines.push("    end", "");
 
       pd.secondaryDrivers.forEach((sd, j) => {
@@ -103,8 +101,8 @@ function App() {
         lines.push(`    ${p} --> ${s}`);
         lines.push(`    subgraph ${s}G[\" \"]`);
         lines.push("        direction TB");
-        lines.push(`        ${s}[\"Secondary Driver<br/>${safeText(sd.title)}\"]`);
-        lines.push(`        ${sk}[\"📊 KPI<br/>${safeText(sd.kpi)}\"]`);
+        lines.push(`        ${s}[${formatNodeLabel("Secondary Driver", sd.title)}]`);
+        lines.push(`        ${sk}[${formatNodeLabel("KPI", sd.kpi)}]`);
         lines.push("    end", "");
 
         sd.changeIdeas.forEach((ci, k) => {
@@ -113,8 +111,8 @@ function App() {
           lines.push(`    ${s} --> ${c}`);
           lines.push(`    subgraph ${c}G[\" \"]`);
           lines.push("        direction TB");
-          lines.push(`        ${c}[\"💡 Change Idea<br/>${safeText(ci.title)}\"]`);
-          lines.push(`        ${ck}[\"📈 KPI Change<br/>${safeText(ci.kpi)}\"]`);
+          lines.push(`        ${c}[${formatNodeLabel("Change Idea", ci.title)}]`);
+          lines.push(`        ${ck}[${formatNodeLabel("KPI Change", ci.kpi)}]`);
           lines.push("    end", "");
         });
       });
@@ -153,13 +151,33 @@ function App() {
 
     async function renderDiagram() {
       try {
-        const result = await mermaid.render(`driver-diagram-${id}`, mermaidCode);
+        if (!mermaidRef.current) {
+          const { default: mermaid } = await import("mermaid");
+          mermaidRef.current = mermaid;
+        }
+
+        if (!mermaidInitialized.current) {
+          mermaidRef.current.initialize({
+            startOnLoad: false,
+            securityLevel: "strict",
+            theme: "base",
+            themeVariables: {
+              fontFamily: "Inter, ui-sans-serif, system-ui",
+              primaryBorderColor: "#cbd5e1",
+              lineColor: "#64748b",
+            },
+          });
+          mermaidInitialized.current = true;
+        }
+
+        const result = await mermaidRef.current.render(`driver-diagram-${id}`, mermaidCode);
         if (!cancelled) {
           setSvg(result.svg);
           setRenderError("");
         }
       } catch (error) {
         if (!cancelled) {
+          setSvg("");
           setRenderError(error?.message || "Mermaid render error");
         }
       }
