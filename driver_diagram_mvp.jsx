@@ -73,26 +73,6 @@ function flattenDiagramRows(data) {
   return rows;
 }
 
-function getLevelStyle(level) {
-  if (level === "Purpose") {
-    return { fill: "FCE4EC", text: "881337" };
-  }
-
-  if (level.startsWith("Primary Driver")) {
-    return { fill: "DBEAFE", text: "1D4ED8" };
-  }
-
-  if (level.startsWith("Secondary Driver")) {
-    return { fill: "FEF3C7", text: "92400E" };
-  }
-
-  if (level.startsWith("Change Idea")) {
-    return { fill: "FFEDD5", text: "C2410C" };
-  }
-
-  return { fill: "F1F5F9", text: "334155" };
-}
-
 function safeText(text = "") {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -496,151 +476,207 @@ function App() {
       setExportingDocx(true);
       const {
         AlignmentType,
+        BorderStyle,
         Document,
-        HeadingLevel,
-        ImageRun,
         Packer,
-        PageBreak,
         Paragraph,
         Table,
         TableCell,
         TableRow,
+        TableVerticalAlign,
         TextRun,
         WidthType,
       } = await import("docx");
 
-      const makeCellParagraphs = (text, bold = false) => {
-        const lines = String(text || "")
-          .split("\n")
-          .filter((line) => line.trim().length > 0);
-
-        return (lines.length ? lines : [""]).map(
-          (line) =>
-            new Paragraph({
-              spacing: { after: 80 },
-              children: [new TextRun({ text: line, bold })],
-            })
-        );
+      const bodyFont = "TH SarabunPSK";
+      const sizeBody = 32;
+      const sizeHeading = 36;
+      const borderAll = {
+        top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+        bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+        left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+        right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
       };
 
-      const rows = flattenDiagramRows(data);
-      const diagramImage = await svgToPngData(svg);
+      const makeTextParagraph = (text, options = {}) =>
+        new Paragraph({
+          alignment: options.alignment,
+          spacing: options.spacing || { after: 120 },
+          children: [
+            new TextRun({
+              text,
+              bold: options.bold,
+              italics: options.italics,
+              color: options.color,
+              font: bodyFont,
+              size: options.size || sizeBody,
+            }),
+          ],
+        });
+
+      const makeKpiRuns = (kpiText) => {
+        const [first, ...rest] = String(kpiText || "").split("\n").filter((line) => line.trim());
+        const lines = [first, ...rest].filter(Boolean);
+        return lines.flatMap((line, index) => [
+          new TextRun({
+            text: index === 0 ? `KPI: ${line}` : line,
+            italics: true,
+            color: "666666",
+            font: bodyFont,
+            size: 28,
+          }),
+          ...(index < lines.length - 1 ? [new TextRun({ break: 1, font: bodyFont, size: 28 })] : []),
+        ]);
+      };
+
+      const makeContentCell = (title, kpi, rowSpan = 1) =>
+        new TableCell({
+          rowSpan,
+          verticalAlign: TableVerticalAlign.CENTER,
+          width: { size: 33, type: WidthType.PERCENTAGE },
+          margins: { top: 120, bottom: 120, left: 120, right: 120 },
+          borders: borderAll,
+          children: [
+            new Paragraph({
+              spacing: { after: 60 },
+              children: [
+                new TextRun({
+                  text: title,
+                  bold: true,
+                  font: bodyFont,
+                  size: sizeBody,
+                }),
+              ],
+            }),
+            new Paragraph({
+              spacing: { after: 120 },
+              children: makeKpiRuns(kpi),
+            }),
+          ],
+        });
+
       const tableRows = [
         new TableRow({
           tableHeader: true,
-          children: ["Level", "Title", "KPI", "Parent"].map(
+          children: [
+            "Primary Drivers & KPIs",
+            "Secondary Drivers & KPIs",
+            "Change Ideas & KPIs",
+          ].map(
             (heading) =>
               new TableCell({
-                width: { size: 25, type: WidthType.PERCENTAGE },
-                shading: { fill: "E2E8F0" },
+                width: { size: 33, type: WidthType.PERCENTAGE },
+                borders: borderAll,
+                shading: { fill: "F0F0F0" },
+                margins: { top: 120, bottom: 120, left: 120, right: 120 },
+                verticalAlign: TableVerticalAlign.CENTER,
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: heading, bold: true })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 120 },
+                    children: [
+                      new TextRun({
+                        text: heading,
+                        bold: true,
+                        font: bodyFont,
+                        size: sizeBody,
+                      }),
+                    ],
                   }),
                 ],
               })
           ),
         }),
-        ...rows.map(
-          (row) => {
-            const palette = getLevelStyle(row.level);
-            return (
-            new TableRow({
-              children: [
-                new TableCell({
-                  width: { size: 18, type: WidthType.PERCENTAGE },
-                  shading: { fill: palette.fill },
-                  children: makeCellParagraphs(row.level, true),
-                }),
-                new TableCell({
-                  width: { size: 30, type: WidthType.PERCENTAGE },
-                  shading: { fill: "FFFFFF" },
-                  children: makeCellParagraphs(row.title),
-                }),
-                new TableCell({
-                  width: { size: 34, type: WidthType.PERCENTAGE },
-                  shading: { fill: "F8FAFC" },
-                  children: makeCellParagraphs(row.kpi),
-                }),
-                new TableCell({
-                  width: { size: 18, type: WidthType.PERCENTAGE },
-                  shading: { fill: "FFFFFF" },
-                  children: makeCellParagraphs(row.parent),
-                }),
-              ],
-            })
-          );
-          }
-        ),
       ];
+
+      data.primaryDrivers.forEach((primary) => {
+        const secondaryGroups = primary.secondaryDrivers.length
+          ? primary.secondaryDrivers
+          : [{ title: "", kpi: "", changeIdeas: [{ title: "", kpi: "" }] }];
+        const primarySpan = secondaryGroups.reduce(
+          (sum, secondary) => sum + Math.max(secondary.changeIdeas.length, 1),
+          0
+        );
+        let primaryPlaced = false;
+
+        secondaryGroups.forEach((secondary) => {
+          const changes = secondary.changeIdeas.length
+            ? secondary.changeIdeas
+            : [{ title: "", kpi: "" }];
+          let secondaryPlaced = false;
+
+          changes.forEach((change) => {
+            const cells = [];
+
+            if (!primaryPlaced) {
+              cells.push(makeContentCell(primary.title, primary.kpi, primarySpan));
+              primaryPlaced = true;
+            }
+
+            if (!secondaryPlaced) {
+              cells.push(makeContentCell(secondary.title, secondary.kpi, changes.length));
+              secondaryPlaced = true;
+            }
+
+            cells.push(makeContentCell(change.title, change.kpi));
+            tableRows.push(new TableRow({ children: cells }));
+          });
+        });
+      });
 
       const doc = new Document({
         sections: [
           {
             children: [
               new Paragraph({
-                heading: HeadingLevel.HEADING_1,
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun({ text: "Driver Diagram Summary", bold: true })],
-              }),
-              new Paragraph({
-                spacing: { after: 240 },
-                alignment: AlignmentType.CENTER,
-                children: [new TextRun(data.purpose.title || "Driver Diagram")],
-              }),
-              ...(diagramImage
-                ? [
-                    new Paragraph({
-                      spacing: { after: 120 },
-                      children: [new TextRun({ text: "Diagram", bold: true, color: "334155" })],
-                    }),
-                    new Paragraph({
-                      spacing: { after: 320 },
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new ImageRun({
-                          data: diagramImage.bytes,
-                          transformation: {
-                            width: 520,
-                            height: Math.round((diagramImage.height / diagramImage.width) * 520),
-                          },
-                        }),
-                      ],
-                    }),
-                    new Paragraph({
-                      spacing: { after: 240 },
-                      alignment: AlignmentType.CENTER,
-                      children: [
-                        new TextRun({
-                          text: "Visual summary for presentation use",
-                          italics: true,
-                          color: "64748B",
-                        }),
-                      ],
-                    }),
-                  ]
-                : []),
-              new Paragraph({
-                children: [new PageBreak()],
+                spacing: { after: 100 },
+                children: [
+                  new TextRun({
+                    text: `เป้าหมาย: ${data.purpose.title}`,
+                    bold: true,
+                    font: bodyFont,
+                    size: sizeHeading,
+                  }),
+                ],
               }),
               new Paragraph({
                 spacing: { after: 120 },
-                heading: HeadingLevel.HEADING_2,
-                children: [new TextRun({ text: "Summary Table", bold: true })],
-              }),
-              new Paragraph({
-                spacing: { after: 180 },
                 children: [
                   new TextRun({
-                    text: "Structured view for editing, review, and document submission",
-                    color: "64748B",
-                    italics: true,
+                    text: "PURPOSE KPI:",
+                    bold: true,
+                    font: bodyFont,
+                    size: sizeBody,
+                  }),
+                  new TextRun({
+                    text: ` ${data.purpose.kpi.replace(/\n/g, " | ")}`,
+                    font: bodyFont,
+                    size: sizeBody,
+                  }),
+                ],
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "1. Driver Diagram",
+                    bold: true,
+                    color: "333333",
+                    font: bodyFont,
+                    size: sizeHeading,
                   }),
                 ],
               }),
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
+                columnWidths: [3259, 3062, 3023],
                 rows: tableRows,
+                margins: { top: 15, bottom: 15, left: 15, right: 15 },
+                layout: "fixed",
+              }),
+              new Paragraph({
+                spacing: { after: 150 },
+                shading: { fill: "F0F0F0" },
+                children: [new TextRun({ text: " ", font: bodyFont, size: 28, color: "777777" })],
               }),
             ],
           },
