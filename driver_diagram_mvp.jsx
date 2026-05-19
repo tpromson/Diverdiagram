@@ -31,6 +31,153 @@ const defaultData = {
   ],
 };
 
+function buildMermaidCode(data) {
+  const lines = [
+    "flowchart LR",
+    "",
+    "    subgraph P0[\" \"]",
+    "        direction TB",
+    `        Purpose[${formatNodeLabel("Purpose", data.purpose.title)}]`,
+    `        PKPI[${formatNodeLabel("Outcome KPI", data.purpose.kpi)}]`,
+    "    end",
+    "",
+  ];
+
+  data.primaryDrivers.forEach((pd, i) => {
+    const p = `PD${i + 1}`;
+    const pk = `PDKPI${i + 1}`;
+    lines.push(`    Purpose --> ${p}`);
+    lines.push(`    subgraph ${p}G[\" \"]`);
+    lines.push("        direction TB");
+    lines.push(`        ${p}[${formatNodeLabel(`Primary Driver ${i + 1}`, pd.title)}]`);
+    lines.push(`        ${pk}[${formatNodeLabel("KPI", pd.kpi)}]`);
+    lines.push("    end", "");
+
+    pd.secondaryDrivers.forEach((sd, j) => {
+      const s = `S${i + 1}_${j + 1}`;
+      const sk = `SKPI${i + 1}_${j + 1}`;
+      lines.push(`    ${p} --> ${s}`);
+      lines.push(`    subgraph ${s}G[\" \"]`);
+      lines.push("        direction TB");
+      lines.push(`        ${s}[${formatNodeLabel("Secondary Driver", sd.title)}]`);
+      lines.push(`        ${sk}[${formatNodeLabel("KPI", sd.kpi)}]`);
+      lines.push("    end", "");
+
+      sd.changeIdeas.forEach((ci, k) => {
+        const c = `C${i + 1}_${j + 1}_${k + 1}`;
+        const ck = `CKPI${i + 1}_${j + 1}_${k + 1}`;
+        lines.push(`    ${s} --> ${c}`);
+        lines.push(`    subgraph ${c}G[\" \"]`);
+        lines.push("        direction TB");
+        lines.push(`        ${c}[${formatNodeLabel("Change Idea", ci.title)}]`);
+        lines.push(`        ${ck}[${formatNodeLabel("KPI Change", ci.kpi)}]`);
+        lines.push("    end", "");
+      });
+    });
+  });
+
+  lines.push(
+    "    classDef purpose fill:#FCE4EC,stroke:#D81B60,color:#880E4F;",
+    "    classDef kpi fill:#E8F5E9,stroke:#43A047,color:#1B5E20;",
+    "    classDef primary fill:#E3F2FD,stroke:#1565C0,color:#0D47A1;",
+    "    classDef secondary fill:#FFF8E1,stroke:#F9A825,color:#5D4037;",
+    "    classDef change fill:#FFF3E0,stroke:#FB8C00,color:#E65100;",
+    "",
+    "    class Purpose purpose;",
+    "    class PKPI kpi;"
+  );
+
+  data.primaryDrivers.forEach((pd, i) => {
+    lines.push(`    class PD${i + 1} primary;`);
+    lines.push(`    class PDKPI${i + 1} kpi;`);
+    pd.secondaryDrivers.forEach((sd, j) => {
+      lines.push(`    class S${i + 1}_${j + 1} secondary;`);
+      lines.push(`    class SKPI${i + 1}_${j + 1} kpi;`);
+      sd.changeIdeas.forEach((_, k) => {
+        lines.push(`    class C${i + 1}_${j + 1}_${k + 1} change;`);
+        lines.push(`    class CKPI${i + 1}_${j + 1}_${k + 1} kpi;`);
+      });
+    });
+  });
+
+  return lines.join("\n");
+}
+
+function decodeMermaidText(text = "") {
+  return String(text)
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+function parseMermaidCode(code) {
+  const normalized = String(code || "").trim();
+  if (!normalized.startsWith("flowchart")) {
+    throw new Error("Mermaid code must start with a flowchart declaration.");
+  }
+
+  const nodeMap = new Map();
+  const nodePattern = /([A-Za-z0-9_]+)\["`([\s\S]*?)`"\]/g;
+  let match;
+
+  while ((match = nodePattern.exec(normalized))) {
+    const [, id, rawLabel] = match;
+    const [heading, ...rest] = rawLabel.split("\n");
+    nodeMap.set(id, {
+      heading: decodeMermaidText(heading || ""),
+      value: decodeMermaidText(rest.join("\n")).trim(),
+    });
+  }
+
+  if (!nodeMap.has("Purpose") || !nodeMap.has("PKPI")) {
+    throw new Error("Purpose and Outcome KPI nodes are required.");
+  }
+
+  const primaryIndexes = Array.from(nodeMap.keys())
+    .map((id) => id.match(/^PD(\d+)$/))
+    .filter(Boolean)
+    .map((parts) => Number(parts[1]))
+    .sort((a, b) => a - b);
+
+  return {
+    purpose: {
+      title: nodeMap.get("Purpose")?.value || "",
+      kpi: nodeMap.get("PKPI")?.value || "",
+    },
+    primaryDrivers: primaryIndexes.map((pi) => {
+      const secondaryIndexes = Array.from(nodeMap.keys())
+        .map((id) => id.match(new RegExp(`^S${pi}_(\\d+)$`)))
+        .filter(Boolean)
+        .map((parts) => Number(parts[1]))
+        .sort((a, b) => a - b);
+
+      return {
+        id: uid(),
+        title: nodeMap.get(`PD${pi}`)?.value || "",
+        kpi: nodeMap.get(`PDKPI${pi}`)?.value || "",
+        secondaryDrivers: secondaryIndexes.map((si) => {
+          const changeIndexes = Array.from(nodeMap.keys())
+            .map((id) => id.match(new RegExp(`^C${pi}_${si}_(\\d+)$`)))
+            .filter(Boolean)
+            .map((parts) => Number(parts[1]))
+            .sort((a, b) => a - b);
+
+          return {
+            id: uid(),
+            title: nodeMap.get(`S${pi}_${si}`)?.value || "",
+            kpi: nodeMap.get(`SKPI${pi}_${si}`)?.value || "",
+            changeIdeas: changeIndexes.map((ci) => ({
+              id: uid(),
+              title: nodeMap.get(`C${pi}_${si}_${ci}`)?.value || "",
+              kpi: nodeMap.get(`CKPI${pi}_${si}_${ci}`)?.value || "",
+            })),
+          };
+        }),
+      };
+    }),
+  };
+}
+
 function safeText(text = "") {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -66,6 +213,9 @@ function TextAreaField({ label, value, onChange, icon }) {
 function App() {
   const [data, setData] = useState(defaultData);
   const [copied, setCopied] = useState(false);
+  const [codeInput, setCodeInput] = useState(() => buildMermaidCode(defaultData));
+  const [codeSyncError, setCodeSyncError] = useState("");
+  const [codeSyncMessage, setCodeSyncMessage] = useState("");
   const [exportingDocx, setExportingDocx] = useState(false);
   const [view, setView] = useState("preview");
   const [svg, setSvg] = useState("");
@@ -73,78 +223,14 @@ function App() {
   const renderId = useRef(0);
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
+  const codeSourceRef = useRef("form");
+  const mermaidCode = useMemo(() => buildMermaidCode(data), [data]);
 
-  const mermaidCode = useMemo(() => {
-    const lines = [
-      "flowchart LR",
-      "",
-      "    subgraph P0[\" \"]",
-      "        direction TB",
-      `        Purpose[${formatNodeLabel("Purpose", data.purpose.title)}]`,
-      `        PKPI[${formatNodeLabel("Outcome KPI", data.purpose.kpi)}]`,
-      "    end",
-      "",
-    ];
-
-    data.primaryDrivers.forEach((pd, i) => {
-      const p = `PD${i + 1}`;
-      const pk = `PDKPI${i + 1}`;
-      lines.push(`    Purpose --> ${p}`);
-      lines.push(`    subgraph ${p}G[\" \"]`);
-      lines.push("        direction TB");
-      lines.push(`        ${p}[${formatNodeLabel(`Primary Driver ${i + 1}`, pd.title)}]`);
-      lines.push(`        ${pk}[${formatNodeLabel("KPI", pd.kpi)}]`);
-      lines.push("    end", "");
-
-      pd.secondaryDrivers.forEach((sd, j) => {
-        const s = `S${i + 1}_${j + 1}`;
-        const sk = `SKPI${i + 1}_${j + 1}`;
-        lines.push(`    ${p} --> ${s}`);
-        lines.push(`    subgraph ${s}G[\" \"]`);
-        lines.push("        direction TB");
-        lines.push(`        ${s}[${formatNodeLabel("Secondary Driver", sd.title)}]`);
-        lines.push(`        ${sk}[${formatNodeLabel("KPI", sd.kpi)}]`);
-        lines.push("    end", "");
-
-        sd.changeIdeas.forEach((ci, k) => {
-          const c = `C${i + 1}_${j + 1}_${k + 1}`;
-          const ck = `CKPI${i + 1}_${j + 1}_${k + 1}`;
-          lines.push(`    ${s} --> ${c}`);
-          lines.push(`    subgraph ${c}G[\" \"]`);
-          lines.push("        direction TB");
-          lines.push(`        ${c}[${formatNodeLabel("Change Idea", ci.title)}]`);
-          lines.push(`        ${ck}[${formatNodeLabel("KPI Change", ci.kpi)}]`);
-          lines.push("    end", "");
-        });
-      });
-    });
-
-    lines.push(
-      "    classDef purpose fill:#FCE4EC,stroke:#D81B60,color:#880E4F;",
-      "    classDef kpi fill:#E8F5E9,stroke:#43A047,color:#1B5E20;",
-      "    classDef primary fill:#E3F2FD,stroke:#1565C0,color:#0D47A1;",
-      "    classDef secondary fill:#FFF8E1,stroke:#F9A825,color:#5D4037;",
-      "    classDef change fill:#FFF3E0,stroke:#FB8C00,color:#E65100;",
-      "",
-      "    class Purpose purpose;",
-      "    class PKPI kpi;"
-    );
-
-    data.primaryDrivers.forEach((pd, i) => {
-      lines.push(`    class PD${i + 1} primary;`);
-      lines.push(`    class PDKPI${i + 1} kpi;`);
-      pd.secondaryDrivers.forEach((sd, j) => {
-        lines.push(`    class S${i + 1}_${j + 1} secondary;`);
-        lines.push(`    class SKPI${i + 1}_${j + 1} kpi;`);
-        sd.changeIdeas.forEach((_, k) => {
-          lines.push(`    class C${i + 1}_${j + 1}_${k + 1} change;`);
-          lines.push(`    class CKPI${i + 1}_${j + 1}_${k + 1} kpi;`);
-        });
-      });
-    });
-
-    return lines.join("\n");
-  }, [data]);
+  useEffect(() => {
+    if (codeSourceRef.current === "form") {
+      setCodeInput(mermaidCode);
+    }
+  }, [mermaidCode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,7 +257,7 @@ function App() {
           mermaidInitialized.current = true;
         }
 
-        const result = await mermaidRef.current.render(`driver-diagram-${id}`, mermaidCode);
+        const result = await mermaidRef.current.render(`driver-diagram-${id}`, codeInput);
         if (!cancelled) {
           setSvg(result.svg);
           setRenderError("");
@@ -188,13 +274,15 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [mermaidCode]);
+  }, [codeInput]);
 
   const updatePurpose = (field, value) => {
+    codeSourceRef.current = "form";
     setData((d) => ({ ...d, purpose: { ...d.purpose, [field]: value } }));
   };
 
   const addPrimary = () => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: [
@@ -205,6 +293,7 @@ function App() {
   };
 
   const updatePrimary = (pi, field, value) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) => (i === pi ? { ...p, [field]: value } : p)),
@@ -212,10 +301,12 @@ function App() {
   };
 
   const removePrimary = (pi) => {
+    codeSourceRef.current = "form";
     setData((d) => ({ ...d, primaryDrivers: d.primaryDrivers.filter((_, i) => i !== pi) }));
   };
 
   const addSecondary = (pi) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -233,6 +324,7 @@ function App() {
   };
 
   const updateSecondary = (pi, si, field, value) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -249,6 +341,7 @@ function App() {
   };
 
   const removeSecondary = (pi, si) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -260,6 +353,7 @@ function App() {
   };
 
   const addChange = (pi, si) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -284,6 +378,7 @@ function App() {
   };
 
   const updateChange = (pi, si, ci, field, value) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -307,6 +402,7 @@ function App() {
   };
 
   const removeChange = (pi, si, ci) => {
+    codeSourceRef.current = "form";
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -325,13 +421,13 @@ function App() {
   };
 
   const copyMermaid = async () => {
-    await navigator.clipboard.writeText("```mermaid\n" + mermaidCode + "\n```");
+    await navigator.clipboard.writeText("```mermaid\n" + codeInput + "\n```");
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   };
 
   const downloadMermaid = () => {
-    const blob = new Blob([mermaidCode], { type: "text/plain" });
+    const blob = new Blob([codeInput], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -567,6 +663,28 @@ function App() {
     }
   };
 
+  const applyCodeToForm = () => {
+    try {
+      const parsed = parseMermaidCode(codeInput);
+      codeSourceRef.current = "code";
+      setData(parsed);
+      setCodeSyncError("");
+      setCodeSyncMessage("Form updated from Mermaid code.");
+    } catch (error) {
+      setCodeSyncMessage("");
+      setCodeSyncError(error?.message || "Unable to parse Mermaid code into the form.");
+    }
+  };
+
+  const handleCodeInputChange = (value) => {
+    codeSourceRef.current = "code";
+    setCodeInput(value);
+    setCodeSyncMessage("");
+    if (codeSyncError) {
+      setCodeSyncError("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -689,9 +807,25 @@ function App() {
                 )}
               </div>
             ) : (
-              <pre className="min-h-[20rem] overflow-auto rounded-3xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-100 lg:h-[73vh]">
-                {mermaidCode}
-              </pre>
+              <div className="space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-500">Edit Mermaid here, then apply it back into the form.</p>
+                  <button
+                    onClick={applyCodeToForm}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Apply to Form
+                  </button>
+                </div>
+                {codeSyncError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{codeSyncError}</div> : null}
+                {!codeSyncError && codeSyncMessage ? <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{codeSyncMessage}</div> : null}
+                <textarea
+                  value={codeInput}
+                  onChange={(e) => handleCodeInputChange(e.target.value)}
+                  spellCheck={false}
+                  className="min-h-[20rem] w-full overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none lg:h-[73vh]"
+                />
+              </div>
             )}
           </section>
         </div>
