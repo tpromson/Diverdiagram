@@ -387,6 +387,341 @@ function formatNodeLabel(heading, value) {
   return `"\`${heading}\n${safeText(value)}\`"`;
 }
 
+function escapeSvgText(text = "") {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function wrapSvgText(text = "", maxChars = 28) {
+  const segmentText = (input) => {
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+      const segmenter = new Intl.Segmenter("th", { granularity: "word" });
+      return Array.from(segmenter.segment(input), (part) => part.segment);
+    }
+    if (input.includes(" ")) {
+      return input.split(/(\s+)/).filter(Boolean);
+    }
+    return Array.from(input);
+  };
+
+  return String(text || "")
+    .split("\n")
+    .flatMap((paragraph) => {
+      const trimmed = paragraph.trim();
+      if (!trimmed) return [""];
+      const tokens = segmentText(trimmed);
+      const lines = [];
+      let current = "";
+
+      tokens.forEach((token) => {
+        const next = `${current}${token}`;
+        const normalizedCurrent = current.trim();
+        const normalizedNext = next.trim();
+        if (normalizedCurrent && normalizedNext.length > maxChars) {
+          lines.push(normalizedCurrent);
+          current = token.trimStart();
+        } else {
+          current = next;
+        }
+      });
+
+      if (current.trim()) {
+        lines.push(current.trim());
+      }
+
+      return lines.length ? lines : [trimmed];
+    });
+}
+
+function buildTemplateSvg(diagramData) {
+  const theme = {
+    bg: "#ffffff",
+    headerBg: "#eef4ff",
+    headerPurposeBg: "#eaf0ff",
+    headerSecondaryBg: "#e8fbff",
+    headerChangeBg: "#e9faf0",
+    headerText: "#1d4ed8",
+    headerSecondaryText: "#0f7490",
+    headerChangeText: "#047857",
+    purposeFill: "#4f46e5",
+    purposeStroke: "#4338ca",
+    purposeText: "#ffffff",
+    purposeKpiText: "#e0e7ff",
+    cardFill: "#ffffff",
+    cardStroke: "#d9e2ef",
+    primaryAccent: "#3b82f6",
+    secondaryAccent: "#06b6d4",
+    changeFill: "#ecfdf5",
+    changeStroke: "#c7f0db",
+    changeText: "#064e3b",
+    bodyText: "#334155",
+    mutedText: "#94a3b8",
+    connector: "#cbd5e1",
+  };
+
+  const layout = {
+    canvasWidth: 1920,
+    topPad: 54,
+    sidePad: 54,
+    headerH: 44,
+    headerGap: 46,
+    contentTop: 168,
+    bottomPad: 56,
+    groupGap: 58,
+    blockGap: 24,
+    cardGap: 20,
+    goalW: 410,
+    primaryW: 380,
+    secondaryW: 380,
+    changeW: 370,
+  };
+
+  const columns = {
+    goalX: layout.sidePad,
+    primaryX: 540,
+    secondaryX: 995,
+    changeX: 1450,
+  };
+
+  const headerWidth = 420;
+
+  const makeCard = (kind, title, kpi, width, accentColor = null) => {
+    const titleLines = wrapSvgText(title, kind === "change" ? 30 : 28);
+    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", kind === "change" ? 34 : 30).filter(Boolean);
+    const titleFontSize = kind === "purpose" ? 18 : 17;
+    const kpiFontSize = kind === "purpose" ? 14 : 13;
+    const titleLineHeight = kind === "purpose" ? 26 : 24;
+    const kpiLineHeight = kind === "purpose" ? 20 : 19;
+    const paddingX = 22;
+    const paddingTop = kind === "purpose" ? 20 : 22;
+    const separatorGap = kpiLines.length ? 16 : 0;
+    const separatorY = paddingTop + titleLines.length * titleLineHeight + separatorGap;
+    const kpiTop = separatorY + (kpiLines.length ? 22 : 0);
+    const height = Math.max(
+      kind === "purpose" ? 150 : 118,
+      paddingTop +
+        titleLines.length * titleLineHeight +
+        (kpiLines.length ? 22 + kpiLines.length * kpiLineHeight : 0) +
+        26
+    );
+
+    return {
+      kind,
+      width,
+      height,
+      titleLines,
+      kpiLines,
+      paddingX,
+      paddingTop,
+      titleFontSize,
+      kpiFontSize,
+      titleLineHeight,
+      kpiLineHeight,
+      separatorY,
+      kpiTop,
+      accentColor,
+    };
+  };
+
+  const primaryGroups = diagramData.primaryDrivers.map((primary) => {
+    const primaryCard = makeCard("primary", primary.title, primary.kpi, layout.primaryW, theme.primaryAccent);
+    const secondaryBlocks = primary.secondaryDrivers.map((secondary) => {
+      const secondaryCard = makeCard("secondary", secondary.title, secondary.kpi, layout.secondaryW, theme.secondaryAccent);
+      const changeCards = (secondary.changeIdeas.length ? secondary.changeIdeas : [{ title: "", kpi: "" }]).map((change) =>
+        makeCard("change", change.title, change.kpi, layout.changeW)
+      );
+      const changeStackHeight =
+        changeCards.reduce((sum, card) => sum + card.height, 0) +
+        Math.max(0, changeCards.length - 1) * layout.cardGap;
+      const blockHeight = Math.max(secondaryCard.height, changeStackHeight);
+      return { secondary, secondaryCard, changeCards, blockHeight };
+    });
+    const secondaryStackHeight =
+      secondaryBlocks.reduce((sum, block) => sum + block.blockHeight, 0) +
+      Math.max(0, secondaryBlocks.length - 1) * layout.blockGap;
+    const groupHeight = Math.max(primaryCard.height, secondaryStackHeight);
+    return { primary, primaryCard, secondaryBlocks, groupHeight };
+  });
+
+  let cursorY = layout.contentTop;
+  const renderCards = [];
+  const primaryCenters = [];
+  const secondaryConnectors = [];
+  const changeConnectors = [];
+
+  primaryGroups.forEach((group) => {
+    const groupTop = cursorY;
+    const primaryY = groupTop + (group.groupHeight - group.primaryCard.height) / 2;
+    renderCards.push({ x: columns.primaryX, y: primaryY, card: group.primaryCard });
+    primaryCenters.push({
+      x: columns.primaryX,
+      y: primaryY + group.primaryCard.height / 2,
+    });
+
+    let blockY = groupTop + (group.groupHeight - (
+      group.secondaryBlocks.reduce((sum, block) => sum + block.blockHeight, 0) +
+      Math.max(0, group.secondaryBlocks.length - 1) * layout.blockGap
+    )) / 2;
+
+    group.secondaryBlocks.forEach((block) => {
+      const secondaryY = blockY + (block.blockHeight - block.secondaryCard.height) / 2;
+      renderCards.push({ x: columns.secondaryX, y: secondaryY, card: block.secondaryCard });
+      secondaryConnectors.push({
+        from: { x: columns.primaryX + group.primaryCard.width, y: primaryY + group.primaryCard.height / 2 },
+        to: { x: columns.secondaryX, y: secondaryY + block.secondaryCard.height / 2 },
+      });
+
+      let changeY = blockY + (block.blockHeight - (
+        block.changeCards.reduce((sum, card) => sum + card.height, 0) +
+        Math.max(0, block.changeCards.length - 1) * layout.cardGap
+      )) / 2;
+
+      const changeCenters = [];
+      block.changeCards.forEach((changeCard) => {
+        renderCards.push({ x: columns.changeX, y: changeY, card: changeCard });
+        changeCenters.push({ x: columns.changeX, y: changeY + changeCard.height / 2 });
+        changeY += changeCard.height + layout.cardGap;
+      });
+
+      changeConnectors.push({
+        from: { x: columns.secondaryX + block.secondaryCard.width, y: secondaryY + block.secondaryCard.height / 2 },
+        to: changeCenters,
+      });
+
+      blockY += block.blockHeight + layout.blockGap;
+    });
+
+    cursorY += group.groupHeight + layout.groupGap;
+  });
+
+  const contentHeight = cursorY - layout.groupGap;
+  const goalCard = makeCard("purpose", diagramData.purpose.title, diagramData.purpose.kpi, layout.goalW);
+  const goalY = layout.contentTop + Math.max(0, (contentHeight - layout.contentTop - goalCard.height) / 2);
+  const goalCenterY = goalY + goalCard.height / 2;
+  renderCards.push({ x: columns.goalX, y: goalY, card: goalCard });
+
+  const purposeTrunkX = columns.goalX + goalCard.width + 48;
+  const primaryJoinX = columns.primaryX - 34;
+
+  const svgHeight = Math.max(cursorY + layout.bottomPad, goalY + goalCard.height + layout.bottomPad);
+
+  const renderTextLines = (lines, x, y, fontSize, lineHeight, fill, fontWeight = 500) =>
+    lines
+      .map(
+        (line, index) =>
+          `<tspan x="${x}" y="${y + index * lineHeight}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${fill}">${escapeSvgText(line)}</tspan>`
+      )
+      .join("");
+
+  const renderCardMarkup = ({ x, y, card }) => {
+    const radius = card.kind === "purpose" ? 18 : 16;
+    const fill =
+      card.kind === "purpose" ? theme.purposeFill : card.kind === "change" ? theme.changeFill : theme.cardFill;
+    const stroke =
+      card.kind === "purpose" ? theme.purposeStroke : card.kind === "change" ? theme.changeStroke : theme.cardStroke;
+    const titleFill = card.kind === "purpose" ? theme.purposeText : card.kind === "change" ? theme.changeText : theme.bodyText;
+    const kpiFill = card.kind === "purpose" ? theme.purposeKpiText : theme.mutedText;
+    const shadow = card.kind === "purpose" ? "url(#goalShadow)" : "url(#cardShadow)";
+    const separatorColor = card.kind === "purpose" ? "rgba(255,255,255,0.24)" : "#eef2f7";
+    const accent = card.accentColor
+      ? `<rect x="${x}" y="${y}" width="6" height="${card.height}" rx="${radius}" fill="${card.accentColor}" />`
+      : "";
+    const separator = card.kpiLines.length
+      ? `<line x1="${x + card.paddingX}" y1="${y + card.separatorY}" x2="${x + card.width - card.paddingX}" y2="${y + card.separatorY}" stroke="${separatorColor}" stroke-width="1"/>`
+      : "";
+
+    return `
+      <g>
+        <rect x="${x}" y="${y}" width="${card.width}" height="${card.height}" rx="${radius}" fill="${fill}" stroke="${stroke}" filter="${shadow}"/>
+        ${accent}
+        <text font-family="Inter, Arial, sans-serif">
+          ${renderTextLines(card.titleLines, x + card.paddingX + (card.accentColor ? 8 : 0), y + card.paddingTop, card.titleFontSize, card.titleLineHeight, titleFill, 600)}
+          ${renderTextLines(card.kpiLines, x + card.paddingX + (card.accentColor ? 8 : 0), y + card.kpiTop, card.kpiFontSize, card.kpiLineHeight, kpiFill, 600)}
+        </text>
+        ${separator}
+      </g>
+    `;
+  };
+
+  const headerY = layout.topPad;
+  const headers = [
+    { x: 76, label: "เป้าหมาย (AIM)", bg: theme.headerPurposeBg, color: "#3343c4" },
+    { x: 540, label: "PRIMARY DRIVERS", bg: theme.headerBg, color: theme.headerText },
+    { x: 980, label: "SECONDARY DRIVERS", bg: theme.headerSecondaryBg, color: theme.headerSecondaryText },
+    { x: 1430, label: "CHANGE IDEAS", bg: theme.headerChangeBg, color: theme.headerChangeText },
+  ]
+    .map(
+      (header) => `
+        <g>
+          <rect x="${header.x}" y="${headerY}" width="${headerWidth}" height="${layout.headerH}" rx="8" fill="${header.bg}" />
+          <text x="${header.x + headerWidth / 2}" y="${headerY + 29}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="${header.color}" letter-spacing="0.3">${escapeSvgText(header.label)}</text>
+        </g>
+      `
+    )
+    .join("");
+
+  const purposeConnector = primaryCenters.length
+    ? `
+      <path d="M ${columns.goalX + goalCard.width} ${goalCenterY} H ${purposeTrunkX} V ${primaryCenters[0].y} H ${primaryJoinX}
+               M ${purposeTrunkX} ${primaryCenters[0].y} V ${primaryCenters[primaryCenters.length - 1].y}"
+            fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      ${primaryCenters
+        .map(
+          (center) =>
+            `<path d="M ${primaryJoinX} ${center.y} H ${columns.primaryX}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />`
+        )
+        .join("")}
+    `
+    : "";
+
+  const secondaryConnectorMarkup = secondaryConnectors
+    .map(
+      ({ from, to }) =>
+        `<path d="M ${from.x} ${from.y} H ${from.x + 30} V ${to.y} H ${to.x}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`
+    )
+    .join("");
+
+  const changeConnectorMarkup = changeConnectors
+    .map(({ from, to }) => {
+      if (!to.length) return "";
+      const joinX = from.x + 46;
+      const vertical = to.length > 1 ? `M ${joinX} ${to[0].y} V ${to[to.length - 1].y}` : "";
+      return `
+        <path d="M ${from.x} ${from.y} H ${joinX}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />
+        <path d="${vertical}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />
+        ${to
+          .map(
+            (target) =>
+              `<path d="M ${joinX} ${target.y} H ${target.x}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />`
+          )
+          .join("")}
+      `;
+    })
+    .join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${layout.canvasWidth}" height="${svgHeight}" viewBox="0 0 ${layout.canvasWidth} ${svgHeight}" role="img" aria-label="Driver Diagram">
+  <defs>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#94a3b8" flood-opacity="0.12"/>
+    </filter>
+    <filter id="goalShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#312e81" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="${theme.bg}" />
+  ${headers}
+  ${purposeConnector}
+  ${secondaryConnectorMarkup}
+  ${changeConnectorMarkup}
+  ${renderCards.map(renderCardMarkup).join("")}
+</svg>`;
+}
+
 function TextAreaField({ label, value, onChange, icon }) {
   return (
     <label className="block space-y-2">
@@ -665,7 +1000,13 @@ function App() {
   };
 
   const downloadSvg = () => {
-    const blob = new Blob([getExportableSvgMarkup(svg)], { type: "image/svg+xml;charset=utf-8" });
+    let exportData = data;
+    try {
+      exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
+    } catch (_error) {
+      exportData = data;
+    }
+    const blob = new Blob([buildTemplateSvg(exportData)], { type: "image/svg+xml;charset=utf-8" });
     triggerBlobDownload(blob, "driver-diagram.svg");
   };
 
