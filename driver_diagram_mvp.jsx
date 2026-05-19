@@ -370,6 +370,9 @@ function App() {
       const bodyFont = "TH SarabunPSK";
       const sizeBody = 32;
       const sizeHeading = 36;
+      const purposeKpiLines = String(data.purpose.kpi || "")
+        .split("\n")
+        .filter((line) => line.trim());
       const borderAll = {
         top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
         bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
@@ -401,7 +404,7 @@ function App() {
           borders: borderAll,
           children: [
             new Paragraph({
-              spacing: { after: 60 },
+              spacing: { after: 300 },
               children: [
                 new TextRun({
                   text: title,
@@ -412,7 +415,7 @@ function App() {
               ],
             }),
             new Paragraph({
-              spacing: { after: 120 },
+              spacing: { after: 300 },
               children: makeKpiRuns(kpi),
             }),
           ],
@@ -436,7 +439,7 @@ function App() {
                 children: [
                   new Paragraph({
                     alignment: AlignmentType.CENTER,
-                    spacing: { after: 120 },
+                    spacing: { after: 300 },
                     children: [
                       new TextRun({
                         text: heading,
@@ -511,22 +514,20 @@ function App() {
                     font: bodyFont,
                     size: sizeBody,
                   }),
-                  ...String(data.purpose.kpi || "")
-                    .split("\n")
-                    .filter((line) => line.trim())
-                    .flatMap((line, index) => [
+                  ...purposeKpiLines.flatMap((line, index) => [
                       new TextRun({
                         text: index === 0 ? ` ${line}` : line,
                         font: bodyFont,
                         size: sizeBody,
                       }),
-                      ...(index < String(data.purpose.kpi || "").split("\n").filter((item) => item.trim()).length - 1
+                      ...(index < purposeKpiLines.length - 1
                         ? [new TextRun({ break: 1, font: bodyFont, size: sizeBody })]
                         : []),
                     ]),
                 ],
               }),
               new Paragraph({
+                spacing: { after: 150 },
                 children: [
                   new TextRun({
                     text: "1. Driver Diagram",
