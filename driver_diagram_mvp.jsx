@@ -110,67 +110,243 @@ function decodeMermaidText(text = "") {
     .replace(/&amp;/g, "&");
 }
 
+function normalizeNodeLabel(rawLabel = "") {
+  return decodeMermaidText(rawLabel)
+    .replace(/^`|`$/g, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/\r\n/g, "\n")
+    .trim();
+}
+
+function normalizeHeading(heading = "") {
+  return String(heading)
+    .replace(/^[^\p{L}\p{N}]+/gu, "")
+    .trim()
+    .toLowerCase();
+}
+
+function inferNodeType(heading = "", value = "") {
+  const normalizedHeading = normalizeHeading(heading);
+  const normalizedValue = String(value || "").trim().toLowerCase();
+  const combined = `${normalizedHeading}\n${normalizedValue}`;
+
+  if (
+    normalizedHeading.includes("primary driver") ||
+    normalizedHeading.includes("secondary driver") ||
+    normalizedHeading.includes("change idea") ||
+    normalizedHeading === "purpose" ||
+    normalizedHeading === "outcome kpi"
+  ) {
+    if (normalizedHeading.includes("primary driver")) return "primary";
+    if (normalizedHeading.includes("secondary driver")) return "secondary";
+    if (normalizedHeading.includes("change idea")) return "change";
+    if (normalizedHeading === "purpose") return "purpose";
+    return "kpi";
+  }
+
+  if (combined.includes("เป้าหมาย") || combined.includes("goal")) return "purpose";
+  if (normalizedHeading.startsWith("kpi") || combined.includes("purpose kpi") || combined.includes("outcome kpi")) {
+    return "kpi";
+  }
+  if (combined.includes("primary driver")) return "primary";
+  if (combined.includes("secondary driver")) return "secondary";
+  if (combined.includes("change idea")) return "change";
+
+  return "unknown";
+}
+
+function parseNodeDefinitions(code) {
+  const nodeMap = new Map();
+  const nodePattern = /([A-Za-z0-9_]+)\["([\s\S]*?)"\]/g;
+  let match;
+
+  while ((match = nodePattern.exec(code))) {
+    const [, id, rawLabel] = match;
+    const normalizedLabel = normalizeNodeLabel(rawLabel);
+    const [heading, ...rest] = normalizedLabel.split("\n");
+    nodeMap.set(id, {
+      id,
+      heading: (heading || "").trim(),
+      value: rest.join("\n").trim(),
+      type: inferNodeType(heading || "", rest.join("\n")),
+    });
+  }
+
+  return nodeMap;
+}
+
+function parseSubgraphMembership(code) {
+  const nodeGroups = new Map();
+  const subgraphPattern = /subgraph\s+[A-Za-z0-9_]+\[[\s\S]*?\]([\s\S]*?)end/g;
+  let match;
+
+  while ((match = subgraphPattern.exec(code))) {
+    const body = match[1];
+    const nodeIds = Array.from(body.matchAll(/([A-Za-z0-9_]+)\["[\s\S]*?"\]/g)).map((parts) => parts[1]);
+    if (nodeIds.length > 1) {
+      nodeIds.forEach((nodeId) => {
+        nodeGroups.set(nodeId, nodeIds.filter((id) => id !== nodeId));
+      });
+    }
+  }
+
+  return nodeGroups;
+}
+
+function parseEdges(code) {
+  const adjacency = new Map();
+  const extractNodeId = (segment, pick = "first") => {
+    const matches = Array.from(String(segment || "").matchAll(/([A-Za-z0-9_]+)(?=\s*(?:\[|$))/g));
+    if (!matches.length) return "";
+    return pick === "last" ? matches[matches.length - 1][1] : matches[0][1];
+  };
+
+  const addEdge = (from, to) => {
+    if (!from || !to) return;
+    const existing = adjacency.get(from) || [];
+    if (!existing.includes(to)) {
+      adjacency.set(from, [...existing, to]);
+    }
+  };
+
+  String(code || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.includes("-->") && !line.startsWith("class ") && !line.startsWith("classDef "))
+    .forEach((line) => {
+      const edgeLine = line.replace(/;.*/, "");
+      const parts = edgeLine.split("-->");
+      if (parts.length < 2) return;
+      const from = extractNodeId(parts[0], "last");
+      if (!from) return;
+      const rightSide = parts.slice(1).join("-->");
+      const targets = rightSide
+        .split("&")
+        .map((segment) => extractNodeId(segment, "first"))
+        .filter(Boolean);
+
+      targets.forEach((to) => addEdge(from, to));
+    });
+
+  return adjacency;
+}
+
+function findAssociatedKpis(nodeMap, nodeGroups) {
+  const kpiByNodeId = new Map();
+  const fallbackPairs = [
+    ["Purpose", "PKPI"],
+  ];
+
+  nodeMap.forEach((node) => {
+    const groupedNodes = (nodeGroups.get(node.id) || [])
+      .map((id) => nodeMap.get(id))
+      .filter(Boolean);
+    const groupedKpis = groupedNodes.filter((groupedNode) => groupedNode.type === "kpi");
+
+    if (node.type !== "kpi" && groupedKpis.length) {
+      kpiByNodeId.set(node.id, groupedKpis.map((groupedNode) => groupedNode.value).filter(Boolean).join("\n"));
+    }
+  });
+
+  fallbackPairs.forEach(([nodeId, kpiId]) => {
+    if (!kpiByNodeId.has(nodeId) && nodeMap.has(kpiId)) {
+      kpiByNodeId.set(nodeId, nodeMap.get(kpiId)?.value || "");
+    }
+  });
+
+  nodeMap.forEach((node) => {
+    if (kpiByNodeId.has(node.id)) return;
+    if (node.type === "primary") {
+      const match = node.id.match(/^PD(\d+)$/);
+      if (match && nodeMap.has(`PDKPI${match[1]}`)) {
+        kpiByNodeId.set(node.id, nodeMap.get(`PDKPI${match[1]}`)?.value || "");
+      }
+    }
+    if (node.type === "secondary") {
+      const match = node.id.match(/^S(\d+)_(\d+)$/);
+      if (match && nodeMap.has(`SKPI${match[1]}_${match[2]}`)) {
+        kpiByNodeId.set(node.id, nodeMap.get(`SKPI${match[1]}_${match[2]}`)?.value || "");
+      }
+    }
+    if (node.type === "change") {
+      const match = node.id.match(/^C(\d+)_(\d+)_(\d+)$/);
+      if (match && nodeMap.has(`CKPI${match[1]}_${match[2]}_${match[3]}`)) {
+        kpiByNodeId.set(node.id, nodeMap.get(`CKPI${match[1]}_${match[2]}_${match[3]}`)?.value || "");
+      }
+    }
+  });
+
+  return kpiByNodeId;
+}
+
 function parseMermaidCode(code) {
   const normalized = String(code || "").trim();
   if (!normalized.startsWith("flowchart")) {
     throw new Error("Mermaid code must start with a flowchart declaration.");
   }
 
-  const nodeMap = new Map();
-  const nodePattern = /([A-Za-z0-9_]+)\["`([\s\S]*?)`"\]/g;
-  let match;
+  const nodeMap = parseNodeDefinitions(normalized);
+  const nodeGroups = parseSubgraphMembership(normalized);
+  const adjacency = parseEdges(normalized);
+  const kpiByNodeId = findAssociatedKpis(nodeMap, nodeGroups);
 
-  while ((match = nodePattern.exec(normalized))) {
-    const [, id, rawLabel] = match;
-    const [heading, ...rest] = rawLabel.split("\n");
-    nodeMap.set(id, {
-      heading: decodeMermaidText(heading || ""),
-      value: decodeMermaidText(rest.join("\n")).trim(),
-    });
+  if (!nodeMap.size) {
+    throw new Error("No Mermaid nodes were found.");
   }
 
-  if (!nodeMap.has("Purpose") || !nodeMap.has("PKPI")) {
-    throw new Error("Purpose and Outcome KPI nodes are required.");
+  const purposeNode =
+    nodeMap.get("Purpose") ||
+    Array.from(nodeMap.values()).find((node) => node.type === "purpose") ||
+    Array.from(nodeMap.values()).find((node) => (adjacency.get(node.id) || []).some((targetId) => nodeMap.get(targetId)?.type === "primary"));
+
+  if (!purposeNode) {
+    throw new Error("A Purpose/Goal node is required.");
   }
 
-  const primaryIndexes = Array.from(nodeMap.keys())
-    .map((id) => id.match(/^PD(\d+)$/))
-    .filter(Boolean)
-    .map((parts) => Number(parts[1]))
-    .sort((a, b) => a - b);
+  const primaryIds = (adjacency.get(purposeNode.id) || []).filter((nodeId) => {
+    const node = nodeMap.get(nodeId);
+    return node && node.type !== "kpi";
+  });
+
+  if (!primaryIds.length) {
+    throw new Error("At least one Primary Driver connected from the Purpose node is required.");
+  }
 
   return {
     purpose: {
-      title: nodeMap.get("Purpose")?.value || "",
-      kpi: nodeMap.get("PKPI")?.value || "",
+      title: purposeNode.value || purposeNode.heading || "",
+      kpi: kpiByNodeId.get(purposeNode.id) || "",
     },
-    primaryDrivers: primaryIndexes.map((pi) => {
-      const secondaryIndexes = Array.from(nodeMap.keys())
-        .map((id) => id.match(new RegExp(`^S${pi}_(\\d+)$`)))
-        .filter(Boolean)
-        .map((parts) => Number(parts[1]))
-        .sort((a, b) => a - b);
+    primaryDrivers: primaryIds.map((primaryId) => {
+      const primaryNode = nodeMap.get(primaryId);
+      const secondaryIds = (adjacency.get(primaryId) || []).filter((nodeId) => {
+        const node = nodeMap.get(nodeId);
+        return node && node.type !== "kpi";
+      });
 
       return {
         id: uid(),
-        title: nodeMap.get(`PD${pi}`)?.value || "",
-        kpi: nodeMap.get(`PDKPI${pi}`)?.value || "",
-        secondaryDrivers: secondaryIndexes.map((si) => {
-          const changeIndexes = Array.from(nodeMap.keys())
-            .map((id) => id.match(new RegExp(`^C${pi}_${si}_(\\d+)$`)))
-            .filter(Boolean)
-            .map((parts) => Number(parts[1]))
-            .sort((a, b) => a - b);
+        title: primaryNode?.value || primaryNode?.heading || "",
+        kpi: kpiByNodeId.get(primaryId) || "",
+        secondaryDrivers: secondaryIds.map((secondaryId) => {
+          const secondaryNode = nodeMap.get(secondaryId);
+          const changeIds = (adjacency.get(secondaryId) || []).filter((nodeId) => {
+            const node = nodeMap.get(nodeId);
+            return node && node.type !== "kpi";
+          });
 
           return {
             id: uid(),
-            title: nodeMap.get(`S${pi}_${si}`)?.value || "",
-            kpi: nodeMap.get(`SKPI${pi}_${si}`)?.value || "",
-            changeIdeas: changeIndexes.map((ci) => ({
-              id: uid(),
-              title: nodeMap.get(`C${pi}_${si}_${ci}`)?.value || "",
-              kpi: nodeMap.get(`CKPI${pi}_${si}_${ci}`)?.value || "",
-            })),
+            title: secondaryNode?.value || secondaryNode?.heading || "",
+            kpi: kpiByNodeId.get(secondaryId) || "",
+            changeIdeas: changeIds.map((changeId) => {
+              const changeNode = nodeMap.get(changeId);
+              return {
+                id: uid(),
+                title: changeNode?.value || changeNode?.heading || "",
+                kpi: kpiByNodeId.get(changeId) || "",
+              };
+            }),
           };
         }),
       };
