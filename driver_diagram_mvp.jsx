@@ -636,13 +636,17 @@ function App() {
     await writable.close();
   };
 
+  const getExportableSvgMarkup = (svgMarkup) =>
+    String(svgMarkup || "")
+      .replace(/<br(\s[^>]*)?>/gi, (_match, attrs = "") => `<br${attrs.trim() ? attrs : ""}/>`); 
+
   const downloadMermaid = () => {
     const blob = new Blob([codeInput], { type: "text/plain;charset=utf-8" });
     triggerBlobDownload(blob, "driver-diagram.mmd");
   };
 
   const downloadSvg = () => {
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const blob = new Blob([getExportableSvgMarkup(svg)], { type: "image/svg+xml;charset=utf-8" });
     triggerBlobDownload(blob, "driver-diagram.svg");
   };
 
