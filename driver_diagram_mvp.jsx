@@ -88,6 +88,85 @@ function formatNodeLabel(heading, value) {
   return `"\`${heading}\n${safeText(value)}\`"`;
 }
 
+function getSvgDimensions(svgMarkup) {
+  const viewBoxMatch = svgMarkup.match(/viewBox="[\d.\s-]+"/);
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[0]
+      .replace('viewBox="', "")
+      .replace('"', "")
+      .trim()
+      .split(/\s+/)
+      .map(Number);
+
+    if (parts.length === 4 && parts.every((value) => Number.isFinite(value))) {
+      return { width: parts[2], height: parts[3] };
+    }
+  }
+
+  const widthMatch = svgMarkup.match(/width="([\d.]+)"/);
+  const heightMatch = svgMarkup.match(/height="([\d.]+)"/);
+  return {
+    width: Number(widthMatch?.[1]) || 1400,
+    height: Number(heightMatch?.[1]) || 500,
+  };
+}
+
+async function svgToPngData(svgMarkup) {
+  if (!svgMarkup) {
+    return null;
+  }
+
+  const { width, height } = getSvgDimensions(svgMarkup);
+  const targetWidth = Math.min(1400, Math.max(900, Math.round(width)));
+  const targetHeight = Math.max(320, Math.round((height / width) * targetWidth));
+  const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+  const objectUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Unable to convert diagram preview into an image."));
+      img.src = objectUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas rendering is unavailable in this browser.");
+    }
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const pngBlob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Unable to export the diagram image."));
+          }
+        },
+        "image/png",
+        1
+      );
+    });
+
+    return {
+      bytes: await pngBlob.arrayBuffer(),
+      width: canvas.width,
+      height: canvas.height,
+    };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 function TextAreaField({ label, value, onChange, icon }) {
   return (
     <label className="block space-y-2">
@@ -399,6 +478,7 @@ function App() {
         AlignmentType,
         Document,
         HeadingLevel,
+        ImageRun,
         Packer,
         Paragraph,
         Table,
@@ -423,6 +503,7 @@ function App() {
       };
 
       const rows = flattenDiagramRows(data);
+      const diagramImage = await svgToPngData(svg);
       const tableRows = [
         new TableRow({
           tableHeader: true,
@@ -477,6 +558,31 @@ function App() {
                 spacing: { after: 240 },
                 alignment: AlignmentType.CENTER,
                 children: [new TextRun(data.purpose.title || "Driver Diagram")],
+              }),
+              ...(diagramImage
+                ? [
+                    new Paragraph({
+                      spacing: { after: 120 },
+                      children: [new TextRun({ text: "Diagram", bold: true })],
+                    }),
+                    new Paragraph({
+                      spacing: { after: 320 },
+                      alignment: AlignmentType.CENTER,
+                      children: [
+                        new ImageRun({
+                          data: diagramImage.bytes,
+                          transformation: {
+                            width: 520,
+                            height: Math.round((diagramImage.height / diagramImage.width) * 520),
+                          },
+                        }),
+                      ],
+                    }),
+                  ]
+                : []),
+              new Paragraph({
+                spacing: { after: 120 },
+                children: [new TextRun({ text: "Summary Table", bold: true })],
               }),
               new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
