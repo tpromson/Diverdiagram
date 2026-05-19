@@ -464,49 +464,55 @@ function buildTemplateSvg(diagramData) {
   };
 
   const layout = {
-    canvasWidth: 1920,
-    topPad: 54,
-    sidePad: 54,
-    headerH: 44,
+    canvasWidth: 1980,
+    topPad: 48,
+    sidePad: 56,
+    headerH: 46,
     headerGap: 46,
-    contentTop: 168,
-    bottomPad: 56,
-    groupGap: 58,
-    blockGap: 24,
-    cardGap: 20,
-    goalW: 410,
-    primaryW: 380,
-    secondaryW: 380,
-    changeW: 370,
+    contentTop: 160,
+    bottomPad: 72,
+    groupGap: 74,
+    blockGap: 30,
+    cardGap: 26,
+    goalW: 420,
+    primaryW: 392,
+    secondaryW: 392,
+    changeW: 384,
   };
 
   const columns = {
     goalX: layout.sidePad,
-    primaryX: 540,
-    secondaryX: 995,
-    changeX: 1450,
+    primaryX: 552,
+    secondaryX: 1028,
+    changeX: 1504,
   };
 
-  const headerWidth = 420;
+  const headerWidth = 394;
+  const headerX = {
+    goal: columns.goalX + 18,
+    primary: columns.primaryX,
+    secondary: columns.secondaryX,
+    change: columns.changeX,
+  };
 
   const makeCard = (kind, title, kpi, width, accentColor = null) => {
-    const titleLines = wrapSvgText(title, kind === "change" ? 30 : 28);
-    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", kind === "change" ? 34 : 30).filter(Boolean);
-    const titleFontSize = kind === "purpose" ? 18 : 17;
+    const titleLines = wrapSvgText(title, kind === "purpose" ? 26 : kind === "change" ? 27 : 25);
+    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", kind === "change" ? 31 : 28).filter(Boolean);
+    const titleFontSize = kind === "purpose" ? 18 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
-    const titleLineHeight = kind === "purpose" ? 26 : 24;
-    const kpiLineHeight = kind === "purpose" ? 20 : 19;
-    const paddingX = 22;
-    const paddingTop = kind === "purpose" ? 20 : 22;
-    const separatorGap = kpiLines.length ? 16 : 0;
+    const titleLineHeight = kind === "purpose" ? 27 : 25;
+    const kpiLineHeight = kind === "purpose" ? 20 : 18;
+    const paddingX = kind === "purpose" ? 24 : 22;
+    const paddingTop = kind === "purpose" ? 22 : 20;
+    const separatorGap = kpiLines.length ? 14 : 0;
     const separatorY = paddingTop + titleLines.length * titleLineHeight + separatorGap;
-    const kpiTop = separatorY + (kpiLines.length ? 22 : 0);
+    const kpiTop = separatorY + (kpiLines.length ? 18 : 0);
     const height = Math.max(
-      kind === "purpose" ? 150 : 118,
+      kind === "purpose" ? 158 : kind === "change" ? 150 : 126,
       paddingTop +
         titleLines.length * titleLineHeight +
-        (kpiLines.length ? 22 + kpiLines.length * kpiLineHeight : 0) +
-        26
+        (kpiLines.length ? 18 + kpiLines.length * kpiLineHeight : 0) +
+        28
     );
 
     return {
@@ -604,8 +610,8 @@ function buildTemplateSvg(diagramData) {
   const goalCenterY = goalY + goalCard.height / 2;
   renderCards.push({ x: columns.goalX, y: goalY, card: goalCard });
 
-  const purposeTrunkX = columns.goalX + goalCard.width + 48;
-  const primaryJoinX = columns.primaryX - 34;
+  const purposeTrunkX = columns.goalX + goalCard.width + 42;
+  const primaryJoinX = columns.primaryX - 30;
 
   const svgHeight = Math.max(cursorY + layout.bottomPad, goalY + goalCard.height + layout.bottomPad);
 
@@ -618,7 +624,7 @@ function buildTemplateSvg(diagramData) {
       .join("");
 
   const renderCardMarkup = ({ x, y, card }) => {
-    const radius = card.kind === "purpose" ? 18 : 16;
+    const radius = card.kind === "purpose" ? 20 : 18;
     const fill =
       card.kind === "purpose" ? theme.purposeFill : card.kind === "change" ? theme.changeFill : theme.cardFill;
     const stroke =
@@ -631,7 +637,7 @@ function buildTemplateSvg(diagramData) {
       ? `<rect x="${x}" y="${y}" width="6" height="${card.height}" rx="${radius}" fill="${card.accentColor}" />`
       : "";
     const separator = card.kpiLines.length
-      ? `<line x1="${x + card.paddingX}" y1="${y + card.separatorY}" x2="${x + card.width - card.paddingX}" y2="${y + card.separatorY}" stroke="${separatorColor}" stroke-width="1"/>`
+      ? `<line x1="${x + card.paddingX}" y1="${y + card.separatorY}" x2="${x + card.width - card.paddingX}" y2="${y + card.separatorY}" stroke="${separatorColor}" stroke-width="1.25"/>`
       : "";
 
     return `
@@ -649,16 +655,16 @@ function buildTemplateSvg(diagramData) {
 
   const headerY = layout.topPad;
   const headers = [
-    { x: 76, label: "เป้าหมาย (AIM)", bg: theme.headerPurposeBg, color: "#3343c4" },
-    { x: 540, label: "PRIMARY DRIVERS", bg: theme.headerBg, color: theme.headerText },
-    { x: 980, label: "SECONDARY DRIVERS", bg: theme.headerSecondaryBg, color: theme.headerSecondaryText },
-    { x: 1430, label: "CHANGE IDEAS", bg: theme.headerChangeBg, color: theme.headerChangeText },
+    { x: headerX.goal, label: "เป้าหมาย (AIM)", bg: theme.headerPurposeBg, color: "#3343c4" },
+    { x: headerX.primary, label: "PRIMARY DRIVERS", bg: theme.headerBg, color: theme.headerText },
+    { x: headerX.secondary, label: "SECONDARY DRIVERS", bg: theme.headerSecondaryBg, color: theme.headerSecondaryText },
+    { x: headerX.change, label: "CHANGE IDEAS", bg: theme.headerChangeBg, color: theme.headerChangeText },
   ]
     .map(
       (header) => `
         <g>
-          <rect x="${header.x}" y="${headerY}" width="${headerWidth}" height="${layout.headerH}" rx="8" fill="${header.bg}" />
-          <text x="${header.x + headerWidth / 2}" y="${headerY + 29}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="${header.color}" letter-spacing="0.3">${escapeSvgText(header.label)}</text>
+          <rect x="${header.x}" y="${headerY}" width="${headerWidth}" height="${layout.headerH}" rx="10" fill="${header.bg}" />
+          <text x="${header.x + headerWidth / 2}" y="${headerY + 30}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="${header.color}" letter-spacing="0.3">${escapeSvgText(header.label)}</text>
         </g>
       `
     )
@@ -672,7 +678,7 @@ function buildTemplateSvg(diagramData) {
       ${primaryCenters
         .map(
           (center) =>
-            `<path d="M ${primaryJoinX} ${center.y} H ${columns.primaryX}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />`
+            `<path d="M ${primaryJoinX} ${center.y} H ${columns.primaryX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
         )
         .join("")}
     `
@@ -681,7 +687,7 @@ function buildTemplateSvg(diagramData) {
   const secondaryConnectorMarkup = secondaryConnectors
     .map(
       ({ from, to }) =>
-        `<path d="M ${from.x} ${from.y} H ${from.x + 30} V ${to.y} H ${to.x}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`
+        `<path d="M ${from.x} ${from.y} H ${from.x + 26} V ${to.y} H ${to.x}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`
     )
     .join("");
 
@@ -691,12 +697,12 @@ function buildTemplateSvg(diagramData) {
       const joinX = from.x + 46;
       const vertical = to.length > 1 ? `M ${joinX} ${to[0].y} V ${to[to.length - 1].y}` : "";
       return `
-        <path d="M ${from.x} ${from.y} H ${joinX}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />
-        <path d="${vertical}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />
+        <path d="M ${from.x} ${from.y} H ${joinX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />
+        <path d="${vertical}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />
         ${to
           .map(
             (target) =>
-              `<path d="M ${joinX} ${target.y} H ${target.x}" fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" />`
+              `<path d="M ${joinX} ${target.y} H ${target.x}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
           )
           .join("")}
       `;
@@ -707,10 +713,10 @@ function buildTemplateSvg(diagramData) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${layout.canvasWidth}" height="${svgHeight}" viewBox="0 0 ${layout.canvasWidth} ${svgHeight}" role="img" aria-label="Driver Diagram">
   <defs>
     <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#94a3b8" flood-opacity="0.12"/>
+      <feDropShadow dx="0" dy="5" stdDeviation="9" flood-color="#94a3b8" flood-opacity="0.11"/>
     </filter>
     <filter id="goalShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#312e81" flood-opacity="0.24"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#312e81" flood-opacity="0.2"/>
     </filter>
   </defs>
   <rect width="100%" height="100%" fill="${theme.bg}" />
