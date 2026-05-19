@@ -31,48 +31,6 @@ const defaultData = {
   ],
 };
 
-function flattenDiagramRows(data) {
-  const rows = [
-    {
-      level: "Purpose",
-      title: data.purpose.title,
-      kpi: data.purpose.kpi,
-      parent: "-",
-    },
-  ];
-
-  data.primaryDrivers.forEach((pd, pi) => {
-    const primaryLabel = `Primary Driver ${pi + 1}`;
-    rows.push({
-      level: primaryLabel,
-      title: pd.title,
-      kpi: pd.kpi,
-      parent: "Purpose",
-    });
-
-    pd.secondaryDrivers.forEach((sd, si) => {
-      const secondaryLabel = `Secondary Driver ${pi + 1}.${si + 1}`;
-      rows.push({
-        level: secondaryLabel,
-        title: sd.title,
-        kpi: sd.kpi,
-        parent: primaryLabel,
-      });
-
-      sd.changeIdeas.forEach((ci, cii) => {
-        rows.push({
-          level: `Change Idea ${pi + 1}.${si + 1}.${cii + 1}`,
-          title: ci.title,
-          kpi: ci.kpi,
-          parent: secondaryLabel,
-        });
-      });
-    });
-  });
-
-  return rows;
-}
-
 function safeText(text = "") {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -86,85 +44,6 @@ function safeText(text = "") {
 
 function formatNodeLabel(heading, value) {
   return `"\`${heading}\n${safeText(value)}\`"`;
-}
-
-function getSvgDimensions(svgMarkup) {
-  const viewBoxMatch = svgMarkup.match(/viewBox="[\d.\s-]+"/);
-  if (viewBoxMatch) {
-    const parts = viewBoxMatch[0]
-      .replace('viewBox="', "")
-      .replace('"', "")
-      .trim()
-      .split(/\s+/)
-      .map(Number);
-
-    if (parts.length === 4 && parts.every((value) => Number.isFinite(value))) {
-      return { width: parts[2], height: parts[3] };
-    }
-  }
-
-  const widthMatch = svgMarkup.match(/width="([\d.]+)"/);
-  const heightMatch = svgMarkup.match(/height="([\d.]+)"/);
-  return {
-    width: Number(widthMatch?.[1]) || 1400,
-    height: Number(heightMatch?.[1]) || 500,
-  };
-}
-
-async function svgToPngData(svgMarkup) {
-  if (!svgMarkup) {
-    return null;
-  }
-
-  const { width, height } = getSvgDimensions(svgMarkup);
-  const targetWidth = Math.min(1400, Math.max(900, Math.round(width)));
-  const targetHeight = Math.max(320, Math.round((height / width) * targetWidth));
-  const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-  const objectUrl = URL.createObjectURL(svgBlob);
-
-  try {
-    const image = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Unable to convert diagram preview into an image."));
-      img.src = objectUrl;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Canvas rendering is unavailable in this browser.");
-    }
-
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    const pngBlob = await new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("Unable to export the diagram image."));
-          }
-        },
-        "image/png",
-        1
-      );
-    });
-
-    return {
-      bytes: await pngBlob.arrayBuffer(),
-      width: canvas.width,
-      height: canvas.height,
-    };
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
 }
 
 function TextAreaField({ label, value, onChange, icon }) {
@@ -498,22 +377,6 @@ function App() {
         right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
       };
 
-      const makeTextParagraph = (text, options = {}) =>
-        new Paragraph({
-          alignment: options.alignment,
-          spacing: options.spacing || { after: 120 },
-          children: [
-            new TextRun({
-              text,
-              bold: options.bold,
-              italics: options.italics,
-              color: options.color,
-              font: bodyFont,
-              size: options.size || sizeBody,
-            }),
-          ],
-        });
-
       const makeKpiRuns = (kpiText) => {
         const [first, ...rest] = String(kpiText || "").split("\n").filter((line) => line.trim());
         const lines = [first, ...rest].filter(Boolean);
@@ -648,11 +511,19 @@ function App() {
                     font: bodyFont,
                     size: sizeBody,
                   }),
-                  new TextRun({
-                    text: ` ${data.purpose.kpi.replace(/\n/g, " | ")}`,
-                    font: bodyFont,
-                    size: sizeBody,
-                  }),
+                  ...String(data.purpose.kpi || "")
+                    .split("\n")
+                    .filter((line) => line.trim())
+                    .flatMap((line, index) => [
+                      new TextRun({
+                        text: index === 0 ? ` ${line}` : line,
+                        font: bodyFont,
+                        size: sizeBody,
+                      }),
+                      ...(index < String(data.purpose.kpi || "").split("\n").filter((item) => item.trim()).length - 1
+                        ? [new TextRun({ break: 1, font: bodyFont, size: sizeBody })]
+                        : []),
+                    ]),
                 ],
               }),
               new Paragraph({
