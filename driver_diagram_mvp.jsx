@@ -217,6 +217,7 @@ function App() {
   const [codeSyncError, setCodeSyncError] = useState("");
   const [codeSyncMessage, setCodeSyncMessage] = useState("");
   const [exportingDocx, setExportingDocx] = useState(false);
+  const [exportError, setExportError] = useState("");
   const [view, setView] = useState("preview");
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
@@ -426,28 +427,52 @@ function App() {
     setTimeout(() => setCopied(false), 1200);
   };
 
-  const downloadMermaid = () => {
-    const blob = new Blob([codeInput], { type: "text/plain" });
+  const triggerBlobDownload = (blob, filename) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "driver-diagram.mmd";
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const saveBlobWithPicker = async (blob, filename, options = {}) => {
+    if (typeof window.showSaveFilePicker !== "function") {
+      triggerBlobDownload(blob, filename);
+      return;
+    }
+
+    const handle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [
+        {
+          description: options.description || "File",
+          accept: {
+            [blob.type || "application/octet-stream"]: options.extensions || [`.${filename.split(".").pop()}`],
+          },
+        },
+      ],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  };
+
+  const downloadMermaid = () => {
+    const blob = new Blob([codeInput], { type: "text/plain;charset=utf-8" });
+    triggerBlobDownload(blob, "driver-diagram.mmd");
   };
 
   const downloadSvg = () => {
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "driver-diagram.svg";
-    a.click();
-    URL.revokeObjectURL(url);
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    triggerBlobDownload(blob, "driver-diagram.svg");
   };
 
   const downloadDocx = async () => {
     try {
+      setExportError("");
       setExportingDocx(true);
       const {
         AlignmentType,
@@ -458,8 +483,8 @@ function App() {
         Table,
         TableCell,
         TableRow,
-        TableVerticalAlign,
         TextRun,
+        VerticalAlign,
         WidthType,
       } = await import("docx");
 
@@ -494,7 +519,7 @@ function App() {
       const makeContentCell = (title, kpi, rowSpan = 1) =>
         new TableCell({
           rowSpan,
-          verticalAlign: TableVerticalAlign.CENTER,
+          verticalAlign: VerticalAlign.CENTER,
           width: { size: 33, type: WidthType.PERCENTAGE },
           margins: { top: 120, bottom: 120, left: 120, right: 120 },
           borders: borderAll,
@@ -531,7 +556,7 @@ function App() {
                 borders: borderAll,
                 shading: { fill: "F0F0F0" },
                 margins: { top: 120, bottom: 120, left: 120, right: 120 },
-                verticalAlign: TableVerticalAlign.CENTER,
+                verticalAlign: VerticalAlign.CENTER,
                 children: [
                   new Paragraph({
                     alignment: AlignmentType.CENTER,
@@ -651,13 +676,21 @@ function App() {
         ],
       });
 
-      const blob = await Packer.toBlob(doc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "driver-diagram.docx";
-      a.click();
-      URL.revokeObjectURL(url);
+      const docBlob = await Packer.toBlob(doc);
+      const blob =
+        docBlob.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          ? docBlob
+          : new Blob([docBlob], {
+              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            });
+      await saveBlobWithPicker(blob, "driver-diagram.docx", {
+        description: "Word Document",
+        extensions: [".docx"],
+      });
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        setExportError(error?.message || "Unable to export .docx right now.");
+      }
     } finally {
       setExportingDocx(false);
     }
@@ -713,6 +746,7 @@ function App() {
               </button>
             </div>
           </div>
+          {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
