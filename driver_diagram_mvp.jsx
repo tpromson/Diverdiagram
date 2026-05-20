@@ -16,6 +16,8 @@ import {
   RefreshCw,
   Database,
   FilePlus2,
+  Mail,
+  LogOut,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
@@ -809,6 +811,13 @@ function App() {
   const [data, setData] = useState(defaultData);
   const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
   const [currentDiagramId, setCurrentDiagramId] = useState("");
+  const [session, setSession] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [authError, setAuthError] = useState("");
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [loadingSavedDiagrams, setLoadingSavedDiagrams] = useState(false);
   const [savingDiagram, setSavingDiagram] = useState(false);
@@ -830,12 +839,14 @@ function App() {
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
   const codeSourceRef = useRef("form");
+  const previousUserIdRef = useRef("");
   const lastSavedSnapshotRef = useRef(buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData)));
   const mermaidCode = useMemo(() => buildMermaidCode(data), [data]);
   const currentSnapshot = useMemo(
     () => buildDiagramSnapshot(documentTitle, data, codeInput),
     [documentTitle, data, codeInput]
   );
+  const isAuthenticated = Boolean(currentUser?.id);
 
   useEffect(() => {
     if (codeSourceRef.current === "form") {
@@ -844,7 +855,7 @@ function App() {
   }, [mermaidCode]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !currentDiagramId) {
+    if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
       setAutoSaveState("idle");
       return;
     }
@@ -857,10 +868,108 @@ function App() {
     if (!savingDiagram) {
       setAutoSaveState("saved");
     }
-  }, [currentSnapshot, currentDiagramId, savingDiagram]);
+  }, [currentSnapshot, currentDiagramId, isAuthenticated, savingDiagram]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
+      setAuthLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncAuthState = (nextSession) => {
+      if (cancelled) return;
+
+      const nextUser = nextSession?.user ?? null;
+      const nextUserId = nextUser?.id || "";
+      const previousUserId = previousUserIdRef.current;
+
+      previousUserIdRef.current = nextUserId;
+      setSession(nextSession);
+      setCurrentUser(nextUser);
+
+      if (previousUserId && previousUserId !== nextUserId) {
+        setCurrentDiagramId("");
+        setSavedDiagrams([]);
+        setAutoSaveState("idle");
+        setStorageMessage("");
+        setStorageError("");
+      }
+
+      if (!nextUserId) {
+        setCurrentDiagramId("");
+        setSavedDiagrams([]);
+        setAutoSaveState("idle");
+      }
+    };
+
+    const initializeAuth = async () => {
+      setAuthLoading(true);
+
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+
+      if (tokenHash) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type || "email",
+        });
+
+        if (cancelled) return;
+
+        if (error) {
+          setAuthError(error.message || "Unable to verify your sign-in link.");
+        } else {
+          setAuthError("");
+          setAuthMessage("Signed in successfully.");
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      const { data: authData, error } = await supabase.auth.getSession();
+
+      if (cancelled) return;
+
+      if (error) {
+        setAuthError(error.message || "Unable to restore your session.");
+      } else {
+        syncAuthState(authData.session);
+      }
+
+      setAuthLoading(false);
+    };
+
+    initializeAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      syncAuthState(nextSession);
+      setAuthLoading(false);
+
+      if (event === "SIGNED_IN") {
+        setAuthError("");
+        setAuthMessage("Signed in successfully.");
+      }
+
+      if (event === "SIGNED_OUT") {
+        setAuthError("");
+        setAuthMessage("Signed out.");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !currentUser?.id) {
+      setSavedDiagrams([]);
+      setLoadingSavedDiagrams(false);
       return;
     }
 
@@ -887,10 +996,10 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase || !currentDiagramId) {
+    if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
       return;
     }
     if (currentSnapshot === lastSavedSnapshotRef.current) {
@@ -907,7 +1016,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSnapshot, currentDiagramId, savingDiagram, loadingSavedDiagrams, openingDiagramId, deletingDiagramId]);
+  }, [currentSnapshot, currentDiagramId, deletingDiagramId, isAuthenticated, loadingSavedDiagrams, openingDiagramId, savingDiagram]);
 
   useEffect(() => {
     let cancelled = false;
@@ -967,6 +1076,10 @@ function App() {
   const refreshSavedDiagrams = async () => {
     if (!isSupabaseConfigured || !supabase) {
       setStorageError("Add Supabase env vars before loading saved diagrams.");
+      return;
+    }
+    if (!currentUser?.id) {
+      setStorageError("Sign in before loading saved diagrams.");
       return;
     }
 
@@ -1146,6 +1259,10 @@ function App() {
       setStorageError("Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY before saving.");
       return;
     }
+    if (!currentUser?.id) {
+      setStorageError("Sign in before saving to the database.");
+      return;
+    }
 
     const normalizedCode = sanitizeMermaidCode(codeInput);
     const normalizedData = normalizeStoredDiagramData(data);
@@ -1157,6 +1274,7 @@ function App() {
     }
 
     const payload = {
+      user_id: currentUser.id,
       title,
       purpose_title: normalizedData.purpose.title,
       purpose_kpi: normalizedData.purpose.kpi,
@@ -1208,6 +1326,10 @@ function App() {
       setStorageError("Add Supabase env vars before opening saved diagrams.");
       return;
     }
+    if (!currentUser?.id) {
+      setStorageError("Sign in before opening saved diagrams.");
+      return;
+    }
 
     setOpeningDiagramId(diagramId);
     setStorageError("");
@@ -1243,6 +1365,10 @@ function App() {
   const deleteDiagram = async (diagramId) => {
     if (!isSupabaseConfigured || !supabase) {
       setStorageError("Add Supabase env vars before deleting saved diagrams.");
+      return;
+    }
+    if (!currentUser?.id) {
+      setStorageError("Sign in before deleting saved diagrams.");
       return;
     }
 
@@ -1577,6 +1703,55 @@ function App() {
     }
   };
 
+  const handleSignIn = async (event) => {
+    event.preventDefault();
+
+    if (!isSupabaseConfigured || !supabase) {
+      setAuthError("Add Supabase env vars before signing in.");
+      return;
+    }
+
+    const email = authEmail.trim();
+    if (!email) {
+      setAuthError("Enter your email before requesting a sign-in link.");
+      return;
+    }
+
+    setAuthSubmitting(true);
+    setAuthError("");
+    setAuthMessage("");
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}${window.location.pathname}`,
+      },
+    });
+
+    if (error) {
+      setAuthError(error.message || "Unable to send the sign-in link.");
+    } else {
+      setAuthMessage("Check your email for the sign-in link.");
+    }
+
+    setAuthSubmitting(false);
+  };
+
+  const handleSignOut = async () => {
+    if (!supabase) return;
+
+    setAuthSubmitting(true);
+    setAuthError("");
+    setAuthMessage("");
+
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setAuthError(error.message || "Unable to sign out right now.");
+    }
+
+    setAuthSubmitting(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -1585,7 +1760,51 @@ function App() {
             <div className="space-y-3">
               <div>
               <h1 className="text-2xl font-bold tracking-tight">Driver Diagram MVP</h1>
-                <p className="text-sm text-slate-500">สร้าง Driver Diagram พร้อม KPI ทุกระดับ พร้อม Live Preview, Export, และบันทึกขึ้นฐานข้อมูล</p>
+                <p className="text-sm text-slate-500">สร้าง Driver Diagram พร้อม KPI ทุกระดับ พร้อม Live Preview, Export, และบันทึกขึ้นฐานข้อมูลแบบแยกตามผู้ใช้</p>
+              </div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                {isAuthenticated ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">{currentUser?.email || session?.user?.email || "Signed-in user"}</div>
+                      <p className="mt-1 text-sm text-slate-500">Saved diagrams in this workspace are only visible to this account.</p>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      disabled={authSubmitting}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                    >
+                      <LogOut size={16} /> {authSubmitting ? "Signing out..." : "Sign out"}
+                    </button>
+                  </div>
+                ) : (
+                  <form className="space-y-3" onSubmit={handleSignIn}>
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Private Cloud Save</div>
+                      <p className="mt-1 text-sm text-slate-500">Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace.</p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                      />
+                      <button
+                        type="submit"
+                        disabled={authSubmitting || authLoading}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        <Mail size={16} /> {authSubmitting ? "Sending..." : "Email Sign-In Link"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
+                  </form>
+                )}
+                {authError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{authError}</div> : null}
+                {!authError && authMessage ? <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{authMessage}</div> : null}
               </div>
               <label className="block max-w-xl space-y-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Document Title</span>
@@ -1609,10 +1828,10 @@ function App() {
               </button>
               <button
                 onClick={saveDiagram}
-                disabled={savingDiagram}
+                disabled={savingDiagram || !isAuthenticated}
                 className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
               >
-                <Save size={16} /> {savingDiagram ? "Saving..." : "Save"}
+                <Save size={16} /> {savingDiagram ? "Saving..." : isAuthenticated ? "Save" : "Sign in to save"}
               </button>
               <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                 <Copy size={16} /> {copied ? "Copied" : "Copy Mermaid"}
@@ -1636,6 +1855,9 @@ function App() {
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-medium ${isSupabaseConfigured ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
               <Database size={15} />
               {isSupabaseConfigured ? "Supabase connected" : "Supabase env not configured yet"}
+            </div>
+            <div className={`rounded-full px-3 py-1.5 ${isAuthenticated ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
+              {isAuthenticated ? "Private workspace active" : authLoading ? "Checking session..." : "Sign in for private cloud save"}
             </div>
             {isSupabaseConfigured && currentDiagramId ? (
               <div
@@ -1671,7 +1893,7 @@ function App() {
                 </div>
                 <button
                   onClick={refreshSavedDiagrams}
-                  disabled={!isSupabaseConfigured || loadingSavedDiagrams}
+                  disabled={!isSupabaseConfigured || !isAuthenticated || loadingSavedDiagrams}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
@@ -1681,6 +1903,10 @@ function App() {
                 {!isSupabaseConfigured ? (
                   <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                     ใส่ค่าใน <code>.env.local</code> ตามไฟล์ <code>.env.example</code> ก่อน ระบบถึงจะบันทึกและเปิดรายการจากฐานข้อมูลได้
+                  </div>
+                ) : !isAuthenticated ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">
+                    Sign in first, then this panel will show only the diagrams saved by your account.
                   </div>
                 ) : loadingSavedDiagrams ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">Loading saved diagrams...</div>
