@@ -70,6 +70,7 @@ for each row
 execute function public.set_updated_at();
 
 revoke all on table public.driver_diagrams from anon;
+grant select on table public.driver_diagrams to anon;
 grant usage, select on all sequences in schema public to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to service_role;
