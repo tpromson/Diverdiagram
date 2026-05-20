@@ -33,6 +33,8 @@ import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const SHARE_LINK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_VERSION_HISTORY = 50;
+const MAX_AUTOSAVE_VERSIONS = 10;
 
 const defaultData = {
   purpose: {
@@ -960,6 +962,7 @@ function App() {
   const [versionHistory, setVersionHistory] = useState([]);
   const [loadingVersionHistory, setLoadingVersionHistory] = useState(false);
   const [restoringVersionId, setRestoringVersionId] = useState("");
+  const [restoringAndSavingVersionId, setRestoringAndSavingVersionId] = useState("");
   const renderId = useRef(0);
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
@@ -1391,6 +1394,49 @@ function App() {
     setLoadingVersionHistory(false);
   };
 
+  const pruneDiagramVersions = async (diagramId) => {
+    if (!supabase || !currentUser?.id || !diagramId) return null;
+
+    const { data: extraAutosaves, error: autosaveError } = await supabase
+      .from("driver_diagram_versions")
+      .select("id")
+      .eq("diagram_id", diagramId)
+      .eq("save_source", "autosave")
+      .order("created_at", { ascending: false })
+      .range(MAX_AUTOSAVE_VERSIONS, MAX_AUTOSAVE_VERSIONS + 99);
+
+    if (autosaveError) return autosaveError;
+
+    if (extraAutosaves?.length) {
+      const { error } = await supabase
+        .from("driver_diagram_versions")
+        .delete()
+        .in("id", extraAutosaves.map((item) => item.id));
+
+      if (error) return error;
+    }
+
+    const { data: extraVersions, error: totalError } = await supabase
+      .from("driver_diagram_versions")
+      .select("id")
+      .eq("diagram_id", diagramId)
+      .order("created_at", { ascending: false })
+      .range(MAX_VERSION_HISTORY, MAX_VERSION_HISTORY + 199);
+
+    if (totalError) return totalError;
+
+    if (extraVersions?.length) {
+      const { error } = await supabase
+        .from("driver_diagram_versions")
+        .delete()
+        .in("id", extraVersions.map((item) => item.id));
+
+      if (error) return error;
+    }
+
+    return null;
+  };
+
   const createDiagramVersion = async ({ diagramId, title, diagramData, mermaidCode, saveSource }) => {
     if (!supabase || !currentUser?.id || !diagramId) return null;
 
@@ -1403,7 +1449,24 @@ function App() {
       save_source: saveSource,
     });
 
-    return error || null;
+    if (error) return error;
+
+    return pruneDiagramVersions(diagramId);
+  };
+
+  const applyDiagramToEditor = ({ title, diagramData, mermaidCode }) => {
+    const normalizedData = normalizeStoredDiagramData(diagramData);
+    const nextTitle = title || defaultDocumentTitle;
+    const nextCode = sanitizeMermaidCode(mermaidCode || buildMermaidCode(normalizedData));
+
+    codeSourceRef.current = "code";
+    setDocumentTitle(nextTitle);
+    setData(normalizedData);
+    setCodeInput(nextCode);
+    setCodeSyncError("");
+    setCodeSyncMessage("");
+
+    return { normalizedData, nextTitle, nextCode };
   };
 
   const refreshSavedDiagrams = async () => {
@@ -1664,7 +1727,9 @@ function App() {
           mermaidCode: normalizedCode,
           saveSource: isAuto ? "autosave" : currentDiagramId ? "manual" : "create",
         });
-        if (!versionError) {
+        if (versionError) {
+          setStorageError("Saved the diagram, but could not record version history.");
+        } else {
           lastVersionSnapshotRef.current = snapshot;
           await refreshVersionHistory(row.id);
         }
@@ -1707,15 +1772,13 @@ function App() {
       return;
     }
 
-    const normalizedData = normalizeStoredDiagramData(row.diagram_data);
-    const nextTitle = row.title || defaultDocumentTitle;
-    const nextCode = sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData));
+    const { normalizedData, nextTitle, nextCode } = applyDiagramToEditor({
+      title: row.title,
+      diagramData: row.diagram_data,
+      mermaidCode: row.mermaid_code,
+    });
 
-    codeSourceRef.current = "code";
     setCurrentDiagramId(row.id);
-    setDocumentTitle(nextTitle);
-    setData(normalizedData);
-    setCodeInput(nextCode);
     lastSavedSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
     lastVersionSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
     upsertSavedDiagram(row);
@@ -1849,13 +1912,16 @@ function App() {
     }
 
     upsertSavedDiagram(row);
-    await createDiagramVersion({
+    const versionError = await createDiagramVersion({
       diagramId: row.id,
       title: row.title,
       diagramData: normalizeStoredDiagramData(sourceRow.diagram_data),
       mermaidCode: sanitizeMermaidCode(sourceRow.mermaid_code || buildMermaidCode(sourceRow.diagram_data || defaultData)),
       saveSource: "duplicate",
     });
+    if (versionError) {
+      setStorageError("Duplicated the diagram, but could not create the first version snapshot.");
+    }
     setStorageMessage("Created a duplicate.");
   };
 
@@ -1986,23 +2052,62 @@ function App() {
     setStorageMessage("Share link revoked.");
   };
 
-  const restoreVersion = async (version) => {
+  const restoreVersion = async (version, { saveImmediately = false } = {}) => {
     setRestoringVersionId(version.id);
     setStorageError("");
     try {
-      const normalizedData = normalizeStoredDiagramData(version.diagram_data);
-      const nextTitle = version.title || defaultDocumentTitle;
-      const nextCode = sanitizeMermaidCode(version.mermaid_code || buildMermaidCode(normalizedData));
+      const { normalizedData, nextTitle, nextCode } = applyDiagramToEditor({
+        title: version.title,
+        diagramData: version.diagram_data,
+        mermaidCode: version.mermaid_code,
+      });
 
-      codeSourceRef.current = "code";
-      setDocumentTitle(nextTitle);
-      setData(normalizedData);
-      setCodeInput(nextCode);
-      setCodeSyncError("");
-      setCodeSyncMessage("");
-      setStorageMessage("Version restored to the editor. Auto-save will create a new latest version.");
+      if (saveImmediately && currentDiagramId && supabase && currentUser?.id) {
+        setRestoringAndSavingVersionId(version.id);
+        const payload = {
+          title: nextTitle,
+          purpose_title: normalizedData.purpose.title,
+          purpose_kpi: normalizedData.purpose.kpi,
+          diagram_data: normalizedData,
+          mermaid_code: nextCode,
+        };
+
+        const { data: row, error } = await supabase
+          .from("driver_diagrams")
+          .update(payload)
+          .eq("id", currentDiagramId)
+          .select(savedDiagramSelectFields)
+          .single();
+
+        if (error || !row) {
+          setStorageError(error?.message || "Unable to restore this version to the database.");
+          return;
+        }
+
+        lastSavedSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
+        const versionError = await createDiagramVersion({
+          diagramId: row.id,
+          title: row.title,
+          diagramData: normalizedData,
+          mermaidCode: nextCode,
+          saveSource: "restore",
+        });
+        if (versionError) {
+          setStorageError("Restored the diagram, but could not record the restore in version history.");
+        } else {
+          lastVersionSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
+          await refreshVersionHistory(row.id);
+        }
+        upsertSavedDiagram(row);
+        setAutoSaveState("saved");
+        setStorageMessage("Version restored and saved to the database.");
+        return;
+      }
+
+      setStorageMessage("Version restored to the editor only. Save or wait for auto-save to make it the latest version.");
     } finally {
       setRestoringVersionId("");
+      setRestoringAndSavingVersionId("");
     }
   };
 
@@ -2901,7 +3006,7 @@ function App() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Version History</h2>
-                  <p className="text-sm text-slate-500">ย้อนกลับไปยัง snapshot ล่าสุดของเอกสารที่กำลังเปิดอยู่ได้</p>
+                  <p className="text-sm text-slate-500">ย้อนกลับไปยัง snapshot ล่าสุดของเอกสารที่กำลังเปิดอยู่ได้ โดยเก็บ autosave ล่าสุด 10 รายการ และรวมไม่เกิน 50 รายการต่อเอกสาร</p>
                 </div>
                 <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
                   {currentDiagramId ? `${versionHistory.length} versions` : "Open a saved diagram"}
@@ -2935,13 +3040,22 @@ function App() {
                           Saved: {formatSavedDateTime(version.created_at)}
                         </div>
                       </div>
-                      <button
-                        onClick={() => restoreVersion(version)}
-                        disabled={restoringVersionId === version.id}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-                      >
-                        <History size={15} /> {restoringVersionId === version.id ? "Restoring..." : "Restore"}
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => restoreVersion(version)}
+                          disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          <History size={15} /> {restoringVersionId === version.id ? "Restoring..." : "Load to editor"}
+                        </button>
+                        <button
+                          onClick={() => restoreVersion(version, { saveImmediately: true })}
+                          disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          <Save size={15} /> {restoringAndSavingVersionId === version.id ? "Saving..." : "Restore & Save"}
+                        </button>
+                      </div>
                     </div>
                   ))
                 ) : (
