@@ -25,6 +25,8 @@ import {
   Star,
   Archive,
   ArchiveRestore,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
@@ -881,6 +883,7 @@ function App() {
   const [renamingDiagramId, setRenamingDiagramId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
   const [renamingDiagram, setRenamingDiagram] = useState(false);
+  const [sharingDiagramId, setSharingDiagramId] = useState("");
   const [storageMessage, setStorageMessage] = useState("");
   const [storageError, setStorageError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -892,6 +895,9 @@ function App() {
   const [view, setView] = useState("preview");
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
+  const [sharedView, setSharedView] = useState(null);
+  const [sharedViewLoading, setSharedViewLoading] = useState(false);
+  const [sharedViewError, setSharedViewError] = useState("");
   const renderId = useRef(0);
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
@@ -904,6 +910,7 @@ function App() {
     [documentTitle, data, codeInput]
   );
   const isAuthenticated = Boolean(currentUser?.id);
+  const isReadOnlySharedView = Boolean(sharedView);
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
     const scoped = savedDiagrams.filter((item) => {
@@ -925,6 +932,66 @@ function App() {
       setCodeInput(mermaidCode);
     }
   }, [mermaidCode]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get("share");
+
+    if (!shareId) {
+      setSharedView(null);
+      setSharedViewError("");
+      setSharedViewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSharedDiagram = async () => {
+      setSharedViewLoading(true);
+      setSharedViewError("");
+
+      const { data: row, error } = await supabase
+        .from("driver_diagrams")
+        .select("*")
+        .eq("share_id", shareId)
+        .is("share_revoked_at", null)
+        .single();
+
+      if (cancelled) return;
+
+      if (error || !row) {
+        setSharedView(null);
+        setSharedViewError(error?.message || "This shared link is unavailable.");
+        setSharedViewLoading(false);
+        return;
+      }
+
+      const normalizedData = normalizeStoredDiagramData(row.diagram_data);
+      const nextTitle = row.title || defaultDocumentTitle;
+      const nextCode = sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData));
+
+      codeSourceRef.current = "code";
+      setSharedView(row);
+      setCurrentDiagramId("");
+      setDocumentTitle(nextTitle);
+      setData(normalizedData);
+      setCodeInput(nextCode);
+      setAutoSaveState("idle");
+      setStorageMessage("");
+      setStorageError("");
+      setSharedViewLoading(false);
+    };
+
+    loadSharedDiagram();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
@@ -1057,7 +1124,7 @@ function App() {
       setLoadingSavedDiagrams(true);
       const { data: rows, error } = await supabase
         .from("driver_diagrams")
-        .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+        .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
         .order("updated_at", { ascending: false });
 
       if (cancelled) return;
@@ -1173,7 +1240,7 @@ function App() {
     setLoadingSavedDiagrams(true);
     const { data: rows, error } = await supabase
       .from("driver_diagrams")
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -1361,14 +1428,14 @@ function App() {
       return;
     }
 
-    const payload = {
-      user_id: currentUser.id,
-      title,
-      purpose_title: normalizedData.purpose.title,
-      purpose_kpi: normalizedData.purpose.kpi,
-      diagram_data: normalizedData,
-      mermaid_code: normalizedCode,
-    };
+      const payload = {
+        user_id: currentUser.id,
+        title,
+        purpose_title: normalizedData.purpose.title,
+        purpose_kpi: normalizedData.purpose.kpi,
+        diagram_data: normalizedData,
+        mermaid_code: normalizedCode,
+      };
 
     setSavingDiagram(true);
     if (isAuto) {
@@ -1384,12 +1451,12 @@ function App() {
           .from("driver_diagrams")
           .update(payload)
           .eq("id", currentDiagramId)
-          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
           .single()
       : supabase
           .from("driver_diagrams")
           .insert(payload)
-          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
           .single();
 
     const { data: row, error } = await query;
@@ -1522,7 +1589,7 @@ function App() {
       .from("driver_diagrams")
       .update({ title })
       .eq("id", diagramId)
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
       .single();
     setRenamingDiagram(false);
 
@@ -1573,7 +1640,7 @@ function App() {
         is_favorite: false,
         archived_at: null,
       })
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
       .single();
     setDuplicatingDiagramId("");
 
@@ -1597,7 +1664,7 @@ function App() {
       .from("driver_diagrams")
       .update({ is_favorite: !item.is_favorite })
       .eq("id", item.id)
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
       .single();
 
     if (error || !row) {
@@ -1621,7 +1688,7 @@ function App() {
       .from("driver_diagrams")
       .update({ archived_at: nextArchivedAt })
       .eq("id", item.id)
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
       .single();
 
     if (error || !row) {
@@ -1634,6 +1701,76 @@ function App() {
       startNewDiagram();
     }
     setStorageMessage(row.archived_at ? "Archived diagram." : "Restored diagram.");
+  };
+
+  const shareDiagram = async (item) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before sharing diagrams.");
+      return;
+    }
+
+    setSharingDiagramId(item.id);
+    setStorageError("");
+    let row = item;
+
+    if (!item.share_id || item.share_revoked_at) {
+      const { data, error } = await supabase
+        .from("driver_diagrams")
+        .update({
+          share_id: crypto.randomUUID(),
+          shared_at: new Date().toISOString(),
+          share_revoked_at: null,
+        })
+        .eq("id", item.id)
+        .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
+        .single();
+
+      if (error || !data) {
+        setSharingDiagramId("");
+        setStorageError(error?.message || "Unable to create a share link.");
+        return;
+      }
+
+      row = data;
+      upsertSavedDiagram(row);
+    }
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${row.share_id}`;
+    await navigator.clipboard.writeText(shareUrl);
+    setSharingDiagramId("");
+    setStorageMessage("Share link copied.");
+  };
+
+  const revokeShareDiagram = async (item) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before revoking share links.");
+      return;
+    }
+
+    setSharingDiagramId(item.id);
+    setStorageError("");
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .update({ share_revoked_at: new Date().toISOString() })
+      .eq("id", item.id)
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, share_revoked_at")
+      .single();
+    setSharingDiagramId("");
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to revoke this share link.");
+      return;
+    }
+
+    upsertSavedDiagram(row);
+    setStorageMessage("Share link revoked.");
+  };
+
+  const exitSharedView = () => {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setSharedView(null);
+    setSharedViewError("");
+    startNewDiagram();
   };
 
   const copyMermaid = async () => {
@@ -2000,6 +2137,120 @@ function App() {
     setAuthSubmitting(false);
   };
 
+  if (sharedViewLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+        <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+          <h1 className="text-2xl font-bold tracking-tight">Driver Diagram Shared View</h1>
+          <p className="mt-3 text-sm text-slate-500">Loading shared diagram...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sharedViewError) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+        <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
+          <h1 className="text-2xl font-bold tracking-tight">Driver Diagram Shared View</h1>
+          <div className="mt-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{sharedViewError}</div>
+          {isAuthenticated ? (
+            <button
+              onClick={exitSharedView}
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <ExternalLink size={16} /> Back to workspace
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isReadOnlySharedView) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">{documentTitle}</h1>
+                <p className="mt-2 text-sm text-slate-500">Shared read-only view. You can preview, inspect the Mermaid code, and export this diagram.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {isAuthenticated ? (
+                  <button
+                    onClick={exitSharedView}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <ExternalLink size={16} /> Back to workspace
+                  </button>
+                ) : null}
+                <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                  <Copy size={16} /> {copied ? "Copied" : "Copy Mermaid"}
+                </button>
+                <button onClick={downloadMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                  <Download size={16} /> .mmd
+                </button>
+                <button onClick={downloadSvg} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                  <Download size={16} /> .svg
+                </button>
+                <button
+                  onClick={downloadDocx}
+                  disabled={exportingDocx}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                >
+                  <Download size={16} /> {exportingDocx ? "Exporting..." : ".docx"}
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+              <div className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">Read-only shared link</div>
+              {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Shared: {formatSavedDateTime(sharedView.shared_at)}</div> : null}
+            </div>
+            {renderError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
+            {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
+          </header>
+
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold">Output</h2>
+              <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+                <button
+                  onClick={() => setView("preview")}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                >
+                  <Eye size={16} /> Preview
+                </button>
+                <button
+                  onClick={() => setView("code")}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                >
+                  <Code2 size={16} /> Code
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              {view === "preview" ? (
+                renderError ? (
+                  <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
+                ) : (
+                  <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: svg }} />
+                )
+              ) : (
+                <textarea
+                  value={codeInput}
+                  readOnly
+                  className="min-h-[420px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 font-mono text-sm text-slate-800 outline-none"
+                />
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -2259,6 +2510,7 @@ function App() {
                               {item.is_favorite ? <Star size={14} className="fill-amber-400 text-amber-500" /> : null}
                               <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
                               {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Archived</span> : null}
+                              {item.share_id && !item.share_revoked_at ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">Shared</span> : null}
                             </div>
                             <div className="mt-1 space-y-1 text-xs text-slate-500">
                               <div>Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</div>
@@ -2275,6 +2527,22 @@ function App() {
                           title="Open"
                         >
                           <FolderOpen size={16} />
+                        </button>
+                        <button
+                          onClick={() => shareDiagram(item)}
+                          disabled={sharingDiagramId === item.id}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                          title={item.share_id && !item.share_revoked_at ? "Copy share link" : "Create share link"}
+                        >
+                          <Link2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => revokeShareDiagram(item)}
+                          disabled={sharingDiagramId === item.id || !item.share_id || Boolean(item.share_revoked_at)}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+                          title="Revoke share link"
+                        >
+                          <X size={16} />
                         </button>
                         <button
                           onClick={() => toggleFavoriteDiagram(item)}

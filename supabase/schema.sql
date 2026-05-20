@@ -10,6 +10,9 @@ create table if not exists public.driver_diagrams (
   mermaid_code text not null,
   is_favorite boolean not null default false,
   archived_at timestamptz,
+  share_id uuid,
+  shared_at timestamptz,
+  share_revoked_at timestamptz,
   last_opened_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -27,10 +30,20 @@ alter table public.driver_diagrams
 alter table public.driver_diagrams
   add column if not exists archived_at timestamptz;
 
+alter table public.driver_diagrams
+  add column if not exists share_id uuid;
+
+alter table public.driver_diagrams
+  add column if not exists shared_at timestamptz;
+
+alter table public.driver_diagrams
+  add column if not exists share_revoked_at timestamptz;
+
 create index if not exists driver_diagrams_user_id_idx on public.driver_diagrams using btree (user_id);
 create index if not exists driver_diagrams_last_opened_at_idx on public.driver_diagrams using btree (last_opened_at desc);
 create index if not exists driver_diagrams_is_favorite_idx on public.driver_diagrams using btree (is_favorite desc);
 create index if not exists driver_diagrams_archived_at_idx on public.driver_diagrams using btree (archived_at desc);
+create unique index if not exists driver_diagrams_share_id_idx on public.driver_diagrams using btree (share_id) where share_id is not null;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -38,9 +51,9 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.is_favorite, new.archived_at)
+  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.is_favorite, new.archived_at, new.share_id, new.shared_at, new.share_revoked_at)
     is distinct from
-    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.is_favorite, old.archived_at) then
+    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.is_favorite, old.archived_at, old.share_id, old.shared_at, old.share_revoked_at) then
     new.updated_at = now();
   else
     new.updated_at = old.updated_at;
@@ -67,6 +80,7 @@ drop policy if exists "Public read driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public insert driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public update driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public delete driver diagrams" on public.driver_diagrams;
+drop policy if exists "Anyone can read shared driver diagrams" on public.driver_diagrams;
 
 drop policy if exists "Users can read their own driver diagrams" on public.driver_diagrams;
 create policy "Users can read their own driver diagrams"
@@ -74,6 +88,12 @@ on public.driver_diagrams
 for select
 to authenticated
 using ((select auth.uid()) = user_id);
+
+create policy "Anyone can read shared driver diagrams"
+on public.driver_diagrams
+for select
+to anon, authenticated
+using (share_id is not null and share_revoked_at is null);
 
 drop policy if exists "Users can insert their own driver diagrams" on public.driver_diagrams;
 create policy "Users can insert their own driver diagrams"
