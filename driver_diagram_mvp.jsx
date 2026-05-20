@@ -76,6 +76,39 @@ function formatSavedDateTime(value) {
   return value ? new Date(value).toLocaleString("th-TH") : "-";
 }
 
+function ensureDocumentMeta(selector, attributes) {
+  if (typeof document === "undefined") return null;
+
+  let element = document.head.querySelector(selector);
+  if (!element) {
+    element = document.createElement("meta");
+    Object.entries(attributes).forEach(([key, value]) => {
+      element.setAttribute(key, value);
+    });
+    document.head.appendChild(element);
+  }
+  return element;
+}
+
+function updateDocumentPresentation({ title, description }) {
+  if (typeof document === "undefined") return;
+
+  document.title = title;
+
+  [
+    ['meta[name="description"]', { name: "description" }, description],
+    ['meta[property="og:title"]', { property: "og:title" }, title],
+    ['meta[property="og:description"]', { property: "og:description" }, description],
+    ['meta[name="twitter:title"]', { name: "twitter:title" }, title],
+    ['meta[name="twitter:description"]', { name: "twitter:description" }, description],
+  ].forEach(([selector, attrs, content]) => {
+    const tag = ensureDocumentMeta(selector, attrs);
+    if (tag) {
+      tag.setAttribute("content", content);
+    }
+  });
+}
+
 function sortSavedDiagrams(items, sortKey) {
   const list = [...items];
 
@@ -898,6 +931,8 @@ function App() {
   const [sharedView, setSharedView] = useState(null);
   const [sharedViewLoading, setSharedViewLoading] = useState(false);
   const [sharedViewError, setSharedViewError] = useState("");
+  const [sharedOpenedAt, setSharedOpenedAt] = useState("");
+  const [lastSharedUrl, setLastSharedUrl] = useState("");
   const renderId = useRef(0);
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
@@ -945,6 +980,7 @@ function App() {
       setSharedView(null);
       setSharedViewError("");
       setSharedViewLoading(false);
+      setSharedOpenedAt("");
       return;
     }
 
@@ -983,6 +1019,7 @@ function App() {
       setAutoSaveState("idle");
       setStorageMessage("");
       setStorageError("");
+      setSharedOpenedAt(new Date().toISOString());
       setSharedViewLoading(false);
     };
 
@@ -992,6 +1029,39 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const sharedTitle = documentTitle || sharedView?.title || defaultDocumentTitle;
+
+    if (sharedViewLoading) {
+      updateDocumentPresentation({
+        title: "Loading Shared Driver Diagram",
+        description: "Opening a shared driver diagram in read-only mode.",
+      });
+      return;
+    }
+
+    if (sharedViewError) {
+      updateDocumentPresentation({
+        title: "Shared Driver Diagram Unavailable",
+        description: "This shared driver diagram link is unavailable or has been revoked.",
+      });
+      return;
+    }
+
+    if (isReadOnlySharedView) {
+      updateDocumentPresentation({
+        title: `${sharedTitle} | Shared Driver Diagram`,
+        description: "Read-only driver diagram view with Mermaid preview, code inspection, and export options.",
+      });
+      return;
+    }
+
+    updateDocumentPresentation({
+      title: "Driver Diagram MVP",
+      description: "Create, edit, save, share, and export driver diagrams with Mermaid and Supabase.",
+    });
+  }, [documentTitle, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
@@ -1216,6 +1286,7 @@ function App() {
   const resetStorageNotice = () => {
     setStorageError("");
     setStorageMessage("");
+    setLastSharedUrl("");
   };
 
   const upsertSavedDiagram = (row) => {
@@ -1736,9 +1807,16 @@ function App() {
     }
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?share=${row.share_id}`;
-    await navigator.clipboard.writeText(shareUrl);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch (error) {
+      setSharingDiagramId("");
+      setStorageError(error?.message || "Unable to copy the share link.");
+      return;
+    }
     setSharingDiagramId("");
-    setStorageMessage("Share link copied.");
+    setLastSharedUrl(shareUrl);
+    setStorageMessage("Read-only share link copied. Anyone with the link can preview and export this diagram.");
   };
 
   const revokeShareDiagram = async (item) => {
@@ -1763,6 +1841,7 @@ function App() {
     }
 
     upsertSavedDiagram(row);
+    setLastSharedUrl("");
     setStorageMessage("Share link revoked.");
   };
 
@@ -2207,6 +2286,7 @@ function App() {
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
               <div className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">Read-only shared link</div>
               {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Shared: {formatSavedDateTime(sharedView.shared_at)}</div> : null}
+              {sharedOpenedAt ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Opened: {formatSavedDateTime(sharedOpenedAt)}</div> : null}
             </div>
             {renderError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
             {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
@@ -2407,7 +2487,24 @@ function App() {
             {currentDiagramId ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">ID: {currentDiagramId.slice(0, 8)}</div> : null}
           </div>
           {storageError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{storageError}</div> : null}
-          {!storageError && storageMessage ? <div className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{storageMessage}</div> : null}
+          {!storageError && storageMessage ? (
+            <div className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">
+              <div>{storageMessage}</div>
+              {lastSharedUrl ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <a
+                    href={lastSharedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                  >
+                    <ExternalLink size={14} /> Open shared view
+                  </a>
+                  <span className="truncate text-xs text-emerald-800">{lastSharedUrl}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
         </header>
 
@@ -2535,6 +2632,17 @@ function App() {
                           title={item.share_id && !item.share_revoked_at ? "Copy share link" : "Create share link"}
                         >
                           <Link2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const shareUrl = `${window.location.origin}${window.location.pathname}?share=${item.share_id}`;
+                            window.open(shareUrl, "_blank", "noopener,noreferrer");
+                          }}
+                          disabled={!item.share_id || Boolean(item.share_revoked_at)}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+                          title="Open shared view"
+                        >
+                          <ExternalLink size={16} />
                         </button>
                         <button
                           onClick={() => revokeShareDiagram(item)}
