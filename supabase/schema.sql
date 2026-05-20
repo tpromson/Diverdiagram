@@ -8,6 +8,7 @@ create table if not exists public.driver_diagrams (
   purpose_kpi text not null default '',
   diagram_data jsonb not null,
   mermaid_code text not null,
+  last_opened_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -15,7 +16,11 @@ create table if not exists public.driver_diagrams (
 alter table public.driver_diagrams
   add column if not exists user_id uuid references auth.users (id) on delete cascade;
 
+alter table public.driver_diagrams
+  add column if not exists last_opened_at timestamptz;
+
 create index if not exists driver_diagrams_user_id_idx on public.driver_diagrams using btree (user_id);
+create index if not exists driver_diagrams_last_opened_at_idx on public.driver_diagrams using btree (last_opened_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -23,7 +28,13 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  new.updated_at = now();
+  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code)
+    is distinct from
+    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code) then
+    new.updated_at = now();
+  else
+    new.updated_at = old.updated_at;
+  end if;
   return new;
 end;
 $$;

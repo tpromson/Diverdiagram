@@ -18,6 +18,10 @@ import {
   FilePlus2,
   Mail,
   LogOut,
+  Search,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
@@ -52,6 +56,35 @@ const defaultData = {
 };
 
 const defaultDocumentTitle = "Driver Diagram ใหม่";
+const savedDiagramSortOptions = [
+  { value: "updated_desc", label: "Updated ล่าสุด" },
+  { value: "opened_desc", label: "Opened ล่าสุด" },
+  { value: "title_asc", label: "ชื่อ A-Z" },
+];
+
+function formatSavedDateTime(value) {
+  return value ? new Date(value).toLocaleString("th-TH") : "-";
+}
+
+function sortSavedDiagrams(items, sortKey) {
+  const list = [...items];
+
+  if (sortKey === "title_asc") {
+    return list.sort((a, b) =>
+      String(a.title || a.purpose_title || "").localeCompare(String(b.title || b.purpose_title || ""), "th")
+    );
+  }
+
+  if (sortKey === "opened_desc") {
+    return list.sort(
+      (a, b) => new Date(b.last_opened_at || 0).getTime() - new Date(a.last_opened_at || 0).getTime()
+    );
+  }
+
+  return list.sort(
+    (a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()
+  );
+}
 
 function normalizeStoredDiagramData(input) {
   const source = input && typeof input === "object" ? input : defaultData;
@@ -820,11 +853,17 @@ function App() {
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
   const [savedDiagrams, setSavedDiagrams] = useState([]);
+  const [savedSearch, setSavedSearch] = useState("");
+  const [savedSort, setSavedSort] = useState("updated_desc");
   const [loadingSavedDiagrams, setLoadingSavedDiagrams] = useState(false);
   const [savingDiagram, setSavingDiagram] = useState(false);
   const [autoSaveState, setAutoSaveState] = useState("idle");
   const [openingDiagramId, setOpeningDiagramId] = useState("");
   const [deletingDiagramId, setDeletingDiagramId] = useState("");
+  const [duplicatingDiagramId, setDuplicatingDiagramId] = useState("");
+  const [renamingDiagramId, setRenamingDiagramId] = useState("");
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renamingDiagram, setRenamingDiagram] = useState(false);
   const [storageMessage, setStorageMessage] = useState("");
   const [storageError, setStorageError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -848,6 +887,16 @@ function App() {
     [documentTitle, data, codeInput]
   );
   const isAuthenticated = Boolean(currentUser?.id);
+  const filteredSavedDiagrams = useMemo(() => {
+    const search = savedSearch.trim().toLowerCase();
+    const filtered = search
+      ? savedDiagrams.filter((item) =>
+          `${item.title || ""}\n${item.purpose_title || ""}`.toLowerCase().includes(search)
+        )
+      : savedDiagrams;
+
+    return sortSavedDiagrams(filtered, savedSort);
+  }, [savedDiagrams, savedSearch, savedSort]);
 
   useEffect(() => {
     if (codeSourceRef.current === "form") {
@@ -894,6 +943,7 @@ function App() {
         setCurrentDiagramId("");
         setSavedDiagrams([]);
         setAutoSaveState("idle");
+        cancelRenamingDiagram();
         setStorageMessage("");
         setStorageError("");
       }
@@ -902,6 +952,7 @@ function App() {
         setCurrentDiagramId("");
         setSavedDiagrams([]);
         setAutoSaveState("idle");
+        cancelRenamingDiagram();
       }
     };
 
@@ -984,7 +1035,7 @@ function App() {
       setLoadingSavedDiagrams(true);
       const { data: rows, error } = await supabase
         .from("driver_diagrams")
-        .select("id, title, purpose_title, updated_at")
+        .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
         .order("updated_at", { ascending: false });
 
       if (cancelled) return;
@@ -1078,6 +1129,15 @@ function App() {
     setStorageMessage("");
   };
 
+  const upsertSavedDiagram = (row) => {
+    if (!row) return;
+
+    setSavedDiagrams((items) => {
+      const next = [row, ...items.filter((item) => item.id !== row.id)];
+      return sortSavedDiagrams(next, "updated_desc");
+    });
+  };
+
   const refreshSavedDiagrams = async () => {
     if (!isSupabaseConfigured || !supabase) {
       setStorageError("Add Supabase env vars before loading saved diagrams.");
@@ -1091,7 +1151,7 @@ function App() {
     setLoadingSavedDiagrams(true);
     const { data: rows, error } = await supabase
       .from("driver_diagrams")
-      .select("id, title, purpose_title, updated_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -1115,6 +1175,7 @@ function App() {
     setData(normalizeStoredDiagramData(defaultData));
     setCodeInput(buildMermaidCode(defaultData));
     setAutoSaveState("idle");
+    cancelRenamingDiagram();
     resetStorageNotice();
     setCodeSyncError("");
     setCodeSyncMessage("");
@@ -1297,8 +1358,17 @@ function App() {
     }
 
     const query = currentDiagramId
-      ? supabase.from("driver_diagrams").update(payload).eq("id", currentDiagramId).select("id, title, purpose_title, updated_at").single()
-      : supabase.from("driver_diagrams").insert(payload).select("id, title, purpose_title, updated_at").single();
+      ? supabase
+          .from("driver_diagrams")
+          .update(payload)
+          .eq("id", currentDiagramId)
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+          .single()
+      : supabase
+          .from("driver_diagrams")
+          .insert(payload)
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+          .single();
 
     const { data: row, error } = await query;
 
@@ -1313,10 +1383,7 @@ function App() {
       setCurrentDiagramId(row.id);
       lastSavedSnapshotRef.current = snapshot;
       setDocumentTitle(row.title);
-      setSavedDiagrams((items) => {
-        const next = [row, ...items.filter((item) => item.id !== row.id)];
-        return next.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-      });
+      upsertSavedDiagram(row);
     }
 
     setAutoSaveState("saved");
@@ -1339,10 +1406,12 @@ function App() {
     setOpeningDiagramId(diagramId);
     setStorageError("");
     setStorageMessage("");
+    const openedAt = new Date().toISOString();
     const { data: row, error } = await supabase
       .from("driver_diagrams")
-      .select("*")
+      .update({ last_opened_at: openedAt })
       .eq("id", diagramId)
+      .select("*")
       .single();
     setOpeningDiagramId("");
 
@@ -1361,6 +1430,7 @@ function App() {
     setData(normalizedData);
     setCodeInput(nextCode);
     lastSavedSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
+    upsertSavedDiagram(row);
     setAutoSaveState("saved");
     setCodeSyncError("");
     setCodeSyncMessage("");
@@ -1397,6 +1467,99 @@ function App() {
       startNewDiagram();
     }
     setStorageMessage("Deleted diagram from database.");
+  };
+
+  const startRenamingDiagram = (item) => {
+    setRenamingDiagramId(item.id);
+    setRenameDraft(item.title || item.purpose_title || defaultDocumentTitle);
+    setStorageError("");
+    setStorageMessage("");
+  };
+
+  const cancelRenamingDiagram = () => {
+    setRenamingDiagramId("");
+    setRenameDraft("");
+    setRenamingDiagram(false);
+  };
+
+  const renameDiagram = async (diagramId) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before renaming saved diagrams.");
+      return;
+    }
+
+    const title = renameDraft.trim();
+    if (!title) {
+      setStorageError("Document title cannot be empty.");
+      return;
+    }
+
+    setRenamingDiagram(true);
+    setStorageError("");
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .update({ title })
+      .eq("id", diagramId)
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+      .single();
+    setRenamingDiagram(false);
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to rename this diagram.");
+      return;
+    }
+
+    upsertSavedDiagram(row);
+    if (currentDiagramId === diagramId) {
+      setDocumentTitle(row.title);
+      lastSavedSnapshotRef.current = buildDiagramSnapshot(row.title, data, codeInput);
+    }
+    cancelRenamingDiagram();
+    setStorageMessage("Renamed diagram.");
+  };
+
+  const duplicateDiagram = async (diagramId) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before duplicating saved diagrams.");
+      return;
+    }
+
+    setDuplicatingDiagramId(diagramId);
+    setStorageError("");
+    const { data: sourceRow, error: sourceError } = await supabase
+      .from("driver_diagrams")
+      .select("*")
+      .eq("id", diagramId)
+      .single();
+
+    if (sourceError || !sourceRow) {
+      setDuplicatingDiagramId("");
+      setStorageError(sourceError?.message || "Unable to load the diagram to duplicate.");
+      return;
+    }
+
+    const duplicateTitle = `${sourceRow.title || sourceRow.purpose_title || defaultDocumentTitle} (Copy)`;
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .insert({
+        user_id: currentUser.id,
+        title: duplicateTitle,
+        purpose_title: sourceRow.purpose_title || "",
+        purpose_kpi: sourceRow.purpose_kpi || "",
+        diagram_data: normalizeStoredDiagramData(sourceRow.diagram_data),
+        mermaid_code: sanitizeMermaidCode(sourceRow.mermaid_code || buildMermaidCode(sourceRow.diagram_data || defaultData)),
+      })
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+      .single();
+    setDuplicatingDiagramId("");
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to duplicate this diagram.");
+      return;
+    }
+
+    upsertSavedDiagram(row);
+    setStorageMessage("Created a duplicate.");
   };
 
   const copyMermaid = async () => {
@@ -1929,7 +2092,7 @@ function App() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Saved Diagrams</h2>
-                  <p className="text-sm text-slate-500">เปิดดูงานที่เคยบันทึกไว้ในฐานข้อมูล</p>
+                  <p className="text-sm text-slate-500">เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้</p>
                 </div>
                 <button
                   onClick={refreshSavedDiagrams}
@@ -1939,6 +2102,30 @@ function App() {
                   <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
                 </button>
               </div>
+              {isAuthenticated ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+                  <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                    <Search size={16} className="text-slate-400" />
+                    <input
+                      value={savedSearch}
+                      onChange={(e) => setSavedSearch(e.target.value)}
+                      placeholder="Search by title or purpose"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none"
+                    />
+                  </label>
+                  <select
+                    value={savedSort}
+                    onChange={(e) => setSavedSort(e.target.value)}
+                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  >
+                    {savedDiagramSortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
               <div className="mt-3 space-y-2">
                 {!isSupabaseConfigured ? (
                   <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
@@ -1950,18 +2137,47 @@ function App() {
                   </div>
                 ) : loadingSavedDiagrams ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">Loading saved diagrams...</div>
-                ) : savedDiagrams.length ? (
-                  savedDiagrams.map((item) => (
+                ) : filteredSavedDiagrams.length ? (
+                  filteredSavedDiagrams.map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                      <button
-                        onClick={() => openDiagram(item.id)}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {item.updated_at ? new Date(item.updated_at).toLocaleString("th-TH") : ""}
-                        </div>
-                      </button>
+                      <div className="min-w-0 flex-1">
+                        {renamingDiagramId === item.id ? (
+                          <div className="space-y-2">
+                            <input
+                              value={renameDraft}
+                              onChange={(e) => setRenameDraft(e.target.value)}
+                              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => renameDiagram(item.id)}
+                                disabled={renamingDiagram}
+                                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                              >
+                                <Check size={15} /> {renamingDiagram ? "Saving..." : "Save"}
+                              </button>
+                              <button
+                                onClick={cancelRenamingDiagram}
+                                disabled={renamingDiagram}
+                                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-70"
+                              >
+                                <X size={15} /> Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => openDiagram(item.id)}
+                            className="min-w-0 text-left"
+                          >
+                            <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
+                            <div className="mt-1 space-y-1 text-xs text-slate-500">
+                              <div>Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</div>
+                              <div>Last opened: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at) : "Not opened yet"}</div>
+                            </div>
+                          </button>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => openDiagram(item.id)}
@@ -1972,8 +2188,24 @@ function App() {
                           <FolderOpen size={16} />
                         </button>
                         <button
+                          onClick={() => startRenamingDiagram(item)}
+                          disabled={renamingDiagramId === item.id || duplicatingDiagramId === item.id}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                          title="Rename"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => duplicateDiagram(item.id)}
+                          disabled={duplicatingDiagramId === item.id}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                          title="Duplicate"
+                        >
+                          <Copy size={16} />
+                        </button>
+                        <button
                           onClick={() => deleteDiagram(item.id)}
-                          disabled={deletingDiagramId === item.id}
+                          disabled={deletingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
                           title="Delete"
                         >
@@ -1982,6 +2214,11 @@ function App() {
                       </div>
                     </div>
                   ))
+                ) : savedSearch.trim() ? (
+                  <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                    <div className="font-semibold text-slate-900">ไม่พบรายการที่ตรงกับคำค้นหา</div>
+                    <p className="mt-1">ลองค้นด้วยชื่อที่สั้นลง หรือสลับ sort เพื่อหางานที่ต้องการ</p>
+                  </div>
                 ) : (
                   <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
                     <div className="font-semibold text-slate-900">ยังไม่มีรายการที่บันทึกไว้</div>
