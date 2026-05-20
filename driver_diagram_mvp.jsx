@@ -83,6 +83,14 @@ function normalizeStoredDiagramData(input) {
   };
 }
 
+function buildDiagramSnapshot(title, diagramData, mermaidCode) {
+  return JSON.stringify({
+    title: String(title || "").trim() || defaultDocumentTitle,
+    diagramData: normalizeStoredDiagramData(diagramData),
+    mermaidCode: sanitizeMermaidCode(mermaidCode || ""),
+  });
+}
+
 function buildMermaidCode(data) {
   const lines = [
     "flowchart LR",
@@ -804,6 +812,7 @@ function App() {
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [loadingSavedDiagrams, setLoadingSavedDiagrams] = useState(false);
   const [savingDiagram, setSavingDiagram] = useState(false);
+  const [autoSaveState, setAutoSaveState] = useState("idle");
   const [openingDiagramId, setOpeningDiagramId] = useState("");
   const [deletingDiagramId, setDeletingDiagramId] = useState("");
   const [storageMessage, setStorageMessage] = useState("");
@@ -821,13 +830,34 @@ function App() {
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
   const codeSourceRef = useRef("form");
+  const lastSavedSnapshotRef = useRef(buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData)));
   const mermaidCode = useMemo(() => buildMermaidCode(data), [data]);
+  const currentSnapshot = useMemo(
+    () => buildDiagramSnapshot(documentTitle, data, codeInput),
+    [documentTitle, data, codeInput]
+  );
 
   useEffect(() => {
     if (codeSourceRef.current === "form") {
       setCodeInput(mermaidCode);
     }
   }, [mermaidCode]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !currentDiagramId) {
+      setAutoSaveState("idle");
+      return;
+    }
+
+    if (currentSnapshot !== lastSavedSnapshotRef.current) {
+      setAutoSaveState("dirty");
+      return;
+    }
+
+    if (!savingDiagram) {
+      setAutoSaveState("saved");
+    }
+  }, [currentSnapshot, currentDiagramId, savingDiagram]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -858,6 +888,26 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !currentDiagramId) {
+      return;
+    }
+    if (currentSnapshot === lastSavedSnapshotRef.current) {
+      return;
+    }
+    if (savingDiagram || loadingSavedDiagrams || openingDiagramId || deletingDiagramId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      saveDiagram({ isAuto: true });
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentSnapshot, currentDiagramId, savingDiagram, loadingSavedDiagrams, openingDiagramId, deletingDiagramId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -937,10 +987,16 @@ function App() {
 
   const startNewDiagram = () => {
     codeSourceRef.current = "form";
+    lastSavedSnapshotRef.current = buildDiagramSnapshot(
+      defaultDocumentTitle,
+      defaultData,
+      buildMermaidCode(defaultData)
+    );
     setCurrentDiagramId("");
     setDocumentTitle(defaultDocumentTitle);
     setData(normalizeStoredDiagramData(defaultData));
     setCodeInput(buildMermaidCode(defaultData));
+    setAutoSaveState("idle");
     resetStorageNotice();
     setCodeSyncError("");
     setCodeSyncMessage("");
@@ -1085,7 +1141,7 @@ function App() {
     }));
   };
 
-  const saveDiagram = async () => {
+  const saveDiagram = async ({ isAuto = false } = {}) => {
     if (!isSupabaseConfigured || !supabase) {
       setStorageError("Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY before saving.");
       return;
@@ -1094,6 +1150,12 @@ function App() {
     const normalizedCode = sanitizeMermaidCode(codeInput);
     const normalizedData = normalizeStoredDiagramData(data);
     const title = documentTitle.trim() || normalizedData.purpose.title || defaultDocumentTitle;
+    const snapshot = buildDiagramSnapshot(title, normalizedData, normalizedCode);
+
+    if (isAuto && (snapshot === lastSavedSnapshotRef.current || !currentDiagramId)) {
+      return;
+    }
+
     const payload = {
       title,
       purpose_title: normalizedData.purpose.title,
@@ -1103,23 +1165,30 @@ function App() {
     };
 
     setSavingDiagram(true);
+    if (isAuto) {
+      setAutoSaveState("saving");
+    }
     setStorageError("");
-    setStorageMessage("");
+    if (!isAuto) {
+      setStorageMessage("");
+    }
 
     const query = currentDiagramId
       ? supabase.from("driver_diagrams").update(payload).eq("id", currentDiagramId).select("id, title, purpose_title, updated_at").single()
       : supabase.from("driver_diagrams").insert(payload).select("id, title, purpose_title, updated_at").single();
 
     const { data: row, error } = await query;
-    setSavingDiagram(false);
 
     if (error) {
       setStorageError(error.message || "Unable to save this diagram.");
+      setAutoSaveState("dirty");
+      setSavingDiagram(false);
       return;
     }
 
     if (row) {
       setCurrentDiagramId(row.id);
+      lastSavedSnapshotRef.current = snapshot;
       setDocumentTitle(row.title);
       setSavedDiagrams((items) => {
         const next = [row, ...items.filter((item) => item.id !== row.id)];
@@ -1127,7 +1196,11 @@ function App() {
       });
     }
 
-    setStorageMessage(currentDiagramId ? "Saved changes to database." : "Saved to database.");
+    setAutoSaveState("saved");
+    setStorageMessage(
+      isAuto ? "Draft auto-saved." : currentDiagramId ? "Saved changes to database." : "Saved to database."
+    );
+    setSavingDiagram(false);
   };
 
   const openDiagram = async (diagramId) => {
@@ -1152,11 +1225,16 @@ function App() {
     }
 
     const normalizedData = normalizeStoredDiagramData(row.diagram_data);
+    const nextTitle = row.title || defaultDocumentTitle;
+    const nextCode = sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData));
+
     codeSourceRef.current = "code";
     setCurrentDiagramId(row.id);
-    setDocumentTitle(row.title || defaultDocumentTitle);
+    setDocumentTitle(nextTitle);
     setData(normalizedData);
-    setCodeInput(sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData)));
+    setCodeInput(nextCode);
+    lastSavedSnapshotRef.current = buildDiagramSnapshot(nextTitle, normalizedData, nextCode);
+    setAutoSaveState("saved");
     setCodeSyncError("");
     setCodeSyncMessage("");
     setStorageMessage("Loaded diagram from database.");
@@ -1559,6 +1637,23 @@ function App() {
               <Database size={15} />
               {isSupabaseConfigured ? "Supabase connected" : "Supabase env not configured yet"}
             </div>
+            {isSupabaseConfigured && currentDiagramId ? (
+              <div
+                className={`rounded-full px-3 py-1.5 ${
+                  autoSaveState === "saving"
+                    ? "bg-blue-50 text-blue-700"
+                    : autoSaveState === "dirty"
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {autoSaveState === "saving"
+                  ? "Auto-saving..."
+                  : autoSaveState === "dirty"
+                    ? "Unsaved changes"
+                    : "All changes saved"}
+              </div>
+            ) : null}
             {currentDiagramId ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">ID: {currentDiagramId.slice(0, 8)}</div> : null}
           </div>
           {storageError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{storageError}</div> : null}
