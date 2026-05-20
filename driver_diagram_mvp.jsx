@@ -22,6 +22,9 @@ import {
   Pencil,
   Check,
   X,
+  Star,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
@@ -61,6 +64,11 @@ const savedDiagramSortOptions = [
   { value: "opened_desc", label: "Opened ล่าสุด" },
   { value: "title_asc", label: "ชื่อ A-Z" },
 ];
+const savedDiagramScopeOptions = [
+  { value: "active", label: "Active" },
+  { value: "all", label: "All" },
+  { value: "archived", label: "Archived" },
+];
 
 function formatSavedDateTime(value) {
   return value ? new Date(value).toLocaleString("th-TH") : "-";
@@ -69,21 +77,29 @@ function formatSavedDateTime(value) {
 function sortSavedDiagrams(items, sortKey) {
   const list = [...items];
 
+  const compareFavorite = (a, b) => Number(Boolean(b.is_favorite)) - Number(Boolean(a.is_favorite));
+
   if (sortKey === "title_asc") {
-    return list.sort((a, b) =>
-      String(a.title || a.purpose_title || "").localeCompare(String(b.title || b.purpose_title || ""), "th")
-    );
+    return list.sort((a, b) => {
+      const favoriteDelta = compareFavorite(a, b);
+      if (favoriteDelta) return favoriteDelta;
+      return String(a.title || a.purpose_title || "").localeCompare(String(b.title || b.purpose_title || ""), "th");
+    });
   }
 
   if (sortKey === "opened_desc") {
-    return list.sort(
-      (a, b) => new Date(b.last_opened_at || 0).getTime() - new Date(a.last_opened_at || 0).getTime()
-    );
+    return list.sort((a, b) => {
+      const favoriteDelta = compareFavorite(a, b);
+      if (favoriteDelta) return favoriteDelta;
+      return new Date(b.last_opened_at || 0).getTime() - new Date(a.last_opened_at || 0).getTime();
+    });
   }
 
-  return list.sort(
-    (a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()
-  );
+  return list.sort((a, b) => {
+    const favoriteDelta = compareFavorite(a, b);
+    if (favoriteDelta) return favoriteDelta;
+    return new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime();
+  });
 }
 
 function normalizeStoredDiagramData(input) {
@@ -855,6 +871,7 @@ function App() {
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [savedSearch, setSavedSearch] = useState("");
   const [savedSort, setSavedSort] = useState("updated_desc");
+  const [savedScope, setSavedScope] = useState("active");
   const [loadingSavedDiagrams, setLoadingSavedDiagrams] = useState(false);
   const [savingDiagram, setSavingDiagram] = useState(false);
   const [autoSaveState, setAutoSaveState] = useState("idle");
@@ -889,14 +906,19 @@ function App() {
   const isAuthenticated = Boolean(currentUser?.id);
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
+    const scoped = savedDiagrams.filter((item) => {
+      if (savedScope === "archived") return Boolean(item.archived_at);
+      if (savedScope === "all") return true;
+      return !item.archived_at;
+    });
     const filtered = search
-      ? savedDiagrams.filter((item) =>
+      ? scoped.filter((item) =>
           `${item.title || ""}\n${item.purpose_title || ""}`.toLowerCase().includes(search)
         )
-      : savedDiagrams;
+      : scoped;
 
     return sortSavedDiagrams(filtered, savedSort);
-  }, [savedDiagrams, savedSearch, savedSort]);
+  }, [savedDiagrams, savedScope, savedSearch, savedSort]);
 
   useEffect(() => {
     if (codeSourceRef.current === "form") {
@@ -1035,7 +1057,7 @@ function App() {
       setLoadingSavedDiagrams(true);
       const { data: rows, error } = await supabase
         .from("driver_diagrams")
-        .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+        .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
         .order("updated_at", { ascending: false });
 
       if (cancelled) return;
@@ -1151,7 +1173,7 @@ function App() {
     setLoadingSavedDiagrams(true);
     const { data: rows, error } = await supabase
       .from("driver_diagrams")
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -1362,12 +1384,12 @@ function App() {
           .from("driver_diagrams")
           .update(payload)
           .eq("id", currentDiagramId)
-          .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
           .single()
       : supabase
           .from("driver_diagrams")
           .insert(payload)
-          .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+          .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
           .single();
 
     const { data: row, error } = await query;
@@ -1500,7 +1522,7 @@ function App() {
       .from("driver_diagrams")
       .update({ title })
       .eq("id", diagramId)
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
       .single();
     setRenamingDiagram(false);
 
@@ -1548,8 +1570,10 @@ function App() {
         purpose_kpi: sourceRow.purpose_kpi || "",
         diagram_data: normalizeStoredDiagramData(sourceRow.diagram_data),
         mermaid_code: sanitizeMermaidCode(sourceRow.mermaid_code || buildMermaidCode(sourceRow.diagram_data || defaultData)),
+        is_favorite: false,
+        archived_at: null,
       })
-      .select("id, title, purpose_title, created_at, updated_at, last_opened_at")
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
       .single();
     setDuplicatingDiagramId("");
 
@@ -1560,6 +1584,56 @@ function App() {
 
     upsertSavedDiagram(row);
     setStorageMessage("Created a duplicate.");
+  };
+
+  const toggleFavoriteDiagram = async (item) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before updating favorites.");
+      return;
+    }
+
+    setStorageError("");
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .update({ is_favorite: !item.is_favorite })
+      .eq("id", item.id)
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .single();
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to update favorite status.");
+      return;
+    }
+
+    upsertSavedDiagram(row);
+    setStorageMessage(row.is_favorite ? "Pinned to favorites." : "Removed from favorites.");
+  };
+
+  const toggleArchiveDiagram = async (item) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before archiving diagrams.");
+      return;
+    }
+
+    const nextArchivedAt = item.archived_at ? null : new Date().toISOString();
+    setStorageError("");
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .update({ archived_at: nextArchivedAt })
+      .eq("id", item.id)
+      .select("id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at")
+      .single();
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to update archive status.");
+      return;
+    }
+
+    upsertSavedDiagram(row);
+    if (currentDiagramId === item.id && row.archived_at) {
+      startNewDiagram();
+    }
+    setStorageMessage(row.archived_at ? "Archived diagram." : "Restored diagram.");
   };
 
   const copyMermaid = async () => {
@@ -2103,7 +2177,7 @@ function App() {
                 </button>
               </div>
               {isAuthenticated ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px_150px]">
                   <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
                     <Search size={16} className="text-slate-400" />
                     <input
@@ -2113,6 +2187,17 @@ function App() {
                       className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none"
                     />
                   </label>
+                  <select
+                    value={savedScope}
+                    onChange={(e) => setSavedScope(e.target.value)}
+                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  >
+                    {savedDiagramScopeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     value={savedSort}
                     onChange={(e) => setSavedSort(e.target.value)}
@@ -2170,7 +2255,11 @@ function App() {
                             onClick={() => openDiagram(item.id)}
                             className="min-w-0 text-left"
                           >
-                            <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
+                            <div className="flex items-center gap-2">
+                              {item.is_favorite ? <Star size={14} className="fill-amber-400 text-amber-500" /> : null}
+                              <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
+                              {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Archived</span> : null}
+                            </div>
                             <div className="mt-1 space-y-1 text-xs text-slate-500">
                               <div>Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</div>
                               <div>Last opened: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at) : "Not opened yet"}</div>
@@ -2186,6 +2275,13 @@ function App() {
                           title="Open"
                         >
                           <FolderOpen size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleFavoriteDiagram(item)}
+                          className={`rounded-xl p-2 hover:bg-slate-100 ${item.is_favorite ? "text-amber-500" : "text-slate-600"}`}
+                          title={item.is_favorite ? "Unfavorite" : "Favorite"}
+                        >
+                          <Star size={16} className={item.is_favorite ? "fill-amber-400" : ""} />
                         </button>
                         <button
                           onClick={() => startRenamingDiagram(item)}
@@ -2204,10 +2300,18 @@ function App() {
                           <Copy size={16} />
                         </button>
                         <button
+                          onClick={() => toggleArchiveDiagram(item)}
+                          disabled={duplicatingDiagramId === item.id}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                          title={item.archived_at ? "Restore" : "Archive"}
+                        >
+                          {item.archived_at ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                        </button>
+                        <button
                           onClick={() => deleteDiagram(item.id)}
                           disabled={deletingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                          title="Delete"
+                          title="Delete permanently"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -2221,8 +2325,14 @@ function App() {
                   </div>
                 ) : (
                   <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    <div className="font-semibold text-slate-900">ยังไม่มีรายการที่บันทึกไว้</div>
-                    <p className="mt-1">เริ่มจากกด Save งานปัจจุบัน แล้วรายการจะโผล่มาใน workspace นี้ทันที</p>
+                    <div className="font-semibold text-slate-900">
+                      {savedScope === "archived" ? "ยังไม่มีรายการที่ archive ไว้" : "ยังไม่มีรายการที่บันทึกไว้"}
+                    </div>
+                    <p className="mt-1">
+                      {savedScope === "archived"
+                        ? "รายการที่ archive ไว้จะมาอยู่ตรงนี้ และกด restore กลับไปที่รายการหลักได้"
+                        : "เริ่มจากกด Save งานปัจจุบัน แล้วรายการจะโผล่มาใน workspace นี้ทันที"}
+                    </p>
                     <button
                       onClick={() => saveDiagram()}
                       disabled={savingDiagram}
