@@ -51,21 +51,23 @@ div::-webkit-scrollbar-track {
 }
 
 .diagram-preview {
+  --diagram-scale: 1;
   width: 100%;
 }
 
 .diagram-preview svg {
   display: block;
   height: auto;
+  width: calc(var(--diagram-scale, 1) * 100%) !important;
+  max-width: none !important;
 }
 
 @media (max-width: 639px) {
   .diagram-preview {
-    min-width: 820px;
+    min-width: calc(820px * var(--diagram-scale, 1));
   }
 
   .diagram-preview svg {
-    width: 820px !important;
-    max-width: none !important;
+    width: calc(820px * var(--diagram-scale, 1)) !important;
   }
 }

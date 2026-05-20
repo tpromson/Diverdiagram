@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
+  Minus,
   Trash2,
   Copy,
   Download,
@@ -28,6 +29,7 @@ import {
   Link2,
   ExternalLink,
   History,
+  RotateCcw,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -35,6 +37,9 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const SHARE_LINK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_VERSION_HISTORY = 50;
 const MAX_AUTOSAVE_VERSIONS = 10;
+const PREVIEW_ZOOM_MIN = 0.5;
+const PREVIEW_ZOOM_MAX = 2;
+const PREVIEW_ZOOM_STEP = 0.25;
 
 const defaultData = {
   purpose: {
@@ -942,6 +947,36 @@ function StatusPill({ tone = "neutral", icon, children }) {
   );
 }
 
+function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset }) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
+      <button
+        onClick={onZoomOut}
+        disabled={zoom <= PREVIEW_ZOOM_MIN}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        title="Zoom out"
+      >
+        <Minus size={16} />
+      </button>
+      <button
+        onClick={onReset}
+        className="inline-flex min-w-[72px] items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+        title="Reset zoom"
+      >
+        <RotateCcw size={14} /> {Math.round(zoom * 100)}%
+      </button>
+      <button
+        onClick={onZoomIn}
+        disabled={zoom >= PREVIEW_ZOOM_MAX}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        title="Zoom in"
+      >
+        <Plus size={16} />
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [data, setData] = useState(defaultData);
   const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
@@ -977,6 +1012,7 @@ function App() {
   const [exportingDocx, setExportingDocx] = useState(false);
   const [exportError, setExportError] = useState("");
   const [view, setView] = useState("preview");
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
   const [sharedView, setSharedView] = useState(null);
@@ -1410,6 +1446,18 @@ function App() {
     setStorageError("");
     setStorageMessage("");
     setLastSharedUrl("");
+  };
+
+  const zoomPreviewIn = () => {
+    setPreviewZoom((current) => Math.min(PREVIEW_ZOOM_MAX, Number((current + PREVIEW_ZOOM_STEP).toFixed(2))));
+  };
+
+  const zoomPreviewOut = () => {
+    setPreviewZoom((current) => Math.max(PREVIEW_ZOOM_MIN, Number((current - PREVIEW_ZOOM_STEP).toFixed(2))));
+  };
+
+  const resetPreviewZoom = () => {
+    setPreviewZoom(1);
   };
 
   const upsertSavedDiagram = (row) => {
@@ -2692,9 +2740,21 @@ function App() {
           </header>
 
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold">Output</h2>
-              <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold">Output</h2>
+                <p className="mt-1 text-sm text-slate-500">Preview the shared diagram, switch to Mermaid code, or zoom in to inspect details more comfortably.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {view === "preview" ? (
+                  <PreviewZoomControls
+                    zoom={previewZoom}
+                    onZoomOut={zoomPreviewOut}
+                    onZoomIn={zoomPreviewIn}
+                    onReset={resetPreviewZoom}
+                  />
+                ) : null}
+                <div className="inline-flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
@@ -2707,6 +2767,7 @@ function App() {
                 >
                   <Code2 size={16} /> Code
                 </button>
+                </div>
               </div>
             </div>
             <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
@@ -2714,7 +2775,13 @@ function App() {
                 renderError ? (
                   <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
                 ) : (
-                  <div className="overflow-auto" dangerouslySetInnerHTML={{ __html: svg }} />
+                  <div className="overflow-auto rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                    <div
+                      className="diagram-preview"
+                      style={{ "--diagram-scale": previewZoom }}
+                      dangerouslySetInnerHTML={{ __html: svg }}
+                    />
+                  </div>
                 )
               ) : (
                 <textarea
@@ -3346,7 +3413,16 @@ function App() {
                 <h2 className="text-lg font-bold text-slate-950">Output</h2>
                 <p className="mt-1 text-sm text-slate-500">Preview the current diagram or edit Mermaid directly, then sync it back into the form when you are ready.</p>
               </div>
-              <div className="flex rounded-2xl bg-slate-100 p-1">
+              <div className="flex flex-wrap items-center gap-2">
+                {view === "preview" ? (
+                  <PreviewZoomControls
+                    zoom={previewZoom}
+                    onZoomOut={zoomPreviewOut}
+                    onZoomIn={zoomPreviewIn}
+                    onReset={resetPreviewZoom}
+                  />
+                ) : null}
+                <div className="flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white shadow-sm" : "text-slate-500"}`}
@@ -3359,6 +3435,7 @@ function App() {
                 >
                   <Code2 size={16} /> Code
                 </button>
+                </div>
               </div>
             </div>
 
@@ -3368,7 +3445,11 @@ function App() {
                   <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
                 ) : (
                   <div className="rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                    <div className="diagram-preview" dangerouslySetInnerHTML={{ __html: svg }} />
+                    <div
+                      className="diagram-preview"
+                      style={{ "--diagram-scale": previewZoom }}
+                      dangerouslySetInnerHTML={{ __html: svg }}
+                    />
                   </div>
                 )}
               </div>
