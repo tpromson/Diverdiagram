@@ -29,7 +29,7 @@ import {
   ExternalLink,
   History,
 } from "lucide-react";
-import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
+import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const SHARE_LINK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -133,6 +133,11 @@ function isExpiredTimestamp(value) {
 
 function hasActiveShareLink(item) {
   return Boolean(item?.share_id) && !item?.share_revoked_at && !isExpiredTimestamp(item?.share_expires_at);
+}
+
+function getSharedDiagramFunctionUrl(shareId) {
+  if (!supabaseUrl || !shareId) return "";
+  return `${supabaseUrl}/functions/v1/shared-driver-diagram?share=${encodeURIComponent(shareId)}`;
 }
 
 function sortSavedDiagrams(items, sortKey) {
@@ -1023,18 +1028,31 @@ function App() {
       setSharedViewLoading(true);
       setSharedViewError("");
 
-      const { data: row, error } = await supabase
-        .from("driver_diagrams")
-        .select("*")
-        .eq("share_id", shareId)
-        .is("share_revoked_at", null)
-        .single();
+      const response = await fetch(getSharedDiagramFunctionUrl(shareId), {
+        headers: {
+          apikey: supabasePublishableKey,
+        },
+      });
+
+      let row = null;
+      let errorMessage = "";
+
+      try {
+        const payload = await response.json();
+        if (!response.ok) {
+          errorMessage = payload?.error || "This shared link is unavailable.";
+        } else {
+          row = payload;
+        }
+      } catch (_error) {
+        errorMessage = response.ok ? "Unable to read the shared diagram response." : "This shared link is unavailable.";
+      }
 
       if (cancelled) return;
 
-      if (error || !row) {
+      if (!response.ok || !row) {
         setSharedView(null);
-        setSharedViewError(error?.message || "This shared link is unavailable.");
+        setSharedViewError(errorMessage || "This shared link is unavailable.");
         setSharedViewLoading(false);
         return;
       }
@@ -1454,6 +1472,31 @@ function App() {
     return pruneDiagramVersions(diagramId);
   };
 
+  const syncSharedDiagramLink = async ({ diagramRow, diagramData, mermaidCode }) => {
+    if (!supabase || !currentUser?.id || !diagramRow?.id || !diagramRow?.share_id) return null;
+
+    const normalizedData = normalizeStoredDiagramData(diagramData || diagramRow.diagram_data);
+    const normalizedCode = sanitizeMermaidCode(mermaidCode || diagramRow.mermaid_code || buildMermaidCode(normalizedData));
+
+    const { error } = await supabase.from("shared_driver_diagrams").upsert(
+      {
+        diagram_id: diagramRow.id,
+        user_id: currentUser.id,
+        share_token: diagramRow.share_id,
+        title: diagramRow.title || defaultDocumentTitle,
+        purpose_title: diagramRow.purpose_title || normalizedData.purpose.title || "",
+        diagram_data: normalizedData,
+        mermaid_code: normalizedCode,
+        shared_at: diagramRow.shared_at || new Date().toISOString(),
+        expires_at: diagramRow.share_expires_at || null,
+        revoked_at: diagramRow.share_revoked_at || null,
+      },
+      { onConflict: "diagram_id" }
+    );
+
+    return error || null;
+  };
+
   const applyDiagramToEditor = ({ title, diagramData, mermaidCode }) => {
     const normalizedData = normalizeStoredDiagramData(diagramData);
     const nextTitle = title || defaultDocumentTitle;
@@ -1734,6 +1777,19 @@ function App() {
           await refreshVersionHistory(row.id);
         }
       }
+      if (hasActiveShareLink(row)) {
+        const sharedError = await syncSharedDiagramLink({
+          diagramRow: {
+            ...row,
+            shared_at: row.shared_at || new Date().toISOString(),
+          },
+          diagramData: normalizedData,
+          mermaidCode: normalizedCode,
+        });
+        if (sharedError) {
+          setStorageError("Saved the diagram, but could not refresh the shared link snapshot.");
+        }
+      }
       setDocumentTitle(row.title);
       upsertSavedDiagram(row);
     }
@@ -1864,6 +1920,17 @@ function App() {
     if (currentDiagramId === diagramId) {
       setDocumentTitle(row.title);
       lastSavedSnapshotRef.current = buildDiagramSnapshot(row.title, data, codeInput);
+    }
+    if (hasActiveShareLink(row)) {
+      const sharedError = await supabase
+        .from("shared_driver_diagrams")
+        .update({ title: row.title })
+        .eq("diagram_id", diagramId);
+
+      if (sharedError.error) {
+        setStorageError("Renamed the diagram, but could not update the shared link title.");
+        return;
+      }
     }
     cancelRenamingDiagram();
     setStorageMessage("Renamed diagram.");
@@ -2009,6 +2076,30 @@ function App() {
       upsertSavedDiagram(row);
     }
 
+    const { data: sourceRow, error: sourceError } = await supabase
+      .from("driver_diagrams")
+      .select("*")
+      .eq("id", item.id)
+      .single();
+
+    if (sourceError || !sourceRow) {
+      setSharingDiagramId("");
+      setStorageError(sourceError?.message || "Unable to load the diagram for sharing.");
+      return;
+    }
+
+    const sharedError = await syncSharedDiagramLink({
+      diagramRow: sourceRow,
+      diagramData: sourceRow.diagram_data,
+      mermaidCode: sourceRow.mermaid_code,
+    });
+
+    if (sharedError) {
+      setSharingDiagramId("");
+      setStorageError("Unable to publish the shared snapshot.");
+      return;
+    }
+
     const shareUrl = `${window.location.origin}${window.location.pathname}?share=${row.share_id}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -2044,6 +2135,16 @@ function App() {
 
     if (error || !row) {
       setStorageError(error?.message || "Unable to revoke this share link.");
+      return;
+    }
+
+    const sharedRow = await supabase
+      .from("shared_driver_diagrams")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("diagram_id", item.id);
+
+    if (sharedRow.error) {
+      setStorageError("Revoked the local share state, but could not revoke the published snapshot.");
       return;
     }
 
