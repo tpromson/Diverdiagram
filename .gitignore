@@ -2,5 +2,8 @@ node_modules
 dist
 .DS_Store
 .vercel
+.env
+.env.local
+.env.*.local
 driver-diagram.mmd
 driver-diagram.svg

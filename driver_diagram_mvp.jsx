@@ -1,5 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2, Copy, Download, Target, Layers, GitBranch, Lightbulb, BarChart3, Eye, Code2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Copy,
+  Download,
+  Target,
+  Layers,
+  GitBranch,
+  Lightbulb,
+  BarChart3,
+  Eye,
+  Code2,
+  Save,
+  FolderOpen,
+  RefreshCw,
+  Database,
+  FilePlus2,
+} from "lucide-react";
+import { isSupabaseConfigured, supabase } from "./src/supabaseClient.js";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -30,6 +48,40 @@ const defaultData = {
     },
   ],
 };
+
+const defaultDocumentTitle = "Driver Diagram ใหม่";
+
+function normalizeStoredDiagramData(input) {
+  const source = input && typeof input === "object" ? input : defaultData;
+
+  return {
+    purpose: {
+      title: String(source?.purpose?.title || ""),
+      kpi: String(source?.purpose?.kpi || ""),
+    },
+    primaryDrivers: Array.isArray(source?.primaryDrivers)
+      ? source.primaryDrivers.map((primary) => ({
+          id: primary?.id || uid(),
+          title: String(primary?.title || ""),
+          kpi: String(primary?.kpi || ""),
+          secondaryDrivers: Array.isArray(primary?.secondaryDrivers)
+            ? primary.secondaryDrivers.map((secondary) => ({
+                id: secondary?.id || uid(),
+                title: String(secondary?.title || ""),
+                kpi: String(secondary?.kpi || ""),
+                changeIdeas: Array.isArray(secondary?.changeIdeas)
+                  ? secondary.changeIdeas.map((change) => ({
+                      id: change?.id || uid(),
+                      title: String(change?.title || ""),
+                      kpi: String(change?.kpi || ""),
+                    }))
+                  : [],
+              }))
+            : [],
+        }))
+      : [],
+  };
+}
 
 function buildMermaidCode(data) {
   const lines = [
@@ -747,6 +799,15 @@ function TextAreaField({ label, value, onChange, icon }) {
 
 function App() {
   const [data, setData] = useState(defaultData);
+  const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
+  const [currentDiagramId, setCurrentDiagramId] = useState("");
+  const [savedDiagrams, setSavedDiagrams] = useState([]);
+  const [loadingSavedDiagrams, setLoadingSavedDiagrams] = useState(false);
+  const [savingDiagram, setSavingDiagram] = useState(false);
+  const [openingDiagramId, setOpeningDiagramId] = useState("");
+  const [deletingDiagramId, setDeletingDiagramId] = useState("");
+  const [storageMessage, setStorageMessage] = useState("");
+  const [storageError, setStorageError] = useState("");
   const [copied, setCopied] = useState(false);
   const [codeInput, setCodeInput] = useState(() => buildMermaidCode(defaultData));
   const [codeSyncError, setCodeSyncError] = useState("");
@@ -767,6 +828,36 @@ function App() {
       setCodeInput(mermaidCode);
     }
   }, [mermaidCode]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSavedDiagrams = async () => {
+      setLoadingSavedDiagrams(true);
+      const { data: rows, error } = await supabase
+        .from("driver_diagrams")
+        .select("id, title, purpose_title, updated_at")
+        .order("updated_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        setStorageError(error.message || "Unable to load saved diagrams.");
+      } else {
+        setSavedDiagrams(rows || []);
+      }
+      setLoadingSavedDiagrams(false);
+    };
+
+    loadSavedDiagrams();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -816,6 +907,43 @@ function App() {
   const updatePurpose = (field, value) => {
     codeSourceRef.current = "form";
     setData((d) => ({ ...d, purpose: { ...d.purpose, [field]: value } }));
+  };
+
+  const resetStorageNotice = () => {
+    setStorageError("");
+    setStorageMessage("");
+  };
+
+  const refreshSavedDiagrams = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setStorageError("Add Supabase env vars before loading saved diagrams.");
+      return;
+    }
+
+    setLoadingSavedDiagrams(true);
+    const { data: rows, error } = await supabase
+      .from("driver_diagrams")
+      .select("id, title, purpose_title, updated_at")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      setStorageError(error.message || "Unable to refresh saved diagrams.");
+    } else {
+      setSavedDiagrams(rows || []);
+      setStorageError("");
+    }
+    setLoadingSavedDiagrams(false);
+  };
+
+  const startNewDiagram = () => {
+    codeSourceRef.current = "form";
+    setCurrentDiagramId("");
+    setDocumentTitle(defaultDocumentTitle);
+    setData(normalizeStoredDiagramData(defaultData));
+    setCodeInput(buildMermaidCode(defaultData));
+    resetStorageNotice();
+    setCodeSyncError("");
+    setCodeSyncMessage("");
   };
 
   const addPrimary = () => {
@@ -955,6 +1083,111 @@ function App() {
           : p
       ),
     }));
+  };
+
+  const saveDiagram = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setStorageError("Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY before saving.");
+      return;
+    }
+
+    const normalizedCode = sanitizeMermaidCode(codeInput);
+    const normalizedData = normalizeStoredDiagramData(data);
+    const title = documentTitle.trim() || normalizedData.purpose.title || defaultDocumentTitle;
+    const payload = {
+      title,
+      purpose_title: normalizedData.purpose.title,
+      purpose_kpi: normalizedData.purpose.kpi,
+      diagram_data: normalizedData,
+      mermaid_code: normalizedCode,
+    };
+
+    setSavingDiagram(true);
+    setStorageError("");
+    setStorageMessage("");
+
+    const query = currentDiagramId
+      ? supabase.from("driver_diagrams").update(payload).eq("id", currentDiagramId).select("id, title, purpose_title, updated_at").single()
+      : supabase.from("driver_diagrams").insert(payload).select("id, title, purpose_title, updated_at").single();
+
+    const { data: row, error } = await query;
+    setSavingDiagram(false);
+
+    if (error) {
+      setStorageError(error.message || "Unable to save this diagram.");
+      return;
+    }
+
+    if (row) {
+      setCurrentDiagramId(row.id);
+      setDocumentTitle(row.title);
+      setSavedDiagrams((items) => {
+        const next = [row, ...items.filter((item) => item.id !== row.id)];
+        return next.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      });
+    }
+
+    setStorageMessage(currentDiagramId ? "Saved changes to database." : "Saved to database.");
+  };
+
+  const openDiagram = async (diagramId) => {
+    if (!isSupabaseConfigured || !supabase) {
+      setStorageError("Add Supabase env vars before opening saved diagrams.");
+      return;
+    }
+
+    setOpeningDiagramId(diagramId);
+    setStorageError("");
+    setStorageMessage("");
+    const { data: row, error } = await supabase
+      .from("driver_diagrams")
+      .select("*")
+      .eq("id", diagramId)
+      .single();
+    setOpeningDiagramId("");
+
+    if (error || !row) {
+      setStorageError(error?.message || "Unable to open this diagram.");
+      return;
+    }
+
+    const normalizedData = normalizeStoredDiagramData(row.diagram_data);
+    codeSourceRef.current = "code";
+    setCurrentDiagramId(row.id);
+    setDocumentTitle(row.title || defaultDocumentTitle);
+    setData(normalizedData);
+    setCodeInput(sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData)));
+    setCodeSyncError("");
+    setCodeSyncMessage("");
+    setStorageMessage("Loaded diagram from database.");
+  };
+
+  const deleteDiagram = async (diagramId) => {
+    if (!isSupabaseConfigured || !supabase) {
+      setStorageError("Add Supabase env vars before deleting saved diagrams.");
+      return;
+    }
+
+    if (!window.confirm("Delete this saved diagram?")) {
+      return;
+    }
+
+    setDeletingDiagramId(diagramId);
+    setStorageError("");
+    setStorageMessage("");
+    const { error } = await supabase.from("driver_diagrams").delete().eq("id", diagramId);
+    setDeletingDiagramId("");
+
+    if (error) {
+      setStorageError(error.message || "Unable to delete this diagram.");
+      return;
+    }
+
+    setSavedDiagrams((items) => items.filter((item) => item.id !== diagramId));
+    if (currentDiagramId === diagramId) {
+      startNewDiagram();
+    }
+    setStorageMessage("Deleted diagram from database.");
   };
 
   const copyMermaid = async () => {
@@ -1270,12 +1503,39 @@ function App() {
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
         <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <div>
               <h1 className="text-2xl font-bold tracking-tight">Driver Diagram MVP</h1>
-              <p className="text-sm text-slate-500">สร้าง Driver Diagram พร้อม KPI ทุกระดับ พร้อม Live Preview และ Export</p>
+                <p className="text-sm text-slate-500">สร้าง Driver Diagram พร้อม KPI ทุกระดับ พร้อม Live Preview, Export, และบันทึกขึ้นฐานข้อมูล</p>
+              </div>
+              <label className="block max-w-xl space-y-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Document Title</span>
+                <input
+                  value={documentTitle}
+                  onChange={(e) => {
+                    setDocumentTitle(e.target.value);
+                    resetStorageNotice();
+                  }}
+                  placeholder="ตั้งชื่อเอกสาร"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              <button
+                onClick={startNewDiagram}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                <FilePlus2 size={16} /> New
+              </button>
+              <button
+                onClick={saveDiagram}
+                disabled={savingDiagram}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+              >
+                <Save size={16} /> {savingDiagram ? "Saving..." : "Save"}
+              </button>
               <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                 <Copy size={16} /> {copied ? "Copied" : "Copy Mermaid"}
               </button>
@@ -1294,11 +1554,79 @@ function App() {
               </button>
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-medium ${isSupabaseConfigured ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              <Database size={15} />
+              {isSupabaseConfigured ? "Supabase connected" : "Supabase env not configured yet"}
+            </div>
+            {currentDiagramId ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">ID: {currentDiagramId.slice(0, 8)}</div> : null}
+          </div>
+          {storageError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{storageError}</div> : null}
+          {!storageError && storageMessage ? <div className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{storageMessage}</div> : null}
           {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh] lg:overflow-auto">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Saved Diagrams</h2>
+                  <p className="text-sm text-slate-500">เปิดดูงานที่เคยบันทึกไว้ในฐานข้อมูล</p>
+                </div>
+                <button
+                  onClick={refreshSavedDiagrams}
+                  disabled={!isSupabaseConfigured || loadingSavedDiagrams}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {!isSupabaseConfigured ? (
+                  <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                    ใส่ค่าใน <code>.env.local</code> ตามไฟล์ <code>.env.example</code> ก่อน ระบบถึงจะบันทึกและเปิดรายการจากฐานข้อมูลได้
+                  </div>
+                ) : loadingSavedDiagrams ? (
+                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">Loading saved diagrams...</div>
+                ) : savedDiagrams.length ? (
+                  savedDiagrams.map((item) => (
+                    <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                      <button
+                        onClick={() => openDiagram(item.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {item.updated_at ? new Date(item.updated_at).toLocaleString("th-TH") : ""}
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openDiagram(item.id)}
+                          disabled={openingDiagramId === item.id}
+                          className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                          title="Open"
+                        >
+                          <FolderOpen size={16} />
+                        </button>
+                        <button
+                          onClick={() => deleteDiagram(item.id)}
+                          disabled={deletingDiagramId === item.id}
+                          className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">ยังไม่มีรายการที่บันทึกไว้</div>
+                )}
+              </div>
+            </div>
+
             <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
               <TextAreaField label="Purpose" value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
               <div className="mt-3">

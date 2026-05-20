@@ -10,6 +10,7 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "@tailwindcss/vite": "^4.3.0",
     "@vitejs/plugin-react": "^6.0.2",
     "docx": "^9.6.1",
