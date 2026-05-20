@@ -46,6 +46,13 @@ create table if not exists public.shared_driver_diagrams (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.shared_driver_diagram_request_logs (
+  id bigserial primary key,
+  ip_address text not null,
+  share_token uuid,
+  requested_at timestamptz not null default now()
+);
+
 alter table public.driver_diagrams
   add column if not exists user_id uuid references auth.users (id) on delete cascade;
 
@@ -94,6 +101,8 @@ create unique index if not exists shared_driver_diagrams_share_token_idx on publ
 create unique index if not exists shared_driver_diagrams_diagram_id_idx on public.shared_driver_diagrams using btree (diagram_id);
 create index if not exists shared_driver_diagrams_user_id_idx on public.shared_driver_diagrams using btree (user_id);
 create index if not exists shared_driver_diagrams_expires_at_idx on public.shared_driver_diagrams using btree (expires_at);
+create index if not exists shared_driver_diagram_request_logs_ip_requested_at_idx on public.shared_driver_diagram_request_logs using btree (ip_address, requested_at desc);
+create index if not exists shared_driver_diagram_request_logs_requested_at_idx on public.shared_driver_diagram_request_logs using btree (requested_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -112,6 +121,17 @@ begin
 end;
 $$;
 
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
 drop trigger if exists driver_diagrams_set_updated_at on public.driver_diagrams;
 
 create trigger driver_diagrams_set_updated_at
@@ -124,11 +144,12 @@ drop trigger if exists shared_driver_diagrams_set_updated_at on public.shared_dr
 create trigger shared_driver_diagrams_set_updated_at
 before update on public.shared_driver_diagrams
 for each row
-execute function public.set_updated_at();
+execute function public.touch_updated_at();
 
 revoke all on table public.driver_diagrams from anon;
 revoke all on table public.driver_diagram_versions from anon;
 revoke all on table public.shared_driver_diagrams from anon;
+revoke all on table public.shared_driver_diagram_request_logs from anon;
 grant usage, select on all sequences in schema public to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to service_role;
@@ -136,10 +157,12 @@ grant select, insert, delete on table public.driver_diagram_versions to authenti
 grant select, insert, delete on table public.driver_diagram_versions to service_role;
 grant select, insert, update, delete on table public.shared_driver_diagrams to authenticated;
 grant select, insert, update, delete on table public.shared_driver_diagrams to service_role;
+grant select, insert, delete on table public.shared_driver_diagram_request_logs to service_role;
 
 alter table public.driver_diagrams enable row level security;
 alter table public.driver_diagram_versions enable row level security;
 alter table public.shared_driver_diagrams enable row level security;
+alter table public.shared_driver_diagram_request_logs enable row level security;
 
 drop policy if exists "Public read driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public insert driver diagrams" on public.driver_diagrams;
