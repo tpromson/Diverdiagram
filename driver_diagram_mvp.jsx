@@ -30,6 +30,7 @@ import {
   ExternalLink,
   History,
   RotateCcw,
+  Maximize2,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -977,6 +978,51 @@ function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset }) {
   );
 }
 
+function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
+  if (renderError) {
+    return <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>;
+  }
+
+  return (
+    <div className={`overflow-auto rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200 ${className}`}>
+      <div
+        className="diagram-preview"
+        style={{ "--diagram-scale": zoom }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    </div>
+  );
+}
+
+function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 sm:p-6">
+      <div className="flex h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div>
+            <h2 className="text-lg font-bold text-slate-950">{title || defaultDocumentTitle}</h2>
+            <p className="mt-1 text-sm text-slate-500">Full-screen preview for reviewing diagram structure and reading small details before export.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} />
+            <button
+              onClick={onClose}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <X size={16} /> Close
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 bg-slate-100 p-4">
+          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} className="h-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [data, setData] = useState(defaultData);
   const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
@@ -1013,6 +1059,7 @@ function App() {
   const [exportError, setExportError] = useState("");
   const [view, setView] = useState("preview");
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
   const [sharedView, setSharedView] = useState(null);
@@ -1437,6 +1484,19 @@ function App() {
     };
   }, [codeInput]);
 
+  useEffect(() => {
+    if (!previewModalOpen) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setPreviewModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewModalOpen]);
+
   const updatePurpose = (field, value) => {
     codeSourceRef.current = "form";
     setData((d) => ({ ...d, purpose: { ...d.purpose, [field]: value } }));
@@ -1458,6 +1518,14 @@ function App() {
 
   const resetPreviewZoom = () => {
     setPreviewZoom(1);
+  };
+
+  const openPreviewModal = () => {
+    setPreviewModalOpen(true);
+  };
+
+  const closePreviewModal = () => {
+    setPreviewModalOpen(false);
   };
 
   const upsertSavedDiagram = (row) => {
@@ -2754,6 +2822,14 @@ function App() {
                     onReset={resetPreviewZoom}
                   />
                 ) : null}
+                {view === "preview" ? (
+                  <button
+                    onClick={openPreviewModal}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <Maximize2 size={16} /> Expand
+                  </button>
+                ) : null}
                 <div className="inline-flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
@@ -2772,17 +2848,7 @@ function App() {
             </div>
             <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
               {view === "preview" ? (
-                renderError ? (
-                  <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
-                ) : (
-                  <div className="overflow-auto rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                    <div
-                      className="diagram-preview"
-                      style={{ "--diagram-scale": previewZoom }}
-                      dangerouslySetInnerHTML={{ __html: svg }}
-                    />
-                  </div>
-                )
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} />
               ) : (
                 <textarea
                   value={codeInput}
@@ -2792,6 +2858,17 @@ function App() {
               )}
             </div>
           </section>
+          <PreviewModal
+            open={previewModalOpen}
+            title={documentTitle}
+            svg={svg}
+            renderError={renderError}
+            zoom={previewZoom}
+            onClose={closePreviewModal}
+            onZoomOut={zoomPreviewOut}
+            onZoomIn={zoomPreviewIn}
+            onReset={resetPreviewZoom}
+          />
         </div>
       </div>
     );
@@ -3422,6 +3499,14 @@ function App() {
                     onReset={resetPreviewZoom}
                   />
                 ) : null}
+                {view === "preview" ? (
+                  <button
+                    onClick={openPreviewModal}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <Maximize2 size={16} /> Expand
+                  </button>
+                ) : null}
                 <div className="flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
@@ -3441,17 +3526,7 @@ function App() {
 
             {view === "preview" ? (
               <div className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:h-[73vh]">
-                {renderError ? (
-                  <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
-                ) : (
-                  <div className="rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                    <div
-                      className="diagram-preview"
-                      style={{ "--diagram-scale": previewZoom }}
-                      dangerouslySetInnerHTML={{ __html: svg }}
-                    />
-                  </div>
-                )}
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} />
               </div>
             ) : (
               <div className="space-y-3">
@@ -3476,6 +3551,17 @@ function App() {
             )}
           </section>
         </div>
+        <PreviewModal
+          open={previewModalOpen}
+          title={documentTitle}
+          svg={svg}
+          renderError={renderError}
+          zoom={previewZoom}
+          onClose={closePreviewModal}
+          onZoomOut={zoomPreviewOut}
+          onZoomIn={zoomPreviewIn}
+          onReset={resetPreviewZoom}
+        />
       </div>
     </div>
   );
