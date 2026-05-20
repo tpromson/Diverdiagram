@@ -814,6 +814,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
+  const [authVerifyingLink, setAuthVerifyingLink] = useState(false);
   const [authEmail, setAuthEmail] = useState("");
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
@@ -912,6 +913,7 @@ function App() {
       const type = params.get("type");
 
       if (tokenHash) {
+        setAuthVerifyingLink(true);
         const { error } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: type || "email",
@@ -926,6 +928,8 @@ function App() {
           setAuthMessage("Signed in successfully.");
           window.history.replaceState({}, document.title, window.location.pathname);
         }
+
+        setAuthVerifyingLink(false);
       }
 
       const { data: authData, error } = await supabase.auth.getSession();
@@ -948,6 +952,7 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       syncAuthState(nextSession);
       setAuthLoading(false);
+      setAuthVerifyingLink(false);
 
       if (event === "SIGNED_IN") {
         setAuthError("");
@@ -1703,18 +1708,16 @@ function App() {
     }
   };
 
-  const handleSignIn = async (event) => {
-    event.preventDefault();
-
+  const requestMagicLink = async () => {
     if (!isSupabaseConfigured || !supabase) {
       setAuthError("Add Supabase env vars before signing in.");
-      return;
+      return false;
     }
 
     const email = authEmail.trim();
     if (!email) {
       setAuthError("Enter your email before requesting a sign-in link.");
-      return;
+      return false;
     }
 
     setAuthSubmitting(true);
@@ -1730,11 +1733,19 @@ function App() {
 
     if (error) {
       setAuthError(error.message || "Unable to send the sign-in link.");
+      setAuthSubmitting(false);
+      return false;
     } else {
-      setAuthMessage("Check your email for the sign-in link.");
+      setAuthMessage(`Check ${email} for the sign-in link.`);
     }
 
     setAuthSubmitting(false);
+    return true;
+  };
+
+  const handleSignIn = async (event) => {
+    event.preventDefault();
+    await requestMagicLink();
   };
 
   const handleSignOut = async () => {
@@ -1788,7 +1799,12 @@ function App() {
                       <input
                         type="email"
                         value={authEmail}
-                        onChange={(e) => setAuthEmail(e.target.value)}
+                        onChange={(e) => {
+                          setAuthEmail(e.target.value);
+                          if (authError) {
+                            setAuthError("");
+                          }
+                        }}
                         placeholder="you@example.com"
                         className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                       />
@@ -1796,10 +1812,28 @@ function App() {
                         type="submit"
                         disabled={authSubmitting || authLoading}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
-                      >
-                        <Mail size={16} /> {authSubmitting ? "Sending..." : "Email Sign-In Link"}
-                      </button>
+                        >
+                          <Mail size={16} /> {authSubmitting ? "Sending..." : "Email Sign-In Link"}
+                        </button>
                     </div>
+                    {authVerifyingLink ? (
+                      <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">Verifying your sign-in link...</div>
+                    ) : authLoading ? (
+                      <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">Checking for an existing session...</div>
+                    ) : null}
+                    {authMessage ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={requestMagicLink}
+                          disabled={authSubmitting}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> Resend Link
+                        </button>
+                        <span className="text-xs text-slate-400">Use this if the first email takes a while to arrive.</span>
+                      </div>
+                    ) : null}
                     <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
                   </form>
                 )}
@@ -1857,7 +1891,13 @@ function App() {
               {isSupabaseConfigured ? "Supabase connected" : "Supabase env not configured yet"}
             </div>
             <div className={`rounded-full px-3 py-1.5 ${isAuthenticated ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
-              {isAuthenticated ? "Private workspace active" : authLoading ? "Checking session..." : "Sign in for private cloud save"}
+              {isAuthenticated
+                ? "Private workspace active"
+                : authVerifyingLink
+                  ? "Verifying sign-in link..."
+                  : authLoading
+                    ? "Checking session..."
+                    : "Sign in for private cloud save"}
             </div>
             {isSupabaseConfigured && currentDiagramId ? (
               <div
@@ -1943,7 +1983,17 @@ function App() {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">ยังไม่มีรายการที่บันทึกไว้</div>
+                  <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                    <div className="font-semibold text-slate-900">ยังไม่มีรายการที่บันทึกไว้</div>
+                    <p className="mt-1">เริ่มจากกด Save งานปัจจุบัน แล้วรายการจะโผล่มาใน workspace นี้ทันที</p>
+                    <button
+                      onClick={() => saveDiagram()}
+                      disabled={savingDiagram}
+                      className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                    >
+                      <Save size={16} /> {savingDiagram ? "Saving..." : "Save Current Diagram"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
