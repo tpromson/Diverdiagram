@@ -12,10 +12,22 @@ create table if not exists public.driver_diagrams (
   archived_at timestamptz,
   share_id uuid,
   shared_at timestamptz,
+  share_expires_at timestamptz,
   share_revoked_at timestamptz,
   last_opened_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists public.driver_diagram_versions (
+  id uuid primary key default gen_random_uuid(),
+  diagram_id uuid not null references public.driver_diagrams (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  title text not null,
+  diagram_data jsonb not null,
+  mermaid_code text not null,
+  save_source text not null default 'manual',
+  created_at timestamptz not null default now()
 );
 
 alter table public.driver_diagrams
@@ -37,6 +49,9 @@ alter table public.driver_diagrams
   add column if not exists shared_at timestamptz;
 
 alter table public.driver_diagrams
+  add column if not exists share_expires_at timestamptz;
+
+alter table public.driver_diagrams
   add column if not exists share_revoked_at timestamptz;
 
 create index if not exists driver_diagrams_user_id_idx on public.driver_diagrams using btree (user_id);
@@ -44,6 +59,9 @@ create index if not exists driver_diagrams_last_opened_at_idx on public.driver_d
 create index if not exists driver_diagrams_is_favorite_idx on public.driver_diagrams using btree (is_favorite desc);
 create index if not exists driver_diagrams_archived_at_idx on public.driver_diagrams using btree (archived_at desc);
 create unique index if not exists driver_diagrams_share_id_idx on public.driver_diagrams using btree (share_id) where share_id is not null;
+create index if not exists driver_diagrams_share_expires_at_idx on public.driver_diagrams using btree (share_expires_at);
+create index if not exists driver_diagram_versions_diagram_id_created_at_idx on public.driver_diagram_versions using btree (diagram_id, created_at desc);
+create index if not exists driver_diagram_versions_user_id_idx on public.driver_diagram_versions using btree (user_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -51,9 +69,9 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.is_favorite, new.archived_at, new.share_id, new.shared_at, new.share_revoked_at)
+  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.is_favorite, new.archived_at, new.share_id, new.shared_at, new.share_expires_at, new.share_revoked_at)
     is distinct from
-    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.is_favorite, old.archived_at, old.share_id, old.shared_at, old.share_revoked_at) then
+    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.is_favorite, old.archived_at, old.share_id, old.shared_at, old.share_expires_at, old.share_revoked_at) then
     new.updated_at = now();
   else
     new.updated_at = old.updated_at;
@@ -70,18 +88,25 @@ for each row
 execute function public.set_updated_at();
 
 revoke all on table public.driver_diagrams from anon;
+revoke all on table public.driver_diagram_versions from anon;
 grant select on table public.driver_diagrams to anon;
 grant usage, select on all sequences in schema public to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to service_role;
+grant select, insert, delete on table public.driver_diagram_versions to authenticated;
+grant select, insert, delete on table public.driver_diagram_versions to service_role;
 
 alter table public.driver_diagrams enable row level security;
+alter table public.driver_diagram_versions enable row level security;
 
 drop policy if exists "Public read driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public insert driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public update driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public delete driver diagrams" on public.driver_diagrams;
 drop policy if exists "Anyone can read shared driver diagrams" on public.driver_diagrams;
+drop policy if exists "Users can read their own diagram versions" on public.driver_diagram_versions;
+drop policy if exists "Users can insert their own diagram versions" on public.driver_diagram_versions;
+drop policy if exists "Users can delete their own diagram versions" on public.driver_diagram_versions;
 
 drop policy if exists "Users can read their own driver diagrams" on public.driver_diagrams;
 create policy "Users can read their own driver diagrams"
@@ -94,7 +119,7 @@ create policy "Anyone can read shared driver diagrams"
 on public.driver_diagrams
 for select
 to anon, authenticated
-using (share_id is not null and share_revoked_at is null);
+using (share_id is not null and share_revoked_at is null and (share_expires_at is null or share_expires_at > now()));
 
 drop policy if exists "Users can insert their own driver diagrams" on public.driver_diagrams;
 create policy "Users can insert their own driver diagrams"
@@ -114,6 +139,24 @@ with check ((select auth.uid()) = user_id);
 drop policy if exists "Users can delete their own driver diagrams" on public.driver_diagrams;
 create policy "Users can delete their own driver diagrams"
 on public.driver_diagrams
+for delete
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy "Users can read their own diagram versions"
+on public.driver_diagram_versions
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy "Users can insert their own diagram versions"
+on public.driver_diagram_versions
+for insert
+to authenticated
+with check ((select auth.uid()) = user_id);
+
+create policy "Users can delete their own diagram versions"
+on public.driver_diagram_versions
 for delete
 to authenticated
 using ((select auth.uid()) = user_id);
