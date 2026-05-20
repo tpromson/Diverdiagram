@@ -909,16 +909,36 @@ function TextAreaField({ label, value, onChange, icon }) {
   return (
     <label className="block space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        {icon}
-        {label}
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200">
+          {icon}
+        </span>
+        <span>{label}</span>
       </div>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={2}
-        className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
       />
     </label>
+  );
+}
+
+function StatusPill({ tone = "neutral", icon, children }) {
+  const toneClass =
+    tone === "success"
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+      : tone === "info"
+        ? "bg-blue-50 text-blue-700 ring-blue-100"
+        : tone === "warning"
+          ? "bg-amber-50 text-amber-700 ring-amber-100"
+          : "bg-slate-100 text-slate-600 ring-slate-200";
+
+  return (
+    <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ${toneClass}`}>
+      {icon}
+      {children}
+    </div>
   );
 }
 
@@ -999,6 +1019,17 @@ function App() {
 
     return sortSavedDiagrams(filtered, savedSort);
   }, [savedDiagrams, savedScope, savedSearch, savedSort]);
+  const diagramStats = useMemo(() => {
+    const primaryCount = data.primaryDrivers.length;
+    const secondaryCount = data.primaryDrivers.reduce((total, primary) => total + primary.secondaryDrivers.length, 0);
+    const changeCount = data.primaryDrivers.reduce(
+      (total, primary) =>
+        total + primary.secondaryDrivers.reduce((branchTotal, secondary) => branchTotal + secondary.changeIdeas.length, 0),
+      0
+    );
+
+    return { primaryCount, secondaryCount, changeCount };
+  }, [data]);
 
   useEffect(() => {
     if (codeSourceRef.current === "form") {
@@ -2702,13 +2733,78 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
-        <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <div>
-              <h1 className="text-2xl font-bold tracking-tight">Driver Diagram MVP</h1>
-                <p className="text-sm text-slate-500">สร้าง Driver Diagram พร้อม KPI ทุกระดับ พร้อม Live Preview, Export, และบันทึกขึ้นฐานข้อมูลแบบแยกตามผู้ใช้</p>
+        <header className="rounded-[28px] bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Driver Diagram Workspace
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">Driver Diagram MVP</h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    สร้าง Driver Diagram พร้อม KPI ทุกระดับ, แก้ไข Mermaid ได้สองทาง, export เอกสาร, และบันทึกขึ้นฐานข้อมูลแบบแยกตามผู้ใช้ใน workspace เดียวกัน
+                  </p>
+                </div>
               </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Document</div>
+                  <div className="mt-2 text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} primary</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} secondary</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} change ideas</span>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
+                  <div className="mt-2 text-base font-semibold text-slate-900">
+                    {isAuthenticated ? currentUser?.email || session?.user?.email || "Signed-in user" : "Private cloud save"}
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    {isAuthenticated
+                      ? "Saved diagrams, version history, and share links in this workspace belong only to this account."
+                      : "Sign in with your email to save, reopen, auto-save, and share diagrams from your own workspace."}
+                  </p>
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Session</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <StatusPill
+                      tone={isSupabaseConfigured ? "success" : "warning"}
+                      icon={<Database size={15} />}
+                    >
+                      {isSupabaseConfigured ? "Supabase connected" : "Supabase env missing"}
+                    </StatusPill>
+                    <StatusPill tone={isAuthenticated ? "info" : "neutral"}>
+                      {isAuthenticated
+                        ? "Private workspace active"
+                        : authVerifyingLink
+                          ? "Verifying sign-in link..."
+                          : authLoading
+                            ? "Checking session..."
+                            : "Sign in for cloud save"}
+                    </StatusPill>
+                    {isSupabaseConfigured && currentDiagramId ? (
+                      <StatusPill
+                        tone={autoSaveState === "saving" ? "info" : autoSaveState === "dirty" ? "warning" : "neutral"}
+                      >
+                        {autoSaveState === "saving"
+                          ? "Auto-saving..."
+                          : autoSaveState === "dirty"
+                            ? "Unsaved changes"
+                            : "All changes saved"}
+                      </StatusPill>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 text-xs text-slate-500">
+                    {currentDiagramId ? `Current ID: ${currentDiagramId.slice(0, 8)}` : "New unsaved document"}
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 {isAuthenticated ? (
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2776,8 +2872,13 @@ function App() {
                 {authError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{authError}</div> : null}
                 {!authError && authMessage ? <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{authMessage}</div> : null}
               </div>
-              <label className="block max-w-xl space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Document Title</span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Document Title</div>
+                <label className="mt-2 block space-y-2">
+                  <span className="sr-only">Document Title</span>
                 <input
                   value={documentTitle}
                   onChange={(e) => {
@@ -2785,74 +2886,54 @@ function App() {
                     resetStorageNotice();
                   }}
                   placeholder="ตั้งชื่อเอกสาร"
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2 xl:justify-end">
-              <button
-                onClick={startNewDiagram}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                <FilePlus2 size={16} /> New
-              </button>
-              <button
-                onClick={saveDiagram}
-                disabled={savingDiagram || !isAuthenticated}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
-              >
-                <Save size={16} /> {savingDiagram ? "Saving..." : isAuthenticated ? "Save" : "Sign in to save"}
-              </button>
-              <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                <Copy size={16} /> {copied ? "Copied" : "Copy Mermaid"}
-              </button>
-              <button onClick={downloadMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                <Download size={16} /> .mmd
-              </button>
-              <button onClick={downloadSvg} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                <Download size={16} /> .svg
-              </button>
-              <button
-                onClick={downloadDocx}
-                disabled={exportingDocx}
-                className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-              >
-                <Download size={16} /> {exportingDocx ? "Exporting..." : ".docx"}
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-medium ${isSupabaseConfigured ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-              <Database size={15} />
-              {isSupabaseConfigured ? "Supabase connected" : "Supabase env not configured yet"}
-            </div>
-            <div className={`rounded-full px-3 py-1.5 ${isAuthenticated ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"}`}>
-              {isAuthenticated
-                ? "Private workspace active"
-                : authVerifyingLink
-                  ? "Verifying sign-in link..."
-                  : authLoading
-                    ? "Checking session..."
-                    : "Sign in for private cloud save"}
-            </div>
-            {isSupabaseConfigured && currentDiagramId ? (
-              <div
-                className={`rounded-full px-3 py-1.5 ${
-                  autoSaveState === "saving"
-                    ? "bg-blue-50 text-blue-700"
-                    : autoSaveState === "dirty"
-                      ? "bg-amber-50 text-amber-700"
-                      : "bg-slate-100 text-slate-600"
-                }`}
-              >
-                {autoSaveState === "saving"
-                  ? "Auto-saving..."
-                  : autoSaveState === "dirty"
-                    ? "Unsaved changes"
-                    : "All changes saved"}
+                </label>
+                <p className="mt-2 text-xs leading-5 text-slate-500">ชื่อนี้จะถูกใช้กับรายการ saved, share title, และชื่อไฟล์ export ด้วย</p>
               </div>
-            ) : null}
-            {currentDiagramId ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">ID: {currentDiagramId.slice(0, 8)}</div> : null}
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Primary Actions</div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button
+                    onClick={saveDiagram}
+                    disabled={savingDiagram || !isAuthenticated}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    <Save size={16} /> {savingDiagram ? "Saving..." : isAuthenticated ? "Save Diagram" : "Sign in to save"}
+                  </button>
+                  <button
+                    onClick={startNewDiagram}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                  >
+                    <FilePlus2 size={16} /> New Diagram
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Export & Code</div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    <Copy size={16} /> {copied ? "Copied Mermaid" : "Copy Mermaid"}
+                  </button>
+                  <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+                    <Download size={16} /> Export .mmd
+                  </button>
+                  <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                    <Download size={16} /> Export .svg
+                  </button>
+                  <button
+                    onClick={downloadDocx}
+                    disabled={exportingDocx}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    <Download size={16} /> {exportingDocx ? "Exporting..." : "Export .docx"}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-500">Export uses the current document title as the filename and reflects the latest form/code state.</p>
+              </div>
+            </div>
           </div>
           {storageError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{storageError}</div> : null}
           {!storageError && storageMessage ? (
@@ -2884,13 +2965,18 @@ function App() {
                   <h2 className="text-base font-bold text-slate-900">Saved Diagrams</h2>
                   <p className="text-sm text-slate-500">เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้</p>
                 </div>
-                <button
-                  onClick={refreshSavedDiagrams}
-                  disabled={!isSupabaseConfigured || !isAuthenticated || loadingSavedDiagrams}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                    {filteredSavedDiagrams.length} shown
+                  </div>
+                  <button
+                    onClick={refreshSavedDiagrams}
+                    disabled={!isSupabaseConfigured || !isAuthenticated || loadingSavedDiagrams}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
+                  </button>
+                </div>
               </div>
               {isAuthenticated ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px_150px]">
@@ -2940,7 +3026,8 @@ function App() {
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">Loading saved diagrams...</div>
                 ) : filteredSavedDiagrams.length ? (
                   filteredSavedDiagrams.map((item) => (
-                    <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                    <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
+                      <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         {renamingDiagramId === item.id ? (
                           <div className="space-y-2">
@@ -2980,11 +3067,13 @@ function App() {
                                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Share expired</span>
                               ) : null}
                             </div>
-                            <div className="mt-1 space-y-1 text-xs text-slate-500">
-                              <div>Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</div>
-                              <div>Last opened: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at) : "Not opened yet"}</div>
+                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</span>
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                                Last opened: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at) : "Not opened yet"}
+                              </span>
                               {hasActiveShareLink(item) ? (
-                                <div>Shared until: {formatSavedDateTime(item.share_expires_at)}</div>
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1">Shared until: {formatSavedDateTime(item.share_expires_at)}</span>
                               ) : null}
                             </div>
                           </button>
@@ -3074,6 +3163,7 @@ function App() {
                           <Trash2 size={16} />
                         </button>
                       </div>
+                    </div>
                     </div>
                   ))
                 ) : savedSearch.trim() ? (
@@ -3168,6 +3258,15 @@ function App() {
             </div>
 
             <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-pink-950">Purpose & Outcome KPI</h2>
+                  <p className="mt-1 text-sm text-pink-800/75">เริ่มจากเป้าหมายหลักและ KPI ระดับผลลัพธ์ เพื่อให้ทุก branch ด้านล่างวิ่งกลับมาหาเป้าหมายเดียวกัน</p>
+                </div>
+                <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
+                  Top-level goal
+                </div>
+              </div>
               <TextAreaField label="Purpose" value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
               <div className="mt-3">
                 <TextAreaField label="Purpose KPI" value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} />
@@ -3175,16 +3274,22 @@ function App() {
             </div>
 
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">Primary Drivers</h2>
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">Primary Drivers</h2>
+                <p className="text-sm text-slate-500">แตกเป้าหมายเป็นตัวขับเคลื่อนหลัก แล้วค่อยเติม secondary drivers และ change ideas ใต้แต่ละ branch</p>
+              </div>
               <button onClick={addPrimary} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
                 <Plus size={16} /> Add Primary
               </button>
             </div>
 
             {data.primaryDrivers.map((pd, pi) => (
-              <div key={pd.id} className="space-y-3 rounded-3xl border border-blue-100 bg-blue-50 p-4">
+              <div key={pd.id} className="space-y-3 rounded-3xl border border-blue-100 bg-blue-50 p-4 shadow-sm ring-1 ring-blue-100/70">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-bold text-blue-900">Primary Driver {pi + 1}</div>
+                  <div>
+                    <div className="font-bold text-blue-900">Primary Driver {pi + 1}</div>
+                    <div className="text-xs text-blue-800/70">Main lever for the outcome goal</div>
+                  </div>
                   <button onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                     <Trash2 size={16} />
                   </button>
@@ -3197,9 +3302,12 @@ function App() {
                 </button>
 
                 {pd.secondaryDrivers.map((sd, si) => (
-                  <div key={sd.id} className="ml-0 space-y-3 rounded-3xl border border-amber-100 bg-amber-50 p-4 md:ml-5">
+                  <div key={sd.id} className="ml-0 space-y-3 rounded-3xl border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
                     <div className="flex items-center justify-between">
-                      <div className="font-bold text-amber-900">Secondary Driver {si + 1}</div>
+                      <div>
+                        <div className="font-bold text-amber-900">Secondary Driver {si + 1}</div>
+                        <div className="text-xs text-amber-800/70">Supporting branch under this primary driver</div>
+                      </div>
                       <button onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                         <Trash2 size={16} />
                       </button>
@@ -3212,9 +3320,12 @@ function App() {
                     </button>
 
                     {sd.changeIdeas.map((ci, cii) => (
-                      <div key={ci.id} className="ml-0 space-y-3 rounded-3xl border border-orange-100 bg-white p-4 md:ml-5">
+                      <div key={ci.id} className="ml-0 space-y-3 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm ring-1 ring-orange-100/80 md:ml-5">
                         <div className="flex items-center justify-between">
-                          <div className="font-bold text-orange-900">Change Idea {cii + 1}</div>
+                          <div>
+                            <div className="font-bold text-orange-900">Change Idea {cii + 1}</div>
+                            <div className="text-xs text-orange-800/70">Concrete experiment or implementation idea</div>
+                          </div>
                           <button onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                             <Trash2 size={16} />
                           </button>
@@ -3230,8 +3341,11 @@ function App() {
           </section>
 
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-bold">Output</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-950">Output</h2>
+                <p className="mt-1 text-sm text-slate-500">Preview the current diagram or edit Mermaid directly, then sync it back into the form when you are ready.</p>
+              </div>
               <div className="flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
@@ -3249,11 +3363,13 @@ function App() {
             </div>
 
             {view === "preview" ? (
-              <div className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-white p-4 lg:h-[73vh]">
+              <div className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:h-[73vh]">
                 {renderError ? (
                   <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>
                 ) : (
-                  <div className="diagram-preview" dangerouslySetInnerHTML={{ __html: svg }} />
+                  <div className="rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                    <div className="diagram-preview" dangerouslySetInnerHTML={{ __html: svg }} />
+                  </div>
                 )}
               </div>
             ) : (
@@ -3273,7 +3389,7 @@ function App() {
                   value={codeInput}
                   onChange={(e) => handleCodeInputChange(e.target.value)}
                   spellCheck={false}
-                  className="min-h-[20rem] w-full overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none lg:h-[73vh]"
+                  className="min-h-[20rem] w-full overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none ring-1 ring-slate-800 lg:h-[73vh]"
                 />
               </div>
             )}

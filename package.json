@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "design:lint": "design.md lint DESIGN.md",
+    "design:lint:json": "design.md lint DESIGN.md --format json",
+    "design:spec": "design.md spec"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +24,7 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
+    "@google/design.md": "^0.1.1",
     "vite": "^8.0.13"
   }
 }
