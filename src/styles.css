@@ -61,13 +61,3 @@ div::-webkit-scrollbar-track {
   width: calc(var(--diagram-scale, 1) * 100%) !important;
   max-width: none !important;
 }
-
-@media (max-width: 639px) {
-  .diagram-preview {
-    min-width: calc(820px * var(--diagram-scale, 1));
-  }
-
-  .diagram-preview svg {
-    width: calc(820px * var(--diagram-scale, 1)) !important;
-  }
-}
