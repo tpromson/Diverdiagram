@@ -119,6 +119,13 @@ function updateDocumentPresentation({ title, description }) {
   });
 }
 
+function isPreviewAuthLayoutEnabled() {
+  if (typeof window === "undefined") return false;
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get("previewAuth") === "1";
+}
+
 function buildExportFilename(title, extension) {
   const base = String(title || defaultDocumentTitle)
     .trim()
@@ -1086,6 +1093,12 @@ function App() {
     [documentTitle, data, codeInput]
   );
   const isAuthenticated = Boolean(currentUser?.id);
+  const previewAuthEnabled = useMemo(
+    () => !isAuthenticated && isPreviewAuthLayoutEnabled(),
+    [isAuthenticated]
+  );
+  const authUiActive = isAuthenticated || previewAuthEnabled;
+  const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : "Signed-in user");
   const isReadOnlySharedView = Boolean(sharedView);
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
@@ -2905,10 +2918,10 @@ function App() {
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
                   <div className="mt-2 text-base font-semibold text-slate-900">
-                    {isAuthenticated ? currentUser?.email || session?.user?.email || "Signed-in user" : "Private cloud save"}
+                    {authUiActive ? authUiEmail : "Private cloud save"}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {isAuthenticated
+                    {authUiActive
                       ? "Saved diagrams, version history, and share links in this workspace belong only to this account."
                       : "Sign in with your email to save, reopen, auto-save, and share diagrams from your own workspace."}
                   </p>
@@ -2922,8 +2935,8 @@ function App() {
                     >
                       {isSupabaseConfigured ? "Supabase connected" : "Supabase env missing"}
                     </StatusPill>
-                    <StatusPill tone={isAuthenticated ? "info" : "neutral"}>
-                      {isAuthenticated
+                    <StatusPill tone={authUiActive ? "info" : "neutral"}>
+                      {authUiActive
                         ? "Private workspace active"
                         : authVerifyingLink
                           ? "Verifying sign-in link..."
@@ -2954,23 +2967,23 @@ function App() {
                   <div>
                     <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Private Cloud Save</div>
                     <p className="mt-1 text-sm text-slate-500">
-                      {isAuthenticated
+                      {authUiActive
                         ? "Your diagrams, auto-saves, version history, and share links stay inside this private workspace."
                         : "Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace."}
                     </p>
                   </div>
 
-                  {isAuthenticated ? (
+                  {authUiActive ? (
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                         <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Signed in as</div>
                         <div className="mt-1 truncate text-sm font-medium text-slate-900">
-                          {currentUser?.email || session?.user?.email || "Signed-in user"}
+                          {authUiEmail}
                         </div>
                       </div>
                       <button
                         onClick={handleSignOut}
-                        disabled={authSubmitting}
+                        disabled={authSubmitting || !isAuthenticated}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
                       >
                         <LogOut size={16} /> {authSubmitting ? "Signing out..." : "Sign out"}
@@ -3008,7 +3021,7 @@ function App() {
                     <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">Checking for an existing session...</div>
                   ) : null}
 
-                  {!isAuthenticated && authMessage ? (
+                  {!authUiActive && authMessage ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
@@ -3023,6 +3036,11 @@ function App() {
                   ) : null}
 
                   <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
+                  {previewAuthEnabled ? (
+                    <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">
+                      Preview auth layout only. Save, autosave, and private data actions still require a real sign-in.
+                    </div>
+                  ) : null}
                 </div>
                 {authError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{authError}</div> : null}
                 {!authError && authMessage ? <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{authMessage}</div> : null}
