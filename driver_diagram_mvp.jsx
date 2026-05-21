@@ -169,6 +169,7 @@ const translations = {
     galleryDisplayNamePlaceholder: "ชื่อที่อยากให้แสดงใน gallery",
     galleryDisplayNameHint: "ใช้ชื่อนี้แทน email เวลาส่งงานเข้า gallery",
     galleryDisplayNameSaved: "อัปเดตชื่อที่ใช้แสดงใน gallery แล้ว",
+    changeDisplayName: "Change",
     reportGallery: "Report",
     reporting: "กำลังส่ง...",
     reportGalleryPrompt: "บอกสั้น ๆ ว่าต้องการ report งานนี้เรื่องอะไร",
@@ -395,6 +396,7 @@ const translations = {
     galleryDisplayNamePlaceholder: "Name to show in the gallery",
     galleryDisplayNameHint: "This replaces your email when you publish to the gallery.",
     galleryDisplayNameSaved: "Updated the gallery display name.",
+    changeDisplayName: "Change",
     reportGallery: "Report",
     reporting: "Reporting...",
     reportGalleryPrompt: "Briefly describe why you are reporting this gallery item.",
@@ -1773,6 +1775,8 @@ function App() {
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
   const [galleryDisplayName, setGalleryDisplayName] = useState(() => readGalleryDisplayName());
+  const [galleryDisplayNameDraft, setGalleryDisplayNameDraft] = useState(() => readGalleryDisplayName());
+  const [editingGalleryDisplayName, setEditingGalleryDisplayName] = useState(false);
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [savedSearch, setSavedSearch] = useState("");
   const [savedSort, setSavedSort] = useState("updated_desc");
@@ -1954,6 +1958,12 @@ function App() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(GALLERY_DISPLAY_NAME_STORAGE_KEY, galleryDisplayName);
   }, [galleryDisplayName]);
+
+  useEffect(() => {
+    if (!editingGalleryDisplayName) {
+      setGalleryDisplayNameDraft(galleryDisplayName);
+    }
+  }, [editingGalleryDisplayName, galleryDisplayName]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -2535,6 +2545,24 @@ function App() {
 
   const closePreviewModal = () => {
     setPreviewModalOpen(false);
+  };
+
+  const startEditingGalleryDisplayName = () => {
+    setGalleryDisplayNameDraft(galleryDisplayName);
+    setEditingGalleryDisplayName(true);
+  };
+
+  const cancelEditingGalleryDisplayName = () => {
+    setGalleryDisplayNameDraft(galleryDisplayName);
+    setEditingGalleryDisplayName(false);
+  };
+
+  const saveGalleryDisplayName = () => {
+    const nextName = galleryDisplayNameDraft.trim() || buildGalleryDisplayName("", authUiEmail);
+    setGalleryDisplayName(nextName);
+    setEditingGalleryDisplayName(false);
+    setAuthError("");
+    setAuthMessage(t.galleryDisplayNameSaved);
   };
 
   const upsertSavedDiagram = (row) => {
@@ -4653,18 +4681,49 @@ function App() {
                         </div>
                       </div>
 
-                      <label className="block rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
-                          <div className="text-xs text-slate-400">{t.galleryDisplayNameHint}</div>
+                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
+                            <div className="mt-2 truncate text-base font-semibold text-slate-900">
+                              {galleryDisplayName || t.galleryDisplayNamePlaceholder}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
+                          </div>
+                          {!editingGalleryDisplayName ? (
+                            <button
+                              onClick={startEditingGalleryDisplayName}
+                              className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                              <Pencil size={14} /> {t.changeDisplayName}
+                            </button>
+                          ) : null}
                         </div>
-                        <input
-                          value={galleryDisplayName}
-                          onChange={(e) => setGalleryDisplayName(e.target.value)}
-                          placeholder={t.galleryDisplayNamePlaceholder}
-                          className="mt-2 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
-                        />
-                      </label>
+                        {editingGalleryDisplayName ? (
+                          <div className="mt-3 space-y-2">
+                            <input
+                              value={galleryDisplayNameDraft}
+                              onChange={(e) => setGalleryDisplayNameDraft(e.target.value)}
+                              placeholder={t.galleryDisplayNamePlaceholder}
+                              className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={saveGalleryDisplayName}
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                              >
+                                <Check size={14} /> {t.save}
+                              </button>
+                              <button
+                                onClick={cancelEditingGalleryDisplayName}
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                <X size={14} /> {t.cancel}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   ) : (
                     <form className="space-y-3" onSubmit={handleSignIn}>
