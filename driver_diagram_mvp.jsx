@@ -179,6 +179,27 @@ const translations = {
     adminModerationDescription: "จัดการรายงาน, ซ่อนงานจาก gallery, และคืนงานกลับขึ้นแสดงเมื่อพร้อม",
     adminQueueLoading: "กำลังโหลด moderation queue...",
     adminQueueEmpty: "ยังไม่มีงานที่ต้อง moderation ตอนนี้",
+    adminNeedsReview: "Needs review",
+    adminHiddenSection: "Hidden items",
+    adminNoReportedItems: "ตอนนี้ยังไม่มีงานที่มีรายงานค้างอยู่",
+    adminNoHiddenItems: "ตอนนี้ยังไม่มีงานที่ถูกซ่อนจาก gallery",
+    adminTotalItems: "Items in queue",
+    adminReportedItems: "Reported items",
+    adminHiddenItems: "Hidden items",
+    adminOpenReports: "Open reports",
+    adminNewestReport: "Latest report",
+    adminOpenReadOnly: "Open read-only",
+    adminUsersTitle: "Admin access",
+    adminUsersDescription: "เพิ่มหรือลบผู้ดูแล gallery จากหน้าเดียวกันได้เลย",
+    adminEmailPlaceholder: "name@example.com",
+    addAdmin: "Add admin",
+    addingAdmin: "Adding...",
+    removeAdmin: "Remove",
+    removingAdmin: "Removing...",
+    adminAdded: "เพิ่ม admin แล้ว",
+    adminRemoved: "ลบ admin แล้ว",
+    adminSelfRemoveBlocked: "หน้าจอนี้ไม่อนุญาตให้ลบสิทธิ์ตัวเอง",
+    adminUsersEmpty: "ยังไม่มีรายชื่อ admin เพิ่มเติมในระบบ",
     adminAccessDenied: "บัญชีนี้ยังไม่มีสิทธิ์ moderation",
     reportCount: "Reports",
     hideFromGallery: "Hide from gallery",
@@ -384,6 +405,27 @@ const translations = {
     adminModerationDescription: "Review reports, hide gallery items, and restore them when they are ready to come back.",
     adminQueueLoading: "Loading moderation queue...",
     adminQueueEmpty: "No gallery items need moderation right now.",
+    adminNeedsReview: "Needs review",
+    adminHiddenSection: "Hidden items",
+    adminNoReportedItems: "There are no items with unresolved reports right now.",
+    adminNoHiddenItems: "There are no hidden gallery items right now.",
+    adminTotalItems: "Items in queue",
+    adminReportedItems: "Reported items",
+    adminHiddenItems: "Hidden items",
+    adminOpenReports: "Open reports",
+    adminNewestReport: "Latest report",
+    adminOpenReadOnly: "Open read-only",
+    adminUsersTitle: "Admin access",
+    adminUsersDescription: "Add or remove gallery admins from the same dashboard.",
+    adminEmailPlaceholder: "name@example.com",
+    addAdmin: "Add admin",
+    addingAdmin: "Adding...",
+    removeAdmin: "Remove",
+    removingAdmin: "Removing...",
+    adminAdded: "Added the admin.",
+    adminRemoved: "Removed the admin.",
+    adminSelfRemoveBlocked: "You cannot remove your own admin access from this screen.",
+    adminUsersEmpty: "There are no additional admins in this list yet.",
     adminAccessDenied: "This account does not have moderation access.",
     reportCount: "Reports",
     hideFromGallery: "Hide from gallery",
@@ -1584,6 +1626,108 @@ function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, 
   );
 }
 
+function AdminStatCard({ label, value, tone = "slate" }) {
+  const toneClasses =
+    tone === "amber"
+      ? "bg-amber-50 text-amber-900 ring-amber-100"
+      : tone === "rose"
+        ? "bg-rose-50 text-rose-900 ring-rose-100"
+        : tone === "blue"
+          ? "bg-blue-50 text-blue-900 ring-blue-100"
+          : "bg-slate-50 text-slate-900 ring-slate-200";
+
+  return (
+    <div className={`rounded-3xl p-4 ring-1 ${toneClasses}`}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
+      <div className="mt-2 text-3xl font-bold tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+function AdminModerationCard({
+  item,
+  t,
+  language,
+  moderationActionToken,
+  onModerate,
+}) {
+  const latestReport = Array.isArray(item.recent_reports) && item.recent_reports.length ? item.recent_reports[0] : null;
+
+  return (
+    <article className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <DiagramThumbnail
+          title={item.title || item.purpose_title || t.untitledDiagram}
+          thumbnailSvg={item.thumbnail_svg}
+          diagramData={item.diagram_data}
+          mermaidCode={item.mermaid_code}
+        />
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold text-slate-900">{item.title || t.untitledDiagram}</h2>
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.reportCount}: {item.report_count || 0}</span>
+                {item.gallery_hidden_at ? (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">{t.hiddenFromGallery}</span>
+                ) : null}
+                {item.gallery_submitter_name ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.galleryOwnerLabel}: {item.gallery_submitter_name}</span>
+                ) : null}
+                {latestReport?.reported_at ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.adminNewestReport}: {formatSavedDateTime(latestReport.reported_at, language)}</span>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`${window.location.pathname}?share=${item.share_token}`}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <ExternalLink size={16} /> {t.adminOpenReadOnly}
+              </a>
+              <button
+                onClick={() => onModerate(item.share_token, item.gallery_hidden_at ? "restore" : "hide")}
+                disabled={moderationActionToken === item.share_token}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {item.gallery_hidden_at ? <Undo2 size={16} /> : <EyeOff size={16} />}
+                {item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}
+              </button>
+              <button
+                onClick={() => onModerate(item.share_token, "resolve_reports")}
+                disabled={moderationActionToken === item.share_token || !item.report_count}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                <Shield size={16} /> {t.resolveReports}
+              </button>
+            </div>
+          </div>
+          {item.purpose_title ? (
+            <p className="line-clamp-3 text-sm leading-6 text-slate-600">{item.purpose_title}</p>
+          ) : null}
+          {item.gallery_hidden_reason ? (
+            <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">{item.gallery_hidden_reason}</div>
+          ) : null}
+          {Array.isArray(item.recent_reports) && item.recent_reports.length ? (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {item.recent_reports.map((report) => (
+                <div key={report.id} className="rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{formatSavedDateTime(report.reported_at, language)}</span>
+                    {report.reporter_email ? <span>{report.reporter_email}</span> : null}
+                  </div>
+                  <div className="mt-1">{report.reason || "-"}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset, t = translations.th }) {
   if (!open) return null;
 
@@ -1671,11 +1815,14 @@ function App() {
   const [galleryHasMore, setGalleryHasMore] = useState(false);
   const [isGalleryAdmin, setIsGalleryAdmin] = useState(false);
   const [adminQueue, setAdminQueue] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [adminOffset, setAdminOffset] = useState(0);
   const [adminHasMore, setAdminHasMore] = useState(false);
   const [moderationActionToken, setModerationActionToken] = useState("");
+  const [adminEmailDraft, setAdminEmailDraft] = useState("");
+  const [adminUserAction, setAdminUserAction] = useState("");
   const [versionHistory, setVersionHistory] = useState([]);
   const [loadingVersionHistory, setLoadingVersionHistory] = useState(false);
   const [restoringVersionId, setRestoringVersionId] = useState("");
@@ -1746,6 +1893,23 @@ function App() {
   const visibleAdminQueue = useMemo(
     () => adminQueue.filter((item) => item.report_count > 0 || item.gallery_hidden_at),
     [adminQueue]
+  );
+  const adminReportedItems = useMemo(
+    () => visibleAdminQueue.filter((item) => (item.report_count || 0) > 0 && !item.gallery_hidden_at),
+    [visibleAdminQueue]
+  );
+  const adminHiddenItems = useMemo(
+    () => visibleAdminQueue.filter((item) => Boolean(item.gallery_hidden_at)),
+    [visibleAdminQueue]
+  );
+  const adminStats = useMemo(
+    () => ({
+      totalItems: visibleAdminQueue.length,
+      reportedItems: adminReportedItems.length,
+      hiddenItems: adminHiddenItems.length,
+      openReports: visibleAdminQueue.reduce((total, item) => total + Number(item.report_count || 0), 0),
+    }),
+    [adminHiddenItems.length, adminReportedItems.length, visibleAdminQueue]
   );
   const diagramStats = useMemo(() => {
     const primaryCount = data.primaryDrivers.length;
@@ -1970,6 +2134,7 @@ function App() {
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !routeState.admin || routeState.shareId || !isAuthenticated) {
       setAdminQueue([]);
+      setAdminUsers([]);
       setAdminLoading(false);
       setAdminError("");
       setAdminOffset(0);
@@ -1999,14 +2164,17 @@ function App() {
 
         if (!response.ok) {
           setAdminQueue([]);
+          setAdminUsers([]);
           setAdminError(payload?.error || t.adminAccessDenied);
         } else {
           setAdminQueue(Array.isArray(payload?.items) ? payload.items : []);
+          setAdminUsers(Array.isArray(payload?.admins) ? payload.admins : []);
           setAdminHasMore(Boolean(payload?.hasMore));
         }
       } catch (_error) {
         if (!cancelled) {
           setAdminQueue([]);
+          setAdminUsers([]);
           setAdminError(t.adminAccessDenied);
           setAdminHasMore(false);
         }
@@ -3419,6 +3587,54 @@ function App() {
     }
   };
 
+  const updateAdminUsers = async ({ action, email = "", userId = "" }) => {
+    if (!supabase || !action) return;
+
+    if (action === "remove_admin" && userId === currentUser?.id) {
+      setAdminError(t.adminSelfRemoveBlocked);
+      return;
+    }
+
+    setAdminUserAction(action === "add_admin" ? "add" : userId);
+    setAdminError("");
+
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const accessToken = authData?.session?.access_token;
+      const response = await fetch(getAdminModerationFunctionUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabasePublishableKey,
+          Authorization: `Bearer ${accessToken || ""}`,
+        },
+        body: JSON.stringify({
+          action,
+          email: String(email || "").trim(),
+          userId,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setAdminError(payload?.error || t.adminAccessDenied);
+        return;
+      }
+
+      setAdminUsers(Array.isArray(payload?.admins) ? payload.admins : []);
+      if (action === "add_admin") {
+        setAdminEmailDraft("");
+        setStorageMessage(t.adminAdded);
+      } else {
+        setStorageMessage(t.adminRemoved);
+      }
+    } catch (_error) {
+      setAdminError(t.adminAccessDenied);
+    } finally {
+      setAdminUserAction("");
+    }
+  };
+
   const restoreVersion = async (version, { saveImmediately = false } = {}) => {
     setRestoringVersionId(version.id);
     setStorageError("");
@@ -4177,73 +4393,121 @@ function App() {
 
           {adminError ? <div className="rounded-3xl bg-red-50 p-4 text-sm text-red-700">{adminError}</div> : null}
 
-          <section className="space-y-4">
-            {adminLoading && !adminQueue.length ? (
-              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminQueueLoading}</div>
-            ) : visibleAdminQueue.length ? (
-              visibleAdminQueue.map((item) => (
-                <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                  <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                    <DiagramThumbnail
-                      title={item.title || item.purpose_title || t.untitledDiagram}
-                      thumbnailSvg={item.thumbnail_svg}
-                      diagramData={item.diagram_data}
-                      mermaidCode={item.mermaid_code}
-                    />
-                    <div className="min-w-0 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h2 className="truncate text-base font-semibold text-slate-900">{item.title || t.untitledDiagram}</h2>
-                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.reportCount}: {item.report_count || 0}</span>
-                            {item.gallery_hidden_at ? (
-                              <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">{t.hiddenFromGallery}</span>
-                            ) : null}
-                            {item.gallery_submitter_name ? (
-                              <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.galleryOwnerLabel}: {item.gallery_submitter_name}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => runModerationAction(item.share_token, item.gallery_hidden_at ? "restore" : "hide")}
-                            disabled={moderationActionToken === item.share_token}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                          >
-                            {item.gallery_hidden_at ? <Undo2 size={16} /> : <EyeOff size={16} />}
-                            {item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}
-                          </button>
-                          <button
-                            onClick={() => runModerationAction(item.share_token, "resolve_reports")}
-                            disabled={moderationActionToken === item.share_token || !item.report_count}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                          >
-                            <Shield size={16} /> {t.resolveReports}
-                          </button>
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <AdminStatCard label={t.adminTotalItems} value={adminStats.totalItems} />
+            <AdminStatCard label={t.adminReportedItems} value={adminStats.reportedItems} tone="rose" />
+            <AdminStatCard label={t.adminHiddenItems} value={adminStats.hiddenItems} tone="amber" />
+            <AdminStatCard label={t.adminOpenReports} value={adminStats.openReports} tone="blue" />
+          </section>
+
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{t.adminUsersTitle}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.adminUsersDescription}</p>
+              </div>
+              <div className="w-full max-w-xl">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="email"
+                    value={adminEmailDraft}
+                    onChange={(e) => setAdminEmailDraft(e.target.value)}
+                    placeholder={t.adminEmailPlaceholder}
+                    className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  />
+                  <button
+                    onClick={() => updateAdminUsers({ action: "add_admin", email: adminEmailDraft })}
+                    disabled={!adminEmailDraft.trim() || adminUserAction === "add"}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    <Shield size={16} /> {adminUserAction === "add" ? t.addingAdmin : t.addAdmin}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {adminUsers.length ? (
+                adminUsers.map((admin) => (
+                  <div key={admin.user_id} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">{admin.email || admin.user_id}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {admin.created_at ? formatSavedDateTime(admin.created_at, language) : admin.user_id}
                         </div>
                       </div>
-                      {item.gallery_hidden_reason ? (
-                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">{item.gallery_hidden_reason}</div>
-                      ) : null}
-                      {Array.isArray(item.recent_reports) && item.recent_reports.length ? (
-                        <div className="space-y-2">
-                          {item.recent_reports.map((report) => (
-                            <div key={report.id} className="rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                <span>{formatSavedDateTime(report.reported_at, language)}</span>
-                                {report.reporter_email ? <span>{report.reporter_email}</span> : null}
-                              </div>
-                              <div className="mt-1">{report.reason || "-"}</div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
+                      <button
+                        onClick={() => updateAdminUsers({ action: "remove_admin", userId: admin.user_id })}
+                        disabled={adminUserAction === admin.user_id || admin.user_id === currentUser?.id}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        title={admin.user_id === currentUser?.id ? t.adminSelfRemoveBlocked : t.removeAdmin}
+                      >
+                        <Trash2 size={14} /> {adminUserAction === admin.user_id ? t.removingAdmin : t.removeAdmin}
+                      </button>
                     </div>
                   </div>
-                </article>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  {t.adminUsersEmpty}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{t.adminNeedsReview}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.adminModerationDescription}</p>
+              </div>
+              <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                {adminReportedItems.length} {t.shown}
+              </div>
+            </div>
+            {adminLoading && !adminQueue.length ? (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminQueueLoading}</div>
+            ) : adminReportedItems.length ? (
+              adminReportedItems.map((item) => (
+                <AdminModerationCard
+                  key={`reported-${item.share_token}`}
+                  item={item}
+                  t={t}
+                  language={language}
+                  moderationActionToken={moderationActionToken}
+                  onModerate={runModerationAction}
+                />
               ))
+            ) : visibleAdminQueue.length ? (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminNoReportedItems}</div>
             ) : (
               <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminQueueEmpty}</div>
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">{t.adminHiddenSection}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.hiddenFromGallery}</p>
+              </div>
+              <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                {adminHiddenItems.length} {t.shown}
+              </div>
+            </div>
+            {adminHiddenItems.length ? (
+              adminHiddenItems.map((item) => (
+                <AdminModerationCard
+                  key={`hidden-${item.share_token}`}
+                  item={item}
+                  t={t}
+                  language={language}
+                  moderationActionToken={moderationActionToken}
+                  onModerate={runModerationAction}
+                />
+              ))
+            ) : (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminNoHiddenItems}</div>
             )}
           </section>
 

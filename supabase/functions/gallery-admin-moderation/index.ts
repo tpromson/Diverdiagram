@@ -41,6 +41,26 @@ async function requireAdmin(req: Request) {
   return { error: "", status: 200, user };
 }
 
+async function loadAdminUsers() {
+  const { data: adminRows, error } = await supabaseAdmin
+    .from("gallery_admins")
+    .select("user_id, email, created_at")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { admins: [], error };
+  }
+
+  return {
+    admins: (adminRows || []).map((row) => ({
+      user_id: row.user_id,
+      email: row.email || "",
+      created_at: row.created_at,
+    })),
+    error: null,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -58,6 +78,14 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const offset = Math.max(0, Number(url.searchParams.get("offset") || "0"));
     const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || "10")));
+    const { admins, error: adminListError } = await loadAdminUsers();
+
+    if (adminListError) {
+      return new Response(JSON.stringify({ error: adminListError.message || "Unable to load admin users." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: reportRows, error: reportError } = await supabaseAdmin
       .from("gallery_item_reports")
@@ -99,7 +127,7 @@ Deno.serve(async (req) => {
     const pageTokens = combinedTokens.slice(offset, offset + limit);
 
     if (!pageTokens.length) {
-      return new Response(JSON.stringify({ items: [], hasMore: false, nextOffset: offset }), {
+      return new Response(JSON.stringify({ items: [], hasMore: false, nextOffset: offset, admins }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -131,7 +159,7 @@ Deno.serve(async (req) => {
       })
       .filter(Boolean);
 
-    return new Response(JSON.stringify({ items, hasMore: combinedTokens.length > offset + items.length, nextOffset: offset + items.length }), {
+    return new Response(JSON.stringify({ items, hasMore: combinedTokens.length > offset + items.length, nextOffset: offset + items.length, admins }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -144,7 +172,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  let payload: { action?: string; shareToken?: string; note?: string } = {};
+  let payload: { action?: string; shareToken?: string; note?: string; email?: string; userId?: string } = {};
   try {
     payload = await req.json();
   } catch (_error) {
@@ -157,6 +185,105 @@ Deno.serve(async (req) => {
   const action = String(payload.action || "").trim();
   const shareToken = String(payload.shareToken || "").trim();
   const note = String(payload.note || "").trim();
+  const email = String(payload.email || "").trim().toLowerCase();
+  const userId = String(payload.userId || "").trim();
+
+  if (action === "add_admin") {
+    if (!email) {
+      return new Response(JSON.stringify({ error: "Missing admin email." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: userList, error: userError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (userError) {
+      return new Response(JSON.stringify({ error: userError.message || "Unable to look up this user." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const matchedUser = (userList?.users || []).find((user) => String(user.email || "").toLowerCase() === email);
+    if (!matchedUser?.id) {
+      return new Response(JSON.stringify({ error: "No signed-in user was found for this email." }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("gallery_admins")
+      .upsert({
+        user_id: matchedUser.id,
+        email,
+      });
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message || "Unable to add this admin." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { admins, error: adminListError } = await loadAdminUsers();
+    if (adminListError) {
+      return new Response(JSON.stringify({ error: adminListError.message || "Added the admin, but could not refresh the list." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, admins }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (action === "remove_admin") {
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Missing admin user id." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (userId === adminCheck.user.id) {
+      return new Response(JSON.stringify({ error: "You cannot remove your own admin access from this screen." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("gallery_admins")
+      .delete()
+      .eq("user_id", userId);
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message || "Unable to remove this admin." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { admins, error: adminListError } = await loadAdminUsers();
+    if (adminListError) {
+      return new Response(JSON.stringify({ error: adminListError.message || "Removed the admin, but could not refresh the list." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ ok: true, admins }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   if (!action || !shareToken) {
     return new Response(JSON.stringify({ error: "Missing moderation action." }), {
