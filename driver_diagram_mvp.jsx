@@ -2950,69 +2950,80 @@ function App() {
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                {isAuthenticated ? (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace</div>
-                      <div className="mt-1 text-sm font-semibold text-slate-900">{currentUser?.email || session?.user?.email || "Signed-in user"}</div>
-                      <p className="mt-1 text-sm text-slate-500">Saved diagrams in this workspace are only visible to this account.</p>
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      disabled={authSubmitting}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                    >
-                      <LogOut size={16} /> {authSubmitting ? "Signing out..." : "Sign out"}
-                    </button>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Private Cloud Save</div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {isAuthenticated
+                        ? "Your diagrams, auto-saves, version history, and share links stay inside this private workspace."
+                        : "Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace."}
+                    </p>
                   </div>
-                ) : (
-                  <form className="space-y-3" onSubmit={handleSignIn}>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Private Cloud Save</div>
-                      <p className="mt-1 text-sm text-slate-500">Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace.</p>
-                    </div>
+
+                  {isAuthenticated ? (
                     <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="email"
-                        value={authEmail}
-                        onChange={(e) => {
-                          setAuthEmail(e.target.value);
-                          if (authError) {
-                            setAuthError("");
-                          }
-                        }}
-                        placeholder="you@example.com"
-                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                      />
+                      <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Signed in as</div>
+                        <div className="mt-1 truncate text-sm font-medium text-slate-900">
+                          {currentUser?.email || session?.user?.email || "Signed-in user"}
+                        </div>
+                      </div>
                       <button
-                        type="submit"
-                        disabled={authSubmitting || authLoading}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                        onClick={handleSignOut}
+                        disabled={authSubmitting}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        <LogOut size={16} /> {authSubmitting ? "Signing out..." : "Sign out"}
+                      </button>
+                    </div>
+                  ) : (
+                    <form className="space-y-3" onSubmit={handleSignIn}>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          type="email"
+                          value={authEmail}
+                          onChange={(e) => {
+                            setAuthEmail(e.target.value);
+                            if (authError) {
+                              setAuthError("");
+                            }
+                          }}
+                          placeholder="you@example.com"
+                          className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                        />
+                        <button
+                          type="submit"
+                          disabled={authSubmitting || authLoading}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                         >
                           <Mail size={16} /> {authSubmitting ? "Sending..." : "Email Sign-In Link"}
                         </button>
-                    </div>
-                    {authVerifyingLink ? (
-                      <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">Verifying your sign-in link...</div>
-                    ) : authLoading ? (
-                      <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">Checking for an existing session...</div>
-                    ) : null}
-                    {authMessage ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={requestMagicLink}
-                          disabled={authSubmitting}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                        >
-                          <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> Resend Link
-                        </button>
-                        <span className="text-xs text-slate-400">Use this if the first email takes a while to arrive.</span>
                       </div>
-                    ) : null}
-                    <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
-                  </form>
-                )}
+                    </form>
+                  )}
+
+                  {authVerifyingLink ? (
+                    <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">Verifying your sign-in link...</div>
+                  ) : authLoading ? (
+                    <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">Checking for an existing session...</div>
+                  ) : null}
+
+                  {!isAuthenticated && authMessage ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={requestMagicLink}
+                        disabled={authSubmitting}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> Resend Link
+                      </button>
+                      <span className="text-xs text-slate-400">Use this if the first email takes a while to arrive.</span>
+                    </div>
+                  ) : null}
+
+                  <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
+                </div>
                 {authError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{authError}</div> : null}
                 {!authError && authMessage ? <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{authMessage}</div> : null}
               </div>
