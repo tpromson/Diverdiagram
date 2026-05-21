@@ -8,6 +8,7 @@ create table if not exists public.driver_diagrams (
   purpose_kpi text not null default '',
   diagram_data jsonb not null,
   mermaid_code text not null,
+  thumbnail_svg text not null default '',
   is_favorite boolean not null default false,
   archived_at timestamptz,
   share_id uuid,
@@ -39,6 +40,7 @@ create table if not exists public.shared_driver_diagrams (
   purpose_title text not null default '',
   diagram_data jsonb not null,
   mermaid_code text not null,
+  thumbnail_svg text not null default '',
   is_public_gallery boolean not null default false,
   gallery_submitted_at timestamptz,
   gallery_submitter_name text not null default '',
@@ -97,6 +99,9 @@ alter table public.driver_diagrams
 alter table public.driver_diagrams
   add column if not exists share_revoked_at timestamptz;
 
+alter table public.driver_diagrams
+  add column if not exists thumbnail_svg text not null default '';
+
 alter table public.shared_driver_diagrams
   add column if not exists purpose_title text not null default '';
 
@@ -117,6 +122,9 @@ alter table public.shared_driver_diagrams
 
 alter table public.shared_driver_diagrams
   add column if not exists gallery_submitter_name text not null default '';
+
+alter table public.shared_driver_diagrams
+  add column if not exists thumbnail_svg text not null default '';
 
 alter table public.shared_driver_diagrams
   add column if not exists gallery_hidden_at timestamptz;
@@ -161,9 +169,9 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.is_favorite, new.archived_at, new.share_id, new.shared_at, new.share_expires_at, new.share_revoked_at)
+  if row(new.user_id, new.title, new.purpose_title, new.purpose_kpi, new.diagram_data, new.mermaid_code, new.thumbnail_svg, new.is_favorite, new.archived_at, new.share_id, new.shared_at, new.share_expires_at, new.share_revoked_at)
     is distinct from
-    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.is_favorite, old.archived_at, old.share_id, old.shared_at, old.share_expires_at, old.share_revoked_at) then
+    row(old.user_id, old.title, old.purpose_title, old.purpose_kpi, old.diagram_data, old.mermaid_code, old.thumbnail_svg, old.is_favorite, old.archived_at, old.share_id, old.shared_at, old.share_expires_at, old.share_revoked_at) then
     new.updated_at = now();
   else
     new.updated_at = old.updated_at;

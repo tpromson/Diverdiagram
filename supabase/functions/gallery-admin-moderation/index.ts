@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
     const { data: hiddenRows, error: hiddenError } = await supabaseAdmin
       .from("shared_driver_diagrams")
-      .select("share_token, title, purpose_title, diagram_data, mermaid_code, gallery_submitter_name, is_public_gallery, gallery_hidden_at, gallery_hidden_reason, gallery_submitted_at")
+      .select("share_token, title, purpose_title, thumbnail_svg, gallery_submitter_name, is_public_gallery, gallery_hidden_at, gallery_hidden_reason, gallery_submitted_at")
       .not("gallery_hidden_at", "is", null)
       .order("gallery_hidden_at", { ascending: false });
 
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     const { data: itemRows, error: itemError } = await supabaseAdmin
       .from("shared_driver_diagrams")
-      .select("share_token, title, purpose_title, diagram_data, mermaid_code, gallery_submitter_name, is_public_gallery, gallery_hidden_at, gallery_hidden_reason, gallery_submitted_at")
+      .select("share_token, title, purpose_title, thumbnail_svg, gallery_submitter_name, is_public_gallery, gallery_hidden_at, gallery_hidden_reason, gallery_submitted_at")
       .in("share_token", pageTokens);
 
     if (itemError) {

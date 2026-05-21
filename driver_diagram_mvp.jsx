@@ -728,6 +728,16 @@ function getThumbnailMarkup(diagramData, mermaidCode) {
   return buildTemplateSvg(normalizedData);
 }
 
+function buildStoredThumbnailSvg(diagramData, mermaidCode) {
+  return getThumbnailMarkup(diagramData, mermaidCode);
+}
+
+function getStoredThumbnailMarkup(thumbnailSvg, diagramData, mermaidCode) {
+  const stored = String(thumbnailSvg || "").trim();
+  if (stored) return stored;
+  return getThumbnailMarkup(diagramData, mermaidCode);
+}
+
 const thumbnailMarkupCache = new Map();
 
 function getCachedThumbnailMarkup(diagramData, mermaidCode) {
@@ -1550,14 +1560,14 @@ function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
   );
 }
 
-function DiagramThumbnail({ title, diagramData, mermaidCode, className = "" }) {
+function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, className = "" }) {
   const markup = useMemo(() => {
     try {
-      return getCachedThumbnailMarkup(diagramData, mermaidCode);
+      return getStoredThumbnailMarkup(thumbnailSvg, diagramData, mermaidCode);
     } catch (_error) {
       return "";
     }
-  }, [diagramData, mermaidCode]);
+  }, [diagramData, mermaidCode, thumbnailSvg]);
 
   return (
     <div className={`diagram-thumbnail ${className}`}>
@@ -1682,7 +1692,7 @@ function App() {
   const savedDiagramSortOptions = useMemo(() => getSavedDiagramSortOptions(t), [t]);
   const savedDiagramScopeOptions = useMemo(() => getSavedDiagramScopeOptions(t), [t]);
   const savedDiagramSelectFields =
-    "id, title, purpose_title, diagram_data, mermaid_code, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
+    "id, title, purpose_title, diagram_data, mermaid_code, thumbnail_svg, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
   const currentSnapshot = useMemo(
     () => buildDiagramSnapshot(documentTitle, data, codeInput),
     [documentTitle, data, codeInput]
@@ -2459,6 +2469,7 @@ function App() {
       mermaidCode || diagramRow.mermaid_code
     );
     const normalizedCode = sanitizeMermaidCode(mermaidCode || diagramRow.mermaid_code || buildMermaidCode(normalizedData));
+    const thumbnailSvg = buildStoredThumbnailSvg(normalizedData, normalizedCode);
 
     const { error } = await supabase.from("shared_driver_diagrams").upsert(
       {
@@ -2469,6 +2480,7 @@ function App() {
         purpose_title: diagramRow.purpose_title || normalizedData.purpose.title || "",
         diagram_data: normalizedData,
         mermaid_code: normalizedCode,
+        thumbnail_svg: thumbnailSvg,
         shared_at: diagramRow.shared_at || new Date().toISOString(),
         expires_at: diagramRow.share_expires_at || null,
         revoked_at: diagramRow.share_revoked_at || null,
@@ -2696,6 +2708,7 @@ function App() {
     const normalizedData = normalizeStoredDiagramData(data);
     const title = documentTitle.trim() || normalizedData.purpose.title || defaultDocumentTitle;
     const snapshot = buildDiagramSnapshot(title, normalizedData, normalizedCode);
+    const thumbnailSvg = buildStoredThumbnailSvg(normalizedData, normalizedCode);
 
     if (isAuto && (snapshot === lastSavedSnapshotRef.current || !currentDiagramId)) {
       return;
@@ -2708,6 +2721,7 @@ function App() {
       purpose_kpi: normalizedData.purpose.kpi,
       diagram_data: normalizedData,
       mermaid_code: normalizedCode,
+      thumbnail_svg: thumbnailSvg,
     };
 
     setSavingDiagram(true);
@@ -2948,6 +2962,10 @@ function App() {
         purpose_kpi: sourceRow.purpose_kpi || "",
         diagram_data: normalizeStoredDiagramData(sourceRow.diagram_data),
         mermaid_code: sanitizeMermaidCode(sourceRow.mermaid_code || buildMermaidCode(sourceRow.diagram_data || defaultData)),
+        thumbnail_svg: buildStoredThumbnailSvg(
+          normalizeStoredDiagramData(sourceRow.diagram_data),
+          sanitizeMermaidCode(sourceRow.mermaid_code || buildMermaidCode(sourceRow.diagram_data || defaultData))
+        ),
         is_favorite: false,
         archived_at: null,
       })
@@ -4067,6 +4085,7 @@ function App() {
                 <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                   <DiagramThumbnail
                     title={item.title || item.purpose_title || t.untitledDiagram}
+                    thumbnailSvg={item.thumbnail_svg}
                     diagramData={item.diagram_data}
                     mermaidCode={item.mermaid_code}
                     className="mb-4"
@@ -4167,6 +4186,7 @@ function App() {
                   <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
                     <DiagramThumbnail
                       title={item.title || item.purpose_title || t.untitledDiagram}
+                      thumbnailSvg={item.thumbnail_svg}
                       diagramData={item.diagram_data}
                       mermaidCode={item.mermaid_code}
                     />
@@ -4591,6 +4611,7 @@ function App() {
                     <div key={item.id} data-testid={`saved-diagram-card-${item.id}`} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
                       <DiagramThumbnail
                         title={item.title || item.purpose_title || t.untitledDiagram}
+                        thumbnailSvg={item.thumbnail_svg}
                         diagramData={item.diagram_data}
                         mermaidCode={item.mermaid_code}
                         className="mb-3"

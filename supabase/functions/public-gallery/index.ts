@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   const { data: rows, error } = await supabaseAdmin
     .from("shared_driver_diagrams")
     .select(
-      "share_token, title, purpose_title, diagram_data, mermaid_code, shared_at, expires_at, revoked_at, is_public_gallery, gallery_submitted_at, gallery_submitter_name, gallery_hidden_at"
+      "share_token, title, purpose_title, thumbnail_svg, shared_at, expires_at, revoked_at, is_public_gallery, gallery_submitted_at, gallery_submitter_name, gallery_hidden_at"
     )
     .eq("is_public_gallery", true)
     .is("revoked_at", null)
