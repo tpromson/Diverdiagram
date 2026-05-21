@@ -33,6 +33,7 @@ import {
   Maximize2,
   LayoutGrid,
   Upload,
+  Flag,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -43,6 +44,7 @@ const MAX_AUTOSAVE_VERSIONS = 10;
 const PREVIEW_ZOOM_MIN = 0.5;
 const PREVIEW_ZOOM_MAX = 2;
 const PREVIEW_ZOOM_STEP = 0.25;
+const GALLERY_DISPLAY_NAME_STORAGE_KEY = "driver-diagram-gallery-display-name";
 
 const defaultData = {
   purpose: {
@@ -160,6 +162,15 @@ const translations = {
     gallerySubmitted: "Submitted",
     galleryOpenReadOnly: "Open read-only view",
     galleryOwnerLabel: "By",
+    galleryDisplayName: "Gallery display name",
+    galleryDisplayNamePlaceholder: "ชื่อที่อยากให้แสดงใน gallery",
+    galleryDisplayNameHint: "ใช้ชื่อนี้แทน email เวลาส่งงานเข้า gallery",
+    galleryDisplayNameSaved: "อัปเดตชื่อที่ใช้แสดงใน gallery แล้ว",
+    reportGallery: "Report",
+    reporting: "กำลังส่ง...",
+    reportGalleryPrompt: "บอกสั้น ๆ ว่าต้องการ report งานนี้เรื่องอะไร",
+    reportGallerySuccess: "ส่ง report สำหรับงานนี้แล้ว",
+    reportGalleryFailed: "ยังส่ง report ไม่สำเร็จ",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้",
     shown: "shown",
@@ -342,6 +353,15 @@ const translations = {
     gallerySubmitted: "Submitted",
     galleryOpenReadOnly: "Open read-only view",
     galleryOwnerLabel: "By",
+    galleryDisplayName: "Gallery display name",
+    galleryDisplayNamePlaceholder: "Name to show in the gallery",
+    galleryDisplayNameHint: "This replaces your email when you publish to the gallery.",
+    galleryDisplayNameSaved: "Updated the gallery display name.",
+    reportGallery: "Report",
+    reporting: "Reporting...",
+    reportGalleryPrompt: "Briefly describe why you are reporting this gallery item.",
+    reportGallerySuccess: "Sent a report for this gallery item.",
+    reportGalleryFailed: "Unable to send the report right now.",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "Open, manage, and continue work from this workspace.",
     shown: "shown",
@@ -533,6 +553,24 @@ function getPublicGalleryFunctionUrl() {
   return `${supabaseUrl}/functions/v1/public-gallery`;
 }
 
+function getReportGalleryFunctionUrl() {
+  if (!supabaseUrl) return "";
+  return `${supabaseUrl}/functions/v1/report-gallery-item`;
+}
+
+function readGalleryDisplayName() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(GALLERY_DISPLAY_NAME_STORAGE_KEY) || "";
+}
+
+function buildGalleryDisplayName(name, email = "") {
+  const trimmed = String(name || "").trim();
+  if (trimmed) return trimmed;
+
+  const emailPrefix = String(email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
+  return emailPrefix;
+}
+
 function readAppLocation() {
   if (typeof window === "undefined") {
     return { shareId: "", gallery: false };
@@ -646,6 +684,11 @@ function buildDiagramSnapshot(title, diagramData, mermaidCode) {
     diagramData: normalizeStoredDiagramData(diagramData),
     mermaidCode: sanitizeMermaidCode(mermaidCode || ""),
   });
+}
+
+function getThumbnailMarkup(diagramData, mermaidCode) {
+  const normalizedData = resolveDiagramDataForEditor(diagramData, mermaidCode);
+  return buildTemplateSvg(normalizedData);
 }
 
 function buildMermaidCode(data) {
@@ -1345,7 +1388,7 @@ function buildTemplateSvg(diagramData) {
 </svg>`;
 }
 
-function TextAreaField({ label, value, onChange, icon }) {
+function TextAreaField({ label, value, onChange, icon, testId = "" }) {
   return (
     <label className="block space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -1358,6 +1401,7 @@ function TextAreaField({ label, value, onChange, icon }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={2}
+        data-testid={testId || undefined}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
       />
     </label>
@@ -1390,6 +1434,7 @@ function LanguageToggle({ language, onChange, t }) {
         <button
           key={option}
           type="button"
+          data-testid={`language-toggle-${option}`}
           onClick={() => onChange(option)}
           className={`rounded-xl px-3 py-2 transition ${language === option ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
           aria-pressed={language === option}
@@ -1449,6 +1494,30 @@ function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
   );
 }
 
+function DiagramThumbnail({ title, diagramData, mermaidCode, className = "" }) {
+  let markup = "";
+
+  try {
+    markup = getThumbnailMarkup(diagramData, mermaidCode);
+  } catch (_error) {
+    markup = "";
+  }
+
+  return (
+    <div className={`diagram-thumbnail ${className}`}>
+      {markup ? (
+        <div
+          className="diagram-thumbnail-inner"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: markup }}
+        />
+      ) : (
+        <div className="diagram-thumbnail-fallback">{title || defaultDocumentTitle}</div>
+      )}
+    </div>
+  );
+}
+
 function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset, t = translations.th }) {
   if (!open) return null;
 
@@ -1464,6 +1533,7 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
             <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} labels={t} />
             <button
               onClick={onClose}
+              data-testid="close-preview-modal-button"
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
             >
               <X size={16} /> {t.close}
@@ -1492,6 +1562,7 @@ function App() {
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
+  const [galleryDisplayName, setGalleryDisplayName] = useState(() => readGalleryDisplayName());
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [savedSearch, setSavedSearch] = useState("");
   const [savedSort, setSavedSort] = useState("updated_desc");
@@ -1529,6 +1600,7 @@ function App() {
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [galleryError, setGalleryError] = useState("");
   const [gallerySearch, setGallerySearch] = useState("");
+  const [reportingGalleryToken, setReportingGalleryToken] = useState("");
   const [versionHistory, setVersionHistory] = useState([]);
   const [loadingVersionHistory, setLoadingVersionHistory] = useState(false);
   const [restoringVersionId, setRestoringVersionId] = useState("");
@@ -1545,7 +1617,7 @@ function App() {
   const savedDiagramSortOptions = useMemo(() => getSavedDiagramSortOptions(t), [t]);
   const savedDiagramScopeOptions = useMemo(() => getSavedDiagramScopeOptions(t), [t]);
   const savedDiagramSelectFields =
-    "id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
+    "id, title, purpose_title, diagram_data, mermaid_code, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
   const currentSnapshot = useMemo(
     () => buildDiagramSnapshot(documentTitle, data, codeInput),
     [documentTitle, data, codeInput]
@@ -1559,6 +1631,15 @@ function App() {
   const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : t.signedInUser);
   const isReadOnlySharedView = Boolean(sharedView);
   const isGalleryView = routeState.gallery && !routeState.shareId;
+  const ownedGalleryByShareToken = useMemo(
+    () =>
+      new Map(
+        savedDiagrams
+          .filter((item) => item.share_id)
+          .map((item) => [item.share_id, item])
+      ),
+    [savedDiagrams]
+  );
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
     const scoped = savedDiagrams.filter((item) => {
@@ -1624,6 +1705,20 @@ function App() {
       setCodeInput(mermaidCode);
     }
   }, [mermaidCode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(GALLERY_DISPLAY_NAME_STORAGE_KEY, galleryDisplayName);
+  }, [galleryDisplayName]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (galleryDisplayName.trim()) return;
+    const nextName = buildGalleryDisplayName("", authUiEmail);
+    if (nextName) {
+      setGalleryDisplayName(nextName);
+    }
+  }, [authUiEmail, galleryDisplayName, isAuthenticated]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -2933,10 +3028,11 @@ function App() {
     }
 
     const nextSubmittedAt = publish ? new Date().toISOString() : null;
+    const nextDisplayName = publish ? buildGalleryDisplayName(galleryDisplayName, currentUser.email || "") : "";
     const galleryPayload = {
       is_public_gallery: publish,
       gallery_submitted_at: nextSubmittedAt,
-      gallery_submitter_name: publish ? currentUser.email || "" : "",
+      gallery_submitter_name: nextDisplayName,
     };
 
     const { error: galleryError } = await supabase
@@ -2956,6 +3052,54 @@ function App() {
       ...galleryPayload,
     });
     setStorageMessage(publish ? "Submitted this diagram to the gallery." : "Removed this diagram from the gallery.");
+  };
+
+  const reportGalleryItem = async (item) => {
+    if (!supabaseUrl || !item?.share_token) {
+      setGalleryError(t.reportGalleryFailed);
+      return;
+    }
+
+    const reason = window.prompt(t.reportGalleryPrompt, "");
+    if (reason === null) {
+      return;
+    }
+
+    setReportingGalleryToken(item.share_token);
+    setGalleryError("");
+
+    try {
+      const response = await fetch(getReportGalleryFunctionUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabasePublishableKey,
+        },
+        body: JSON.stringify({
+          shareToken: item.share_token,
+          reason: String(reason || "").trim(),
+          reporterEmail: currentUser?.email || "",
+        }),
+      });
+
+      let payload = {};
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = {};
+      }
+
+      if (!response.ok) {
+        setGalleryError(payload?.error || t.reportGalleryFailed);
+        return;
+      }
+
+      setStorageMessage(t.reportGallerySuccess);
+    } catch (_error) {
+      setGalleryError(t.reportGalleryFailed);
+    } finally {
+      setReportingGalleryToken("");
+    }
   };
 
   const restoreVersion = async (version, { saveImmediately = false } = {}) => {
@@ -3589,6 +3733,7 @@ function App() {
                   value={gallerySearch}
                   onChange={(e) => setGallerySearch(e.target.value)}
                   placeholder={t.gallerySearchPlaceholder}
+                  data-testid="gallery-search-input"
                   className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none"
                 />
               </label>
@@ -3603,7 +3748,13 @@ function App() {
             ) : filteredGalleryItems.length ? (
               filteredGalleryItems.map((item) => (
                 <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                  <div className="flex items-start justify-between gap-3">
+                  <DiagramThumbnail
+                    title={item.title || item.purpose_title || t.untitledDiagram}
+                    diagramData={item.diagram_data}
+                    mermaidCode={item.mermaid_code}
+                    className="mb-4"
+                  />
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <h2 className="truncate text-base font-semibold text-slate-900">{item.title || t.untitledDiagram}</h2>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
@@ -3618,12 +3769,32 @@ function App() {
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">{t.inGallery}</span>
                   </div>
                   <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">{item.purpose_title || item.title || t.untitledDiagram}</p>
-                  <a
-                    href={`${window.location.pathname}?share=${item.share_token}`}
-                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                  >
-                    <ExternalLink size={16} /> {t.galleryOpenReadOnly}
-                  </a>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a
+                      href={`${window.location.pathname}?share=${item.share_token}`}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    >
+                      <ExternalLink size={16} /> {t.galleryOpenReadOnly}
+                    </a>
+                    {ownedGalleryByShareToken.get(item.share_token) ? (
+                      <button
+                        onClick={() =>
+                          toggleGallerySubmission(ownedGalleryByShareToken.get(item.share_token), { publish: false })
+                        }
+                        disabled={gallerySubmittingId === ownedGalleryByShareToken.get(item.share_token)?.id}
+                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        <Upload size={16} /> {t.removeFromGallery}
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={() => reportGalleryItem(item)}
+                      disabled={reportingGalleryToken === item.share_token}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      <Flag size={16} /> {reportingGalleryToken === item.share_token ? t.reporting : t.reportGallery}
+                    </button>
+                  </div>
                 </article>
               ))
             ) : (
@@ -3733,20 +3904,32 @@ function App() {
                   </div>
 
                   {authUiActive ? (
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
-                        <div className="mt-1 truncate text-sm font-medium text-slate-900">
-                          {authUiEmail}
+                    <div className="space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
+                          <div className="mt-1 truncate text-sm font-medium text-slate-900">
+                            {authUiEmail}
+                          </div>
                         </div>
+                        <button
+                          onClick={handleSignOut}
+                          disabled={authSubmitting || !isAuthenticated}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
+                        </button>
                       </div>
-                      <button
-                        onClick={handleSignOut}
-                        disabled={authSubmitting || !isAuthenticated}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                      >
-                        <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
-                      </button>
+                      <label className="block rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
+                        <input
+                          value={galleryDisplayName}
+                          onChange={(e) => setGalleryDisplayName(e.target.value)}
+                          placeholder={t.galleryDisplayNamePlaceholder}
+                          className="mt-2 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                        />
+                        <div className="mt-2 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
+                      </label>
                     </div>
                   ) : (
                     <form className="space-y-3" onSubmit={handleSignIn}>
@@ -3817,6 +4000,7 @@ function App() {
                     setDocumentTitle(e.target.value);
                     resetStorageNotice();
                   }}
+                  data-testid="document-title-input"
                   placeholder={t.documentTitlePlaceholder}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
@@ -3959,6 +4143,12 @@ function App() {
                 ) : filteredSavedDiagrams.length ? (
                   filteredSavedDiagrams.map((item) => (
                     <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
+                      <DiagramThumbnail
+                        title={item.title || item.purpose_title || t.untitledDiagram}
+                        diagramData={item.diagram_data}
+                        mermaidCode={item.mermaid_code}
+                        className="mb-3"
+                      />
                       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0 flex-1">
                         {renamingDiagramId === item.id ? (
@@ -4213,9 +4403,9 @@ function App() {
                   {t.topLevelGoal}
                 </div>
               </div>
-              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
+              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" />
               <div className="mt-3">
-                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} />
+                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" />
               </div>
             </div>
 
@@ -4224,7 +4414,7 @@ function App() {
                 <h2 className="text-lg font-bold text-slate-950">{t.primaryDrivers}</h2>
                 <p className="text-sm text-slate-500">{t.primaryDriversDescription}</p>
               </div>
-              <button onClick={addPrimary} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              <button onClick={addPrimary} data-testid="add-primary-button" className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
                 <Plus size={16} /> {t.addPrimary}
               </button>
             </div>
@@ -4240,7 +4430,7 @@ function App() {
                     <Trash2 size={16} />
                   </button>
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : ""} />
                 <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                 <button onClick={() => addSecondary(pi)} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
@@ -4305,6 +4495,7 @@ function App() {
                 {view === "preview" ? (
                   <button
                     onClick={openPreviewModal}
+                    data-testid="open-preview-modal-button"
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                   >
                     <Maximize2 size={16} /> {t.expand}
@@ -4313,12 +4504,14 @@ function App() {
                 <div className="flex rounded-2xl bg-slate-100 p-1">
                 <button
                   onClick={() => setView("preview")}
+                  data-testid="preview-tab-button"
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white shadow-sm" : "text-slate-500"}`}
                 >
                   <Eye size={16} /> {t.preview}
                 </button>
                 <button
                   onClick={() => setView("code")}
+                  data-testid="code-tab-button"
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white shadow-sm" : "text-slate-500"}`}
                 >
                   <Code2 size={16} /> {t.code}
@@ -4328,7 +4521,7 @@ function App() {
             </div>
 
             {view === "preview" ? (
-              <div className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:h-[73vh]">
+              <div data-testid="preview-panel" className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:h-[73vh]">
                 <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} />
               </div>
             ) : (
@@ -4348,6 +4541,7 @@ function App() {
                   value={codeInput}
                   onChange={(e) => handleCodeInputChange(e.target.value)}
                   spellCheck={false}
+                  data-testid="mermaid-code-input"
                   className="min-h-[20rem] w-full overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none ring-1 ring-slate-800 lg:h-[73vh]"
                 />
               </div>

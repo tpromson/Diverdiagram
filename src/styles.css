@@ -75,3 +75,51 @@ div::-webkit-scrollbar-track {
   width: calc(var(--diagram-scale, 1) * 100%) !important;
   max-width: none !important;
 }
+
+.diagram-thumbnail {
+  position: relative;
+  overflow: hidden;
+  min-height: 168px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+}
+
+.diagram-thumbnail-inner {
+  position: absolute;
+  inset: 0;
+}
+
+.diagram-thumbnail-inner svg {
+  display: block;
+  width: 244%;
+  max-width: none;
+  height: auto;
+  transform: translate(-19%, -23%) scale(0.42);
+  transform-origin: top left;
+}
+
+.diagram-thumbnail-fallback {
+  display: flex;
+  height: 100%;
+  min-height: 168px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .preview-paper {
+    width: 1440px;
+    min-height: 980px;
+  }
+
+  .diagram-thumbnail {
+    min-height: 148px;
+  }
+}
