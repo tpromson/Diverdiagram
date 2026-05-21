@@ -39,6 +39,9 @@ create table if not exists public.shared_driver_diagrams (
   purpose_title text not null default '',
   diagram_data jsonb not null,
   mermaid_code text not null,
+  is_public_gallery boolean not null default false,
+  gallery_submitted_at timestamptz,
+  gallery_submitter_name text not null default '',
   shared_at timestamptz not null default now(),
   expires_at timestamptz,
   revoked_at timestamptz,
@@ -89,6 +92,15 @@ alter table public.shared_driver_diagrams
 alter table public.shared_driver_diagrams
   add column if not exists updated_at timestamptz not null default now();
 
+alter table public.shared_driver_diagrams
+  add column if not exists is_public_gallery boolean not null default false;
+
+alter table public.shared_driver_diagrams
+  add column if not exists gallery_submitted_at timestamptz;
+
+alter table public.shared_driver_diagrams
+  add column if not exists gallery_submitter_name text not null default '';
+
 create index if not exists driver_diagrams_user_id_idx on public.driver_diagrams using btree (user_id);
 create index if not exists driver_diagrams_last_opened_at_idx on public.driver_diagrams using btree (last_opened_at desc);
 create index if not exists driver_diagrams_is_favorite_idx on public.driver_diagrams using btree (is_favorite desc);
@@ -101,6 +113,7 @@ create unique index if not exists shared_driver_diagrams_share_token_idx on publ
 create unique index if not exists shared_driver_diagrams_diagram_id_idx on public.shared_driver_diagrams using btree (diagram_id);
 create index if not exists shared_driver_diagrams_user_id_idx on public.shared_driver_diagrams using btree (user_id);
 create index if not exists shared_driver_diagrams_expires_at_idx on public.shared_driver_diagrams using btree (expires_at);
+create index if not exists shared_driver_diagrams_public_gallery_idx on public.shared_driver_diagrams using btree (is_public_gallery, gallery_submitted_at desc);
 create index if not exists shared_driver_diagram_request_logs_ip_requested_at_idx on public.shared_driver_diagram_request_logs using btree (ip_address, requested_at desc);
 create index if not exists shared_driver_diagram_request_logs_requested_at_idx on public.shared_driver_diagram_request_logs using btree (requested_at desc);
 

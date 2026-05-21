@@ -31,6 +31,8 @@ import {
   History,
   RotateCcw,
   Maximize2,
+  LayoutGrid,
+  Upload,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -145,6 +147,19 @@ const translations = {
     exportDocx: "Export .docx",
     exportHint: "Export จะใช้ document title ปัจจุบันเป็นชื่อไฟล์ และอ้างอิง state ล่าสุดของ form/code",
     openSharedView: "Open shared view",
+    openGallery: "Open gallery",
+    backToGallery: "Back to gallery",
+    galleryTitle: "Community Gallery",
+    galleryDescription: "รวมงานที่เจ้าของเลือกส่งมาแสดงร่วมกันในหน้าเดียว",
+    galleryLoading: "กำลังโหลดงานใน gallery...",
+    galleryEmpty: "ยังไม่มีงานที่ถูกส่งเข้า gallery",
+    gallerySearchPlaceholder: "Search gallery by title or purpose",
+    submitToGallery: "ส่งเข้า gallery",
+    removeFromGallery: "เอาออกจาก gallery",
+    inGallery: "In gallery",
+    gallerySubmitted: "Submitted",
+    galleryOpenReadOnly: "Open read-only view",
+    galleryOwnerLabel: "By",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้",
     shown: "shown",
@@ -314,6 +329,19 @@ const translations = {
     exportDocx: "Export .docx",
     exportHint: "Export uses the current document title as the filename and reflects the latest form/code state.",
     openSharedView: "Open shared view",
+    openGallery: "Open gallery",
+    backToGallery: "Back to gallery",
+    galleryTitle: "Community Gallery",
+    galleryDescription: "Browse diagrams that owners have chosen to publish together in one shared page.",
+    galleryLoading: "Loading gallery items...",
+    galleryEmpty: "No diagrams have been submitted to the gallery yet.",
+    gallerySearchPlaceholder: "Search gallery by title or purpose",
+    submitToGallery: "Submit to gallery",
+    removeFromGallery: "Remove from gallery",
+    inGallery: "In gallery",
+    gallerySubmitted: "Submitted",
+    galleryOpenReadOnly: "Open read-only view",
+    galleryOwnerLabel: "By",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "Open, manage, and continue work from this workspace.",
     shown: "shown",
@@ -498,6 +526,31 @@ function hasActiveShareLink(item) {
 function getSharedDiagramFunctionUrl(shareId) {
   if (!supabaseUrl || !shareId) return "";
   return `${supabaseUrl}/functions/v1/shared-driver-diagram?share=${encodeURIComponent(shareId)}`;
+}
+
+function getPublicGalleryFunctionUrl() {
+  if (!supabaseUrl) return "";
+  return `${supabaseUrl}/functions/v1/public-gallery`;
+}
+
+function readAppLocation() {
+  if (typeof window === "undefined") {
+    return { shareId: "", gallery: false };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return {
+    shareId: params.get("share") || "",
+    gallery: params.get("gallery") === "1",
+  };
+}
+
+function replaceAppLocation(nextParams) {
+  if (typeof window === "undefined") return;
+
+  const query = nextParams.toString();
+  const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+  window.history.replaceState({}, document.title, nextUrl);
 }
 
 function sortSavedDiagrams(items, sortKey) {
@@ -1427,6 +1480,7 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
 
 function App() {
   const [language, setLanguage] = useState(defaultLanguage);
+  const [routeState, setRouteState] = useState(() => readAppLocation());
   const [data, setData] = useState(defaultData);
   const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
   const [currentDiagramId, setCurrentDiagramId] = useState("");
@@ -1452,6 +1506,7 @@ function App() {
   const [renameDraft, setRenameDraft] = useState("");
   const [renamingDiagram, setRenamingDiagram] = useState(false);
   const [sharingDiagramId, setSharingDiagramId] = useState("");
+  const [gallerySubmittingId, setGallerySubmittingId] = useState("");
   const [storageMessage, setStorageMessage] = useState("");
   const [storageError, setStorageError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -1470,6 +1525,10 @@ function App() {
   const [sharedViewError, setSharedViewError] = useState("");
   const [sharedOpenedAt, setSharedOpenedAt] = useState("");
   const [lastSharedUrl, setLastSharedUrl] = useState("");
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryError, setGalleryError] = useState("");
+  const [gallerySearch, setGallerySearch] = useState("");
   const [versionHistory, setVersionHistory] = useState([]);
   const [loadingVersionHistory, setLoadingVersionHistory] = useState(false);
   const [restoringVersionId, setRestoringVersionId] = useState("");
@@ -1499,6 +1558,7 @@ function App() {
   const authUiActive = isAuthenticated || previewAuthEnabled;
   const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : t.signedInUser);
   const isReadOnlySharedView = Boolean(sharedView);
+  const isGalleryView = routeState.gallery && !routeState.shareId;
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
     const scoped = savedDiagrams.filter((item) => {
@@ -1514,6 +1574,18 @@ function App() {
 
     return sortSavedDiagrams(filtered, savedSort);
   }, [savedDiagrams, savedScope, savedSearch, savedSort]);
+  const filteredGalleryItems = useMemo(() => {
+    const search = gallerySearch.trim().toLowerCase();
+    const items = [...galleryItems].sort(
+      (a, b) => new Date(b.gallery_submitted_at || b.shared_at || 0).getTime() - new Date(a.gallery_submitted_at || a.shared_at || 0).getTime()
+    );
+
+    if (!search) return items;
+
+    return items.filter((item) =>
+      `${item.title || ""}\n${item.purpose_title || ""}\n${item.gallery_submitter_name || ""}`.toLowerCase().includes(search)
+    );
+  }, [galleryItems, gallerySearch]);
   const diagramStats = useMemo(() => {
     const primaryCount = data.primaryDrivers.length;
     const secondaryCount = data.primaryDrivers.reduce((total, primary) => total + primary.secondaryDrivers.length, 0);
@@ -1526,6 +1598,27 @@ function App() {
     return { primaryCount, secondaryCount, changeCount };
   }, [data]);
 
+  const enrichSavedDiagramsWithGalleryState = async (rows) => {
+    if (!supabase || !currentUser?.id || !Array.isArray(rows) || !rows.length) {
+      return rows || [];
+    }
+
+    const { data: sharedRows, error } = await supabase
+      .from("shared_driver_diagrams")
+      .select("diagram_id, is_public_gallery, gallery_submitted_at, gallery_submitter_name")
+      .eq("user_id", currentUser.id);
+
+    if (error || !sharedRows?.length) {
+      return rows;
+    }
+
+    const galleryByDiagramId = new Map(sharedRows.map((item) => [item.diagram_id, item]));
+    return rows.map((row) => ({
+      ...row,
+      ...(galleryByDiagramId.get(row.id) || {}),
+    }));
+  };
+
   useEffect(() => {
     if (codeSourceRef.current === "form") {
       setCodeInput(mermaidCode);
@@ -1533,12 +1626,18 @@ function App() {
   }, [mermaidCode]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const syncRoute = () => setRouteState(readAppLocation());
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
+
+  useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       return;
     }
-
-    const params = new URLSearchParams(window.location.search);
-    const shareId = params.get("share");
+    const shareId = routeState.shareId;
 
     if (!shareId) {
       setSharedView(null);
@@ -1612,7 +1711,55 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [routeState.shareId]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !routeState.gallery || routeState.shareId) {
+      setGalleryItems([]);
+      setGalleryLoading(false);
+      setGalleryError("");
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadGallery = async () => {
+      setGalleryLoading(true);
+      setGalleryError("");
+
+      try {
+        const response = await fetch(getPublicGalleryFunctionUrl(), {
+          headers: {
+            apikey: supabasePublishableKey,
+          },
+        });
+
+        const payload = await response.json();
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setGalleryItems([]);
+          setGalleryError(payload?.error || "Unable to load the gallery right now.");
+        } else {
+          setGalleryItems(Array.isArray(payload?.items) ? payload.items : []);
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setGalleryItems([]);
+          setGalleryError("Unable to load the gallery right now.");
+        }
+      }
+
+      if (!cancelled) {
+        setGalleryLoading(false);
+      }
+    };
+
+    loadGallery();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeState.gallery, routeState.shareId]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
@@ -1675,11 +1822,19 @@ function App() {
       return;
     }
 
+    if (isGalleryView) {
+      updateDocumentPresentation({
+        title: t.galleryTitle,
+        description: t.galleryDescription,
+      });
+      return;
+    }
+
     updateDocumentPresentation({
       title: t.appTitle,
       description: t.metaAppDescription,
     });
-  }, [documentTitle, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
+  }, [documentTitle, isGalleryView, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
@@ -1754,7 +1909,11 @@ function App() {
         } else {
           setAuthError("");
           setAuthMessage("Signed in successfully.");
-          window.history.replaceState({}, document.title, window.location.pathname);
+          const nextParams = new URLSearchParams(window.location.search);
+          nextParams.delete("token_hash");
+          nextParams.delete("type");
+          replaceAppLocation(nextParams);
+          setRouteState(readAppLocation());
         }
 
         setAuthVerifyingLink(false);
@@ -1820,7 +1979,7 @@ function App() {
       if (error) {
         setStorageError(error.message || "Unable to load saved diagrams.");
       } else {
-        setSavedDiagrams(rows || []);
+        setSavedDiagrams(await enrichSavedDiagramsWithGalleryState(rows || []));
       }
       setLoadingSavedDiagrams(false);
     };
@@ -1944,7 +2103,8 @@ function App() {
     if (!row) return;
 
     setSavedDiagrams((items) => {
-      const next = [row, ...items.filter((item) => item.id !== row.id)];
+      const existing = items.find((item) => item.id === row.id) || {};
+      const next = [{ ...existing, ...row }, ...items.filter((item) => item.id !== row.id)];
       return sortSavedDiagrams(next, "updated_desc");
     });
   };
@@ -2093,7 +2253,7 @@ function App() {
     if (error) {
       setStorageError(error.message || "Unable to refresh saved diagrams.");
     } else {
-      setSavedDiagrams(rows || []);
+      setSavedDiagrams(await enrichSavedDiagramsWithGalleryState(rows || []));
       setStorageError("");
     }
     setLoadingSavedDiagrams(false);
@@ -2715,6 +2875,89 @@ function App() {
     setStorageMessage("Share link revoked.");
   };
 
+  const toggleGallerySubmission = async (item, { publish }) => {
+    if (!supabase || !currentUser?.id) {
+      setStorageError("Sign in before sending diagrams to the gallery.");
+      return;
+    }
+
+    setGallerySubmittingId(item.id);
+    setStorageError("");
+
+    let row = item;
+    if (publish && !hasActiveShareLink(item)) {
+      const { data, error } = await supabase
+        .from("driver_diagrams")
+        .update({
+          share_id: item.share_id || crypto.randomUUID(),
+          shared_at: new Date().toISOString(),
+          share_expires_at: getNextShareExpiry(),
+          share_revoked_at: null,
+        })
+        .eq("id", item.id)
+        .select(savedDiagramSelectFields)
+        .single();
+
+      if (error || !data) {
+        setGallerySubmittingId("");
+        setStorageError(error?.message || "Unable to prepare this diagram for the gallery.");
+        return;
+      }
+
+      row = data;
+      upsertSavedDiagram(row);
+    }
+
+    const { data: sourceRow, error: sourceError } = await supabase
+      .from("driver_diagrams")
+      .select("*")
+      .eq("id", item.id)
+      .single();
+
+    if (sourceError || !sourceRow) {
+      setGallerySubmittingId("");
+      setStorageError(sourceError?.message || "Unable to load the diagram for the gallery.");
+      return;
+    }
+
+    const sharedError = await syncSharedDiagramLink({
+      diagramRow: sourceRow,
+      diagramData: sourceRow.diagram_data,
+      mermaidCode: sourceRow.mermaid_code,
+    });
+
+    if (sharedError) {
+      setGallerySubmittingId("");
+      setStorageError("Unable to refresh the shared snapshot for the gallery.");
+      return;
+    }
+
+    const nextSubmittedAt = publish ? new Date().toISOString() : null;
+    const galleryPayload = {
+      is_public_gallery: publish,
+      gallery_submitted_at: nextSubmittedAt,
+      gallery_submitter_name: publish ? currentUser.email || "" : "",
+    };
+
+    const { error: galleryError } = await supabase
+      .from("shared_driver_diagrams")
+      .update(galleryPayload)
+      .eq("diagram_id", item.id);
+
+    setGallerySubmittingId("");
+
+    if (galleryError) {
+      setStorageError(galleryError.message || "Unable to update gallery status.");
+      return;
+    }
+
+    upsertSavedDiagram({
+      ...row,
+      ...galleryPayload,
+    });
+    setStorageMessage(publish ? "Submitted this diagram to the gallery." : "Removed this diagram from the gallery.");
+  };
+
   const restoreVersion = async (version, { saveImmediately = false } = {}) => {
     setRestoringVersionId(version.id);
     setStorageError("");
@@ -2774,8 +3017,29 @@ function App() {
     }
   };
 
+  const openGalleryPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("share");
+    params.delete("token_hash");
+    params.delete("type");
+    params.set("gallery", "1");
+    replaceAppLocation(params);
+    setRouteState(readAppLocation());
+  };
+
+  const exitGalleryPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("gallery");
+    params.delete("share");
+    replaceAppLocation(params);
+    setRouteState(readAppLocation());
+  };
+
   const exitSharedView = () => {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("share");
+    replaceAppLocation(params);
+    setRouteState(readAppLocation());
     setSharedView(null);
     setSharedViewError("");
     startNewDiagram();
@@ -3298,6 +3562,79 @@ function App() {
     );
   }
 
+  if (isGalleryView) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">{t.galleryTitle}</h1>
+                <p className="mt-2 text-sm text-slate-500">{t.galleryDescription}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={exitGalleryPage}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  <ExternalLink size={16} /> {t.backToWorkspace}
+                </button>
+                <LanguageToggle language={language} onChange={setLanguage} t={t} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <Search size={16} className="text-slate-400" />
+                <input
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                  placeholder={t.gallerySearchPlaceholder}
+                  className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none"
+                />
+              </label>
+            </div>
+          </header>
+
+          {galleryError ? <div className="rounded-3xl bg-red-50 p-4 text-sm text-red-700">{galleryError}</div> : null}
+
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {galleryLoading ? (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.galleryLoading}</div>
+            ) : filteredGalleryItems.length ? (
+              filteredGalleryItems.map((item) => (
+                <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="truncate text-base font-semibold text-slate-900">{item.title || t.untitledDiagram}</h2>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                        {item.gallery_submitted_at ? (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.gallerySubmitted}: {formatSavedDateTime(item.gallery_submitted_at, language)}</span>
+                        ) : null}
+                        {item.gallery_submitter_name ? (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.galleryOwnerLabel}: {item.gallery_submitter_name}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">{t.inGallery}</span>
+                  </div>
+                  <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">{item.purpose_title || item.title || t.untitledDiagram}</p>
+                  <a
+                    href={`${window.location.pathname}?share=${item.share_token}`}
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    <ExternalLink size={16} /> {t.galleryOpenReadOnly}
+                  </a>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.galleryEmpty}</div>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -3309,7 +3646,15 @@ function App() {
                   <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {t.appEyebrow}
                   </div>
-                  <LanguageToggle language={language} onChange={setLanguage} t={t} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={openGalleryPage}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      <LayoutGrid size={16} /> {t.openGallery}
+                    </button>
+                    <LanguageToggle language={language} onChange={setLanguage} t={t} />
+                  </div>
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight text-slate-950">{t.appTitle}</h1>
@@ -3650,6 +3995,7 @@ function App() {
                               <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || t.untitledDiagram}</div>
                               {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{t.archived}</span> : null}
                               {hasActiveShareLink(item) ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">{t.shared}</span> : null}
+                              {item.is_public_gallery ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">{t.inGallery}</span> : null}
                               {item.share_id && !hasActiveShareLink(item) && !item.share_revoked_at ? (
                                 <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">{t.shareExpired}</span>
                               ) : null}
@@ -3661,6 +4007,9 @@ function App() {
                               </span>
                               {hasActiveShareLink(item) ? (
                                 <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.sharedUntil}: {formatSavedDateTime(item.share_expires_at, language)}</span>
+                              ) : null}
+                              {item.gallery_submitted_at ? (
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.gallerySubmitted}: {formatSavedDateTime(item.gallery_submitted_at, language)}</span>
                               ) : null}
                             </div>
                           </button>
@@ -3709,6 +4058,14 @@ function App() {
                           title={t.revokeShareLink}
                         >
                           <X size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleGallerySubmission(item, { publish: !item.is_public_gallery })}
+                          disabled={gallerySubmittingId === item.id || sharingDiagramId === item.id}
+                          className={`rounded-xl p-2 hover:bg-slate-100 disabled:opacity-50 ${item.is_public_gallery ? "text-emerald-600" : "text-slate-600"}`}
+                          title={item.is_public_gallery ? t.removeFromGallery : t.submitToGallery}
+                        >
+                          <Upload size={16} />
                         </button>
                         <button
                           onClick={() => toggleFavoriteDiagram(item)}
