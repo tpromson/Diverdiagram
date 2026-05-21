@@ -560,6 +560,33 @@ function normalizeStoredDiagramData(input) {
   };
 }
 
+function hasRenderableDiagramData(diagramData) {
+  if (!diagramData || typeof diagramData !== "object") return false;
+
+  const purposeTitle = String(diagramData?.purpose?.title || "").trim();
+  const purposeKpi = String(diagramData?.purpose?.kpi || "").trim();
+  const primaryCount = Array.isArray(diagramData?.primaryDrivers) ? diagramData.primaryDrivers.length : 0;
+
+  return Boolean(purposeTitle || purposeKpi || primaryCount > 0);
+}
+
+function resolveDiagramDataForEditor(diagramData, mermaidCode) {
+  if (hasRenderableDiagramData(diagramData)) {
+    return normalizeStoredDiagramData(diagramData);
+  }
+
+  const normalizedCode = sanitizeMermaidCode(mermaidCode || "");
+  if (normalizedCode) {
+    try {
+      return normalizeStoredDiagramData(parseMermaidCode(normalizedCode));
+    } catch (_error) {
+      // Older saved diagrams can still fall back to their stored payload/default scaffold.
+    }
+  }
+
+  return normalizeStoredDiagramData(diagramData);
+}
+
 function buildDiagramSnapshot(title, diagramData, mermaidCode) {
   return JSON.stringify({
     title: String(title || "").trim() || defaultDocumentTitle,
@@ -2005,7 +2032,10 @@ function App() {
   const syncSharedDiagramLink = async ({ diagramRow, diagramData, mermaidCode }) => {
     if (!supabase || !currentUser?.id || !diagramRow?.id || !diagramRow?.share_id) return null;
 
-    const normalizedData = normalizeStoredDiagramData(diagramData || diagramRow.diagram_data);
+    const normalizedData = resolveDiagramDataForEditor(
+      diagramData || diagramRow.diagram_data,
+      mermaidCode || diagramRow.mermaid_code
+    );
     const normalizedCode = sanitizeMermaidCode(mermaidCode || diagramRow.mermaid_code || buildMermaidCode(normalizedData));
 
     const { error } = await supabase.from("shared_driver_diagrams").upsert(
@@ -2028,7 +2058,7 @@ function App() {
   };
 
   const applyDiagramToEditor = ({ title, diagramData, mermaidCode }) => {
-    const normalizedData = normalizeStoredDiagramData(diagramData);
+    const normalizedData = resolveDiagramDataForEditor(diagramData, mermaidCode);
     const nextTitle = title || defaultDocumentTitle;
     const nextCode = sanitizeMermaidCode(mermaidCode || buildMermaidCode(normalizedData));
 
