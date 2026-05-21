@@ -1498,7 +1498,7 @@ function buildTemplateSvg(diagramData) {
 </svg>`;
 }
 
-function TextAreaField({ label, value, onChange, icon, testId = "" }) {
+function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = null }) {
   return (
     <label className="block space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -1508,6 +1508,7 @@ function TextAreaField({ label, value, onChange, icon, testId = "" }) {
         <span>{label}</span>
       </div>
       <textarea
+        ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={2}
@@ -1834,6 +1835,7 @@ function App() {
   const renderId = useRef(0);
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
+  const purposeTitleInputRef = useRef(null);
   const codeSourceRef = useRef("form");
   const previousUserIdRef = useRef("");
   const lastSavedSnapshotRef = useRef(buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData)));
@@ -2749,6 +2751,9 @@ function App() {
     resetStorageNotice();
     setCodeSyncError("");
     setCodeSyncMessage("");
+    window.setTimeout(() => {
+      purposeTitleInputRef.current?.focus();
+    }, 0);
   };
 
   const addPrimary = () => {
@@ -5207,7 +5212,7 @@ function App() {
                   {t.topLevelGoal}
                 </div>
               </div>
-              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" />
+              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} />
               <div className="mt-3">
                 <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" />
               </div>
