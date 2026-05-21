@@ -61,7 +61,16 @@ create table if not exists public.gallery_item_reports (
   share_token uuid not null references public.shared_driver_diagrams (share_token) on delete cascade,
   reporter_email text not null default '',
   reason text not null default '',
+  resolved_at timestamptz,
+  resolved_by uuid references auth.users (id) on delete set null,
+  resolution_note text not null default '',
   reported_at timestamptz not null default now()
+);
+
+create table if not exists public.gallery_admins (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  email text not null default '',
+  created_at timestamptz not null default now()
 );
 
 alter table public.driver_diagrams
@@ -109,6 +118,24 @@ alter table public.shared_driver_diagrams
 alter table public.shared_driver_diagrams
   add column if not exists gallery_submitter_name text not null default '';
 
+alter table public.shared_driver_diagrams
+  add column if not exists gallery_hidden_at timestamptz;
+
+alter table public.shared_driver_diagrams
+  add column if not exists gallery_hidden_reason text not null default '';
+
+alter table public.shared_driver_diagrams
+  add column if not exists gallery_hidden_by uuid references auth.users (id) on delete set null;
+
+alter table public.gallery_item_reports
+  add column if not exists resolved_at timestamptz;
+
+alter table public.gallery_item_reports
+  add column if not exists resolved_by uuid references auth.users (id) on delete set null;
+
+alter table public.gallery_item_reports
+  add column if not exists resolution_note text not null default '';
+
 create index if not exists driver_diagrams_user_id_idx on public.driver_diagrams using btree (user_id);
 create index if not exists driver_diagrams_last_opened_at_idx on public.driver_diagrams using btree (last_opened_at desc);
 create index if not exists driver_diagrams_is_favorite_idx on public.driver_diagrams using btree (is_favorite desc);
@@ -125,6 +152,8 @@ create index if not exists shared_driver_diagrams_public_gallery_idx on public.s
 create index if not exists shared_driver_diagram_request_logs_ip_requested_at_idx on public.shared_driver_diagram_request_logs using btree (ip_address, requested_at desc);
 create index if not exists shared_driver_diagram_request_logs_requested_at_idx on public.shared_driver_diagram_request_logs using btree (requested_at desc);
 create index if not exists gallery_item_reports_share_token_reported_at_idx on public.gallery_item_reports using btree (share_token, reported_at desc);
+create index if not exists gallery_item_reports_unresolved_idx on public.gallery_item_reports using btree (resolved_at, reported_at desc);
+create index if not exists gallery_admins_email_idx on public.gallery_admins using btree (email);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -173,6 +202,7 @@ revoke all on table public.driver_diagram_versions from anon;
 revoke all on table public.shared_driver_diagrams from anon;
 revoke all on table public.shared_driver_diagram_request_logs from anon;
 revoke all on table public.gallery_item_reports from anon;
+revoke all on table public.gallery_admins from anon;
 grant usage, select on all sequences in schema public to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to authenticated;
 grant select, insert, update, delete on table public.driver_diagrams to service_role;
@@ -182,12 +212,14 @@ grant select, insert, update, delete on table public.shared_driver_diagrams to a
 grant select, insert, update, delete on table public.shared_driver_diagrams to service_role;
 grant select, insert, delete on table public.shared_driver_diagram_request_logs to service_role;
 grant select, insert, delete on table public.gallery_item_reports to service_role;
+grant select, insert, delete on table public.gallery_admins to service_role;
 
 alter table public.driver_diagrams enable row level security;
 alter table public.driver_diagram_versions enable row level security;
 alter table public.shared_driver_diagrams enable row level security;
 alter table public.shared_driver_diagram_request_logs enable row level security;
 alter table public.gallery_item_reports enable row level security;
+alter table public.gallery_admins enable row level security;
 
 drop policy if exists "Public read driver diagrams" on public.driver_diagrams;
 drop policy if exists "Public insert driver diagrams" on public.driver_diagrams;
@@ -201,6 +233,7 @@ drop policy if exists "Users can read their own shared driver diagrams" on publi
 drop policy if exists "Users can insert their own shared driver diagrams" on public.shared_driver_diagrams;
 drop policy if exists "Users can update their own shared driver diagrams" on public.shared_driver_diagrams;
 drop policy if exists "Users can delete their own shared driver diagrams" on public.shared_driver_diagrams;
+drop policy if exists "Users can read their own gallery admin row" on public.gallery_admins;
 
 drop policy if exists "Users can read their own driver diagrams" on public.driver_diagrams;
 create policy "Users can read their own driver diagrams"
@@ -271,5 +304,11 @@ with check ((select auth.uid()) = user_id);
 create policy "Users can delete their own shared driver diagrams"
 on public.shared_driver_diagrams
 for delete
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy "Users can read their own gallery admin row"
+on public.gallery_admins
+for select
 to authenticated
 using ((select auth.uid()) = user_id);

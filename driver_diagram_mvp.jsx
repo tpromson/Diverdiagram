@@ -34,6 +34,9 @@ import {
   LayoutGrid,
   Upload,
   Flag,
+  Shield,
+  EyeOff,
+  Undo2,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -171,6 +174,20 @@ const translations = {
     reportGalleryPrompt: "บอกสั้น ๆ ว่าต้องการ report งานนี้เรื่องอะไร",
     reportGallerySuccess: "ส่ง report สำหรับงานนี้แล้ว",
     reportGalleryFailed: "ยังส่ง report ไม่สำเร็จ",
+    openModeration: "Moderation",
+    adminModerationTitle: "Gallery Moderation",
+    adminModerationDescription: "จัดการรายงาน, ซ่อนงานจาก gallery, และคืนงานกลับขึ้นแสดงเมื่อพร้อม",
+    adminQueueLoading: "กำลังโหลด moderation queue...",
+    adminQueueEmpty: "ยังไม่มีงานที่ต้อง moderation ตอนนี้",
+    adminAccessDenied: "บัญชีนี้ยังไม่มีสิทธิ์ moderation",
+    reportCount: "Reports",
+    hideFromGallery: "Hide from gallery",
+    restoreToGallery: "Restore to gallery",
+    resolveReports: "Resolve reports",
+    hiddenFromGallery: "Hidden",
+    moderationReasonPrompt: "ระบุเหตุผลสั้น ๆ สำหรับการซ่อนหรือปิดรายงานนี้",
+    loadMore: "Load more",
+    moderationUpdated: "อัปเดต moderation queue แล้ว",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้",
     shown: "shown",
@@ -362,6 +379,20 @@ const translations = {
     reportGalleryPrompt: "Briefly describe why you are reporting this gallery item.",
     reportGallerySuccess: "Sent a report for this gallery item.",
     reportGalleryFailed: "Unable to send the report right now.",
+    openModeration: "Moderation",
+    adminModerationTitle: "Gallery Moderation",
+    adminModerationDescription: "Review reports, hide gallery items, and restore them when they are ready to come back.",
+    adminQueueLoading: "Loading moderation queue...",
+    adminQueueEmpty: "No gallery items need moderation right now.",
+    adminAccessDenied: "This account does not have moderation access.",
+    reportCount: "Reports",
+    hideFromGallery: "Hide from gallery",
+    restoreToGallery: "Restore to gallery",
+    resolveReports: "Resolve reports",
+    hiddenFromGallery: "Hidden",
+    moderationReasonPrompt: "Add a short note for hiding or resolving this gallery item.",
+    loadMore: "Load more",
+    moderationUpdated: "Updated the moderation queue.",
     savedDiagrams: "Saved Diagrams",
     savedDiagramsDescription: "Open, manage, and continue work from this workspace.",
     shown: "shown",
@@ -553,6 +584,11 @@ function getPublicGalleryFunctionUrl() {
   return `${supabaseUrl}/functions/v1/public-gallery`;
 }
 
+function getAdminModerationFunctionUrl() {
+  if (!supabaseUrl) return "";
+  return `${supabaseUrl}/functions/v1/gallery-admin-moderation`;
+}
+
 function getReportGalleryFunctionUrl() {
   if (!supabaseUrl) return "";
   return `${supabaseUrl}/functions/v1/report-gallery-item`;
@@ -573,13 +609,14 @@ function buildGalleryDisplayName(name, email = "") {
 
 function readAppLocation() {
   if (typeof window === "undefined") {
-    return { shareId: "", gallery: false };
+    return { shareId: "", gallery: false, admin: false };
   }
 
   const params = new URLSearchParams(window.location.search);
   return {
     shareId: params.get("share") || "",
     gallery: params.get("gallery") === "1",
+    admin: params.get("admin") === "1",
   };
 }
 
@@ -689,6 +726,25 @@ function buildDiagramSnapshot(title, diagramData, mermaidCode) {
 function getThumbnailMarkup(diagramData, mermaidCode) {
   const normalizedData = resolveDiagramDataForEditor(diagramData, mermaidCode);
   return buildTemplateSvg(normalizedData);
+}
+
+const thumbnailMarkupCache = new Map();
+
+function getCachedThumbnailMarkup(diagramData, mermaidCode) {
+  const key = buildDiagramSnapshot("thumbnail", diagramData, mermaidCode);
+  if (thumbnailMarkupCache.has(key)) {
+    return thumbnailMarkupCache.get(key);
+  }
+
+  const markup = getThumbnailMarkup(diagramData, mermaidCode);
+  thumbnailMarkupCache.set(key, markup);
+
+  if (thumbnailMarkupCache.size > 80) {
+    const oldestKey = thumbnailMarkupCache.keys().next().value;
+    thumbnailMarkupCache.delete(oldestKey);
+  }
+
+  return markup;
 }
 
 function buildMermaidCode(data) {
@@ -1495,13 +1551,13 @@ function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
 }
 
 function DiagramThumbnail({ title, diagramData, mermaidCode, className = "" }) {
-  let markup = "";
-
-  try {
-    markup = getThumbnailMarkup(diagramData, mermaidCode);
-  } catch (_error) {
-    markup = "";
-  }
+  const markup = useMemo(() => {
+    try {
+      return getCachedThumbnailMarkup(diagramData, mermaidCode);
+    } catch (_error) {
+      return "";
+    }
+  }, [diagramData, mermaidCode]);
 
   return (
     <div className={`diagram-thumbnail ${className}`}>
@@ -1601,6 +1657,15 @@ function App() {
   const [galleryError, setGalleryError] = useState("");
   const [gallerySearch, setGallerySearch] = useState("");
   const [reportingGalleryToken, setReportingGalleryToken] = useState("");
+  const [galleryOffset, setGalleryOffset] = useState(0);
+  const [galleryHasMore, setGalleryHasMore] = useState(false);
+  const [isGalleryAdmin, setIsGalleryAdmin] = useState(false);
+  const [adminQueue, setAdminQueue] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [adminOffset, setAdminOffset] = useState(0);
+  const [adminHasMore, setAdminHasMore] = useState(false);
+  const [moderationActionToken, setModerationActionToken] = useState("");
   const [versionHistory, setVersionHistory] = useState([]);
   const [loadingVersionHistory, setLoadingVersionHistory] = useState(false);
   const [restoringVersionId, setRestoringVersionId] = useState("");
@@ -1631,6 +1696,7 @@ function App() {
   const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : t.signedInUser);
   const isReadOnlySharedView = Boolean(sharedView);
   const isGalleryView = routeState.gallery && !routeState.shareId;
+  const isAdminView = routeState.admin && !routeState.shareId;
   const ownedGalleryByShareToken = useMemo(
     () =>
       new Map(
@@ -1667,6 +1733,10 @@ function App() {
       `${item.title || ""}\n${item.purpose_title || ""}\n${item.gallery_submitter_name || ""}`.toLowerCase().includes(search)
     );
   }, [galleryItems, gallerySearch]);
+  const visibleAdminQueue = useMemo(
+    () => adminQueue.filter((item) => item.report_count > 0 || item.gallery_hidden_at),
+    [adminQueue]
+  );
   const diagramStats = useMemo(() => {
     const primaryCount = data.primaryDrivers.length;
     const secondaryCount = data.primaryDrivers.reduce((total, primary) => total + primary.secondaryDrivers.length, 0);
@@ -1727,6 +1797,32 @@ function App() {
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !currentUser?.id) {
+      setIsGalleryAdmin(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdminState = async () => {
+      const { data, error } = await supabase
+        .from("gallery_admins")
+        .select("user_id")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      if (!cancelled) {
+        setIsGalleryAdmin(Boolean(data?.user_id) && !error);
+      }
+    };
+
+    loadAdminState();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -1809,10 +1905,12 @@ function App() {
   }, [routeState.shareId]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !routeState.gallery || routeState.shareId) {
+    if (!isSupabaseConfigured || !routeState.gallery || routeState.shareId || routeState.admin) {
       setGalleryItems([]);
       setGalleryLoading(false);
       setGalleryError("");
+      setGalleryOffset(0);
+      setGalleryHasMore(false);
       return;
     }
 
@@ -1821,9 +1919,10 @@ function App() {
     const loadGallery = async () => {
       setGalleryLoading(true);
       setGalleryError("");
+      setGalleryOffset(0);
 
       try {
-        const response = await fetch(getPublicGalleryFunctionUrl(), {
+        const response = await fetch(`${getPublicGalleryFunctionUrl()}?offset=0&limit=12`, {
           headers: {
             apikey: supabasePublishableKey,
           },
@@ -1837,11 +1936,13 @@ function App() {
           setGalleryError(payload?.error || "Unable to load the gallery right now.");
         } else {
           setGalleryItems(Array.isArray(payload?.items) ? payload.items : []);
+          setGalleryHasMore(Boolean(payload?.hasMore));
         }
       } catch (_error) {
         if (!cancelled) {
           setGalleryItems([]);
           setGalleryError("Unable to load the gallery right now.");
+          setGalleryHasMore(false);
         }
       }
 
@@ -1854,7 +1955,63 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [routeState.gallery, routeState.shareId]);
+  }, [routeState.admin, routeState.gallery, routeState.shareId]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !routeState.admin || routeState.shareId || !isAuthenticated) {
+      setAdminQueue([]);
+      setAdminLoading(false);
+      setAdminError("");
+      setAdminOffset(0);
+      setAdminHasMore(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAdminQueue = async () => {
+      setAdminLoading(true);
+      setAdminError("");
+      setAdminOffset(0);
+
+      try {
+        const { data: authData } = await supabase.auth.getSession();
+        const accessToken = authData?.session?.access_token;
+        const response = await fetch(`${getAdminModerationFunctionUrl()}?offset=0&limit=10`, {
+          headers: {
+            apikey: supabasePublishableKey,
+            Authorization: `Bearer ${accessToken || ""}`,
+          },
+        });
+
+        const payload = await response.json();
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setAdminQueue([]);
+          setAdminError(payload?.error || t.adminAccessDenied);
+        } else {
+          setAdminQueue(Array.isArray(payload?.items) ? payload.items : []);
+          setAdminHasMore(Boolean(payload?.hasMore));
+        }
+      } catch (_error) {
+        if (!cancelled) {
+          setAdminQueue([]);
+          setAdminError(t.adminAccessDenied);
+          setAdminHasMore(false);
+        }
+      }
+
+      if (!cancelled) {
+        setAdminLoading(false);
+      }
+    };
+
+    loadAdminQueue();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, routeState.admin, routeState.shareId, t.adminAccessDenied]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
@@ -1925,11 +2082,19 @@ function App() {
       return;
     }
 
+    if (isAdminView) {
+      updateDocumentPresentation({
+        title: t.adminModerationTitle,
+        description: t.adminModerationDescription,
+      });
+      return;
+    }
+
     updateDocumentPresentation({
       title: t.appTitle,
       description: t.metaAppDescription,
     });
-  }, [documentTitle, isGalleryView, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
+  }, [documentTitle, isAdminView, isGalleryView, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
@@ -3102,6 +3267,140 @@ function App() {
     }
   };
 
+  const loadMoreGalleryItems = async () => {
+    if (galleryLoading || !galleryHasMore) return;
+
+    const nextOffset = galleryItems.length;
+    setGalleryLoading(true);
+    try {
+      const response = await fetch(`${getPublicGalleryFunctionUrl()}?offset=${nextOffset}&limit=12`, {
+        headers: {
+          apikey: supabasePublishableKey,
+        },
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setGalleryError(payload?.error || "Unable to load the gallery right now.");
+        return;
+      }
+
+      const nextItems = Array.isArray(payload?.items) ? payload.items : [];
+      setGalleryItems((current) => [...current, ...nextItems]);
+      setGalleryOffset(nextOffset);
+      setGalleryHasMore(Boolean(payload?.hasMore));
+    } catch (_error) {
+      setGalleryError("Unable to load the gallery right now.");
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
+  const runModerationAction = async (shareToken, action) => {
+    if (!supabase || !shareToken || !action) return;
+
+    const note = window.prompt(t.moderationReasonPrompt, "");
+    if (note === null) {
+      return;
+    }
+
+    setModerationActionToken(shareToken);
+    setAdminError("");
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const accessToken = authData?.session?.access_token;
+      const response = await fetch(getAdminModerationFunctionUrl(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabasePublishableKey,
+          Authorization: `Bearer ${accessToken || ""}`,
+        },
+        body: JSON.stringify({
+          action,
+          shareToken,
+          note: String(note || "").trim(),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        setAdminError(payload?.error || t.adminAccessDenied);
+        return;
+      }
+
+      setStorageMessage(t.moderationUpdated);
+      setAdminQueue((current) =>
+        current.map((item) => {
+          if (item.share_token !== shareToken) return item;
+          if (action === "hide") {
+            return {
+              ...item,
+              is_public_gallery: false,
+              gallery_hidden_at: new Date().toISOString(),
+              gallery_hidden_reason: String(note || "").trim(),
+              report_count: 0,
+              recent_reports: [],
+            };
+          }
+          if (action === "restore") {
+            return {
+              ...item,
+              is_public_gallery: true,
+              gallery_hidden_at: null,
+              gallery_hidden_reason: "",
+            };
+          }
+          if (action === "resolve_reports") {
+            return {
+              ...item,
+              report_count: 0,
+              recent_reports: [],
+            };
+          }
+          return item;
+        })
+      );
+    } catch (_error) {
+      setAdminError(t.adminAccessDenied);
+    } finally {
+      setModerationActionToken("");
+    }
+  };
+
+  const loadMoreAdminQueue = async () => {
+    if (!supabase || adminLoading || !adminHasMore) return;
+
+    setAdminLoading(true);
+    const nextOffset = adminQueue.length;
+
+    try {
+      const { data: authData } = await supabase.auth.getSession();
+      const accessToken = authData?.session?.access_token;
+      const response = await fetch(`${getAdminModerationFunctionUrl()}?offset=${nextOffset}&limit=10`, {
+        headers: {
+          apikey: supabasePublishableKey,
+          Authorization: `Bearer ${accessToken || ""}`,
+        },
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setAdminError(payload?.error || t.adminAccessDenied);
+        return;
+      }
+
+      const nextItems = Array.isArray(payload?.items) ? payload.items : [];
+      setAdminQueue((current) => [...current, ...nextItems]);
+      setAdminOffset(nextOffset);
+      setAdminHasMore(Boolean(payload?.hasMore));
+    } catch (_error) {
+      setAdminError(t.adminAccessDenied);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   const restoreVersion = async (version, { saveImmediately = false } = {}) => {
     setRestoringVersionId(version.id);
     setStorageError("");
@@ -3164,6 +3463,7 @@ function App() {
   const openGalleryPage = () => {
     const params = new URLSearchParams(window.location.search);
     params.delete("share");
+    params.delete("admin");
     params.delete("token_hash");
     params.delete("type");
     params.set("gallery", "1");
@@ -3171,9 +3471,26 @@ function App() {
     setRouteState(readAppLocation());
   };
 
+  const openAdminPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("share");
+    params.delete("gallery");
+    params.set("admin", "1");
+    replaceAppLocation(params);
+    setRouteState(readAppLocation());
+  };
+
   const exitGalleryPage = () => {
     const params = new URLSearchParams(window.location.search);
     params.delete("gallery");
+    params.delete("share");
+    replaceAppLocation(params);
+    setRouteState(readAppLocation());
+  };
+
+  const exitAdminPage = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("admin");
     params.delete("share");
     replaceAppLocation(params);
     setRouteState(readAppLocation());
@@ -3801,6 +4118,126 @@ function App() {
               <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.galleryEmpty}</div>
             )}
           </section>
+          {galleryHasMore ? (
+            <div className="flex justify-center">
+              <button
+                onClick={loadMoreGalleryItems}
+                disabled={galleryLoading}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <RefreshCw size={16} className={galleryLoading ? "animate-spin" : ""} /> {t.loadMore}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdminView) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">{t.adminModerationTitle}</h1>
+                <p className="mt-2 text-sm text-slate-500">{t.adminModerationDescription}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={exitAdminPage}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  <ExternalLink size={16} /> {t.backToWorkspace}
+                </button>
+                <LanguageToggle language={language} onChange={setLanguage} t={t} />
+              </div>
+            </div>
+          </header>
+
+          {adminError ? <div className="rounded-3xl bg-red-50 p-4 text-sm text-red-700">{adminError}</div> : null}
+
+          <section className="space-y-4">
+            {adminLoading && !adminQueue.length ? (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminQueueLoading}</div>
+            ) : visibleAdminQueue.length ? (
+              visibleAdminQueue.map((item) => (
+                <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                  <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+                    <DiagramThumbnail
+                      title={item.title || item.purpose_title || t.untitledDiagram}
+                      diagramData={item.diagram_data}
+                      mermaidCode={item.mermaid_code}
+                    />
+                    <div className="min-w-0 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-base font-semibold text-slate-900">{item.title || t.untitledDiagram}</h2>
+                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.reportCount}: {item.report_count || 0}</span>
+                            {item.gallery_hidden_at ? (
+                              <span className="rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-700">{t.hiddenFromGallery}</span>
+                            ) : null}
+                            {item.gallery_submitter_name ? (
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.galleryOwnerLabel}: {item.gallery_submitter_name}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => runModerationAction(item.share_token, item.gallery_hidden_at ? "restore" : "hide")}
+                            disabled={moderationActionToken === item.share_token}
+                            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                          >
+                            {item.gallery_hidden_at ? <Undo2 size={16} /> : <EyeOff size={16} />}
+                            {item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}
+                          </button>
+                          <button
+                            onClick={() => runModerationAction(item.share_token, "resolve_reports")}
+                            disabled={moderationActionToken === item.share_token || !item.report_count}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            <Shield size={16} /> {t.resolveReports}
+                          </button>
+                        </div>
+                      </div>
+                      {item.gallery_hidden_reason ? (
+                        <div className="rounded-2xl bg-amber-50 px-3 py-2 text-sm text-amber-800">{item.gallery_hidden_reason}</div>
+                      ) : null}
+                      {Array.isArray(item.recent_reports) && item.recent_reports.length ? (
+                        <div className="space-y-2">
+                          {item.recent_reports.map((report) => (
+                            <div key={report.id} className="rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span>{formatSavedDateTime(report.reported_at, language)}</span>
+                                {report.reporter_email ? <span>{report.reporter_email}</span> : null}
+                              </div>
+                              <div className="mt-1">{report.reason || "-"}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-3xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">{t.adminQueueEmpty}</div>
+            )}
+          </section>
+
+          {adminHasMore ? (
+            <div className="flex justify-center">
+              <button
+                onClick={loadMoreAdminQueue}
+                disabled={adminLoading}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <RefreshCw size={16} className={adminLoading ? "animate-spin" : ""} /> {t.loadMore}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -3818,6 +4255,14 @@ function App() {
                     {t.appEyebrow}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {isGalleryAdmin ? (
+                      <button
+                        onClick={openAdminPage}
+                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                      >
+                        <Shield size={16} /> {t.openModeration}
+                      </button>
+                    ) : null}
                     <button
                       onClick={openGalleryPage}
                       className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
@@ -4013,6 +4458,7 @@ function App() {
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <button
                     onClick={saveDiagram}
+                    data-testid="save-diagram-button"
                     disabled={savingDiagram || !isAuthenticated}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                   >
@@ -4142,7 +4588,7 @@ function App() {
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">{t.loadingSavedDiagrams}</div>
                 ) : filteredSavedDiagrams.length ? (
                   filteredSavedDiagrams.map((item) => (
-                    <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
+                    <div key={item.id} data-testid={`saved-diagram-card-${item.id}`} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
                       <DiagramThumbnail
                         title={item.title || item.purpose_title || t.untitledDiagram}
                         diagramData={item.diagram_data}
@@ -4218,6 +4664,7 @@ function App() {
                         </button>
                         <button
                           onClick={() => shareDiagram(item)}
+                          data-testid={`share-diagram-button-${item.id}`}
                           disabled={sharingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
                           title={hasActiveShareLink(item) ? t.copyShareLink : t.createShareLink}
@@ -4253,6 +4700,7 @@ function App() {
                         </button>
                         <button
                           onClick={() => toggleGallerySubmission(item, { publish: !item.is_public_gallery })}
+                          data-testid={`toggle-gallery-button-${item.id}`}
                           disabled={gallerySubmittingId === item.id || sharingDiagramId === item.id}
                           className={`rounded-xl p-2 hover:bg-slate-100 disabled:opacity-50 ${item.is_public_gallery ? "text-emerald-600" : "text-slate-600"}`}
                           title={item.is_public_gallery ? t.removeFromGallery : t.submitToGallery}
