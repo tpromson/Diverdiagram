@@ -4358,42 +4358,48 @@ function App() {
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {authUiActive
-                        ? t.privateCloudSaveActive
-                        : t.privateCloudSaveInactive}
-                    </p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
+                      <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+                        {authUiActive
+                          ? t.privateCloudSaveActive
+                          : t.privateCloudSaveInactive}
+                      </p>
+                    </div>
+                    {authUiActive ? (
+                      <button
+                        onClick={handleSignOut}
+                        disabled={authSubmitting || !isAuthenticated}
+                        className="inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
+                      </button>
+                    ) : null}
                   </div>
 
                   {authUiActive ? (
-                    <div className="space-y-2">
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
-                          <div className="mt-1 truncate text-sm font-medium text-slate-900">
-                            {authUiEmail}
-                          </div>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
+                        <div className="mt-2 truncate text-base font-semibold text-slate-900">{authUiEmail}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {isAuthenticated ? t.privateWorkspaceActive : t.previewAuthOnly}
                         </div>
-                        <button
-                          onClick={handleSignOut}
-                          disabled={authSubmitting || !isAuthenticated}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                        >
-                          <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
-                        </button>
                       </div>
+
                       <label className="block rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
+                          <div className="text-xs text-slate-400">{t.galleryDisplayNameHint}</div>
+                        </div>
                         <input
                           value={galleryDisplayName}
                           onChange={(e) => setGalleryDisplayName(e.target.value)}
                           placeholder={t.galleryDisplayNamePlaceholder}
-                          className="mt-2 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                          className="mt-2 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
                         />
-                        <div className="mt-2 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
                       </label>
                     </div>
                   ) : (
@@ -4422,35 +4428,41 @@ function App() {
                     </form>
                   )}
 
-                  {authVerifyingLink ? (
-                    <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{t.verifyingSignInLink}</div>
-                  ) : authLoading ? (
-                    <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">{t.checkingSession}</div>
-                  ) : null}
+                  <div className="flex flex-col gap-2">
+                    {authVerifyingLink ? (
+                      <div className="rounded-2xl bg-blue-50 px-3 py-2.5 text-sm text-blue-700">{t.verifyingSignInLink}</div>
+                    ) : authLoading ? (
+                      <div className="rounded-2xl bg-slate-100 px-3 py-2.5 text-sm text-slate-600">{t.checkingSession}</div>
+                    ) : null}
 
-                  {!authUiActive && authMessage ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={requestMagicLink}
-                        disabled={authSubmitting}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                      >
-                        <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> {t.resendLink}
-                      </button>
-                      <span className="text-xs text-slate-400">{t.resendHint}</span>
-                    </div>
-                  ) : null}
+                    {!authUiActive && authMessage ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={requestMagicLink}
+                          disabled={authSubmitting}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> {t.resendLink}
+                        </button>
+                        <span className="text-xs text-slate-400">{t.resendHint}</span>
+                      </div>
+                    ) : null}
 
-                  <p className="text-xs text-slate-400">{t.redirectHint}</p>
-                  {previewAuthEnabled ? (
-                    <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">
-                      {t.previewAuthOnly}
-                    </div>
-                  ) : null}
+                    {!authUiActive ? <p className="text-xs text-slate-400">{t.redirectHint}</p> : null}
+                    {previewAuthEnabled && !authUiActive ? (
+                      <div className="rounded-2xl bg-amber-50 px-3 py-2.5 text-sm text-amber-700">
+                        {t.previewAuthOnly}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                {authError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{authError}</div> : null}
-                {!authError && authMessage ? <div className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{authMessage}</div> : null}
+                {authError ? <div className="mt-3 rounded-2xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{authError}</div> : null}
+                {!authError && authMessage ? (
+                  <div className={`mt-3 rounded-2xl px-3 py-2.5 text-sm ${authUiActive ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
+                    {authMessage}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -4540,7 +4552,7 @@ function App() {
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh] lg:overflow-auto">
+          <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -4808,7 +4820,7 @@ function App() {
                   {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
                 </div>
               </div>
-              <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 space-y-2">
                 {!isAuthenticated ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
                     {t.signInForVersionHistory}
