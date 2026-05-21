@@ -1384,12 +1384,14 @@ function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
   }
 
   return (
-    <div className={`overflow-auto rounded-[24px] bg-white p-3 shadow-sm ring-1 ring-slate-200 ${className}`}>
-      <div
-        className="diagram-preview"
-        style={{ "--diagram-scale": zoom }}
-        dangerouslySetInnerHTML={{ __html: svg }}
-      />
+    <div className={`preview-surface overflow-auto rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}>
+      <div className="preview-paper shadow-sm">
+        <div
+          className="diagram-preview"
+          style={{ "--diagram-scale": zoom }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      </div>
     </div>
   );
 }

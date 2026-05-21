@@ -55,6 +55,20 @@ div::-webkit-scrollbar-track {
   width: 100%;
 }
 
+.preview-surface {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.preview-paper {
+  width: max(100%, 1123px);
+  min-height: 794px;
+  padding: 24px;
+  border-radius: 24px;
+  background: #ffffff;
+}
+
 .diagram-preview svg {
   display: block;
   height: auto;
