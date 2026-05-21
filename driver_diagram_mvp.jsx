@@ -3749,16 +3749,16 @@ function App() {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
-                  <p className="text-sm text-slate-500">{t.versionHistoryDescription}</p>
+                  <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-slate-500">{t.versionHistoryDescription}</p>
                 </div>
-                <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
+                <div className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
                   {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
                 </div>
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
                 {!isAuthenticated ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
                     {t.signInForVersionHistory}
@@ -3773,7 +3773,7 @@ function App() {
                   </div>
                 ) : versionHistory.length ? (
                   versionHistory.map((version) => (
-                    <div key={version.id} className="flex items-start justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                    <div key={version.id} className="flex flex-col gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <History size={14} className="text-slate-400" />
@@ -3786,20 +3786,20 @@ function App() {
                           {t.saved}: {formatSavedDateTime(version.created_at, language)}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
                         <button
                           onClick={() => restoreVersion(version)}
                           disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                         >
-                          <History size={15} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
+                          <History size={14} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
                         </button>
                         <button
                           onClick={() => restoreVersion(version, { saveImmediately: true })}
                           disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                          className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Save size={15} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
+                          <Save size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
                         </button>
                       </div>
                     </div>
