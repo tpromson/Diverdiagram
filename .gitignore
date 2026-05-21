@@ -7,3 +7,4 @@ dist
 .env.*.local
 driver-diagram.mmd
 driver-diagram.svg
+test-results

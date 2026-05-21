@@ -37,6 +37,7 @@ import {
   Shield,
   EyeOff,
   Undo2,
+  MoreHorizontal,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 
@@ -84,6 +85,7 @@ const translations = {
     languageLabel: "ภาษา",
     languageTh: "TH",
     languageEn: "EN",
+    more: "เพิ่มเติม",
     sharedViewTitle: "Driver Diagram Shared View",
     loadingSharedDiagram: "กำลังโหลด shared diagram...",
     backToWorkspace: "กลับไป workspace",
@@ -311,6 +313,7 @@ const translations = {
     languageLabel: "Language",
     languageTh: "TH",
     languageEn: "EN",
+    more: "More",
     sharedViewTitle: "Driver Diagram Shared View",
     loadingSharedDiagram: "Loading shared diagram...",
     backToWorkspace: "Back to workspace",
@@ -1537,7 +1540,7 @@ function StatusPill({ tone = "neutral", icon, children }) {
   );
 }
 
-function LanguageToggle({ language, onChange, t }) {
+function LanguageToggle({ language, onChange, t, exposeTestIds = false }) {
   return (
     <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold">
       <span className="px-2 text-xs uppercase text-slate-500">{t.languageLabel}</span>
@@ -1545,7 +1548,7 @@ function LanguageToggle({ language, onChange, t }) {
         <button
           key={option}
           type="button"
-          data-testid={`language-toggle-${option}`}
+          data-testid={exposeTestIds ? `language-toggle-${option}` : undefined}
           onClick={() => onChange(option)}
           className={`rounded-xl px-3 py-2 transition ${language === option ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
           aria-pressed={language === option}
@@ -1554,6 +1557,168 @@ function LanguageToggle({ language, onChange, t }) {
         </button>
       ))}
     </div>
+  );
+}
+
+function WorkspaceMenubar({
+  t,
+  language,
+  onLanguageChange,
+  documentTitle,
+  autoSaveState,
+  isSupabaseConfigured,
+  isAuthenticated,
+  isGalleryAdmin,
+  savingDiagram,
+  copied,
+  exportingDocx,
+  authSubmitting,
+  authUiActive,
+  onSave,
+  onNew,
+  onCopyMermaid,
+  onDownloadMermaid,
+  onDownloadSvg,
+  onDownloadDocx,
+  onOpenGallery,
+  onOpenAdmin,
+  onSignOut,
+}) {
+  const title = documentTitle.trim() || defaultDocumentTitle;
+  const saveLabel = savingDiagram ? t.saving : isAuthenticated ? t.saveDiagram : t.signInToSave;
+  const syncLabel =
+    isSupabaseConfigured && isAuthenticated
+      ? autoSaveState === "saving"
+        ? t.autoSaving
+        : autoSaveState === "dirty"
+          ? t.unsavedChanges
+          : t.allChangesSaved
+      : t.newUnsavedDocument;
+  const syncTone =
+    autoSaveState === "saving"
+      ? "text-blue-700 bg-blue-50 ring-blue-100"
+      : autoSaveState === "dirty"
+        ? "text-amber-700 bg-amber-50 ring-amber-100"
+        : isSupabaseConfigured && isAuthenticated
+          ? "text-emerald-700 bg-emerald-50 ring-emerald-100"
+          : "text-slate-600 bg-slate-100 ring-slate-200";
+
+  return (
+    <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
+            <GitBranch size={18} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase text-slate-400">{t.appEyebrow}</div>
+            <div className="truncate text-sm font-bold text-slate-950 sm:text-base">{title}</div>
+          </div>
+          <span className={`hidden shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 lg:inline-flex ${syncTone}`}>
+            {syncLabel}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isGalleryAdmin ? (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <Shield size={16} /> {t.openModeration}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onOpenGallery}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <LayoutGrid size={16} /> {t.openGallery}
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={savingDiagram || !isAuthenticated}
+            data-testid="save-diagram-button"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+          >
+            <Save size={16} /> {saveLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onNew}
+            className="hidden items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 sm:inline-flex"
+          >
+            <FilePlus2 size={16} /> {t.newDiagram}
+          </button>
+
+          <details className="relative">
+            <summary className="inline-flex list-none items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+              <Download size={16} /> {t.exportAndCode}
+            </summary>
+            <div className="absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl">
+              <button
+                type="button"
+                onClick={onCopyMermaid}
+                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadMermaid}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Download size={16} /> {t.exportMmd}
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadSvg}
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                <Download size={16} /> {t.exportSvg}
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadDocx}
+                disabled={exportingDocx}
+                className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-3 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+              >
+                <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
+              </button>
+            </div>
+          </details>
+
+          <div>
+            <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds />
+          </div>
+          {authUiActive ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              disabled={authSubmitting || !isAuthenticated}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
+            >
+              <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function MobileOverflowMenu({ label, children }) {
+  return (
+    <details className="relative md:hidden">
+      <summary className="inline-flex list-none items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+        <MoreHorizontal size={16} /> {label}
+      </summary>
+      <div className="absolute right-0 z-30 mt-2 flex min-w-[240px] flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -4177,13 +4342,16 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
         <div className="mx-auto max-w-6xl space-y-4">
-          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <header className="sticky top-4 z-30 rounded-3xl bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{documentTitle}</h1>
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {t.sharedViewTitle}
+                </div>
+                <h1 className="mt-3 text-2xl font-bold tracking-tight">{documentTitle}</h1>
                 <p className="mt-2 text-sm text-slate-500">{t.sharedReadOnlyDescription}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 md:flex">
                 <LanguageToggle language={language} onChange={setLanguage} t={t} />
                 {isAuthenticated ? (
                   <button
@@ -4193,23 +4361,18 @@ function App() {
                     <ExternalLink size={16} /> {t.backToWorkspace}
                   </button>
                 ) : null}
-                <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                  <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
-                </button>
-                <button onClick={downloadMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                  <Download size={16} /> .mmd
-                </button>
-                <button onClick={downloadSvg} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                  <Download size={16} /> .svg
-                </button>
-                <button
-                  onClick={downloadDocx}
-                  disabled={exportingDocx}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-                >
-                  <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
-                </button>
               </div>
+              <MobileOverflowMenu label={t.more}>
+                <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
+                {isAuthenticated ? (
+                  <button
+                    onClick={exitSharedView}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <ExternalLink size={16} /> {t.backToWorkspace}
+                  </button>
+                ) : null}
+              </MobileOverflowMenu>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
               <div className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">{t.readOnlySharedLink}</div>
@@ -4220,6 +4383,33 @@ function App() {
             {renderError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
             {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
           </header>
+
+          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
+                <p className="mt-1 text-sm text-slate-500">{t.exportHint}</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                  <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
+                </button>
+                <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                  <Download size={16} /> .mmd
+                </button>
+                <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                  <Download size={16} /> .svg
+                </button>
+                <button
+                  onClick={downloadDocx}
+                  disabled={exportingDocx}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                >
+                  <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
+                </button>
+              </div>
+            </div>
+          </section>
 
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -4294,13 +4484,16 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
         <div className="mx-auto max-w-6xl space-y-4">
-          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <header className="sticky top-4 z-30 rounded-3xl bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{t.galleryTitle}</h1>
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {t.openGallery}
+                </div>
+                <h1 className="mt-3 text-2xl font-bold tracking-tight">{t.galleryTitle}</h1>
                 <p className="mt-2 text-sm text-slate-500">{t.galleryDescription}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 md:flex">
                 <button
                   onClick={exitGalleryPage}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
@@ -4309,6 +4502,15 @@ function App() {
                 </button>
                 <LanguageToggle language={language} onChange={setLanguage} t={t} />
               </div>
+              <MobileOverflowMenu label={t.more}>
+                <button
+                  onClick={exitGalleryPage}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <ExternalLink size={16} /> {t.backToWorkspace}
+                </button>
+                <LanguageToggle language={language} onChange={setLanguage} t={t} />
+              </MobileOverflowMenu>
             </div>
             <div className="mt-4">
               <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
@@ -4406,13 +4608,16 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
         <div className="mx-auto max-w-6xl space-y-4">
-          <header className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <header className="sticky top-4 z-30 rounded-3xl bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">{t.adminModerationTitle}</h1>
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {t.openModeration}
+                </div>
+                <h1 className="mt-3 text-2xl font-bold tracking-tight">{t.adminModerationTitle}</h1>
                 <p className="mt-2 text-sm text-slate-500">{t.adminModerationDescription}</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 md:flex">
                 <button
                   onClick={exitAdminPage}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
@@ -4421,6 +4626,15 @@ function App() {
                 </button>
                 <LanguageToggle language={language} onChange={setLanguage} t={t} />
               </div>
+              <MobileOverflowMenu label={t.more}>
+                <button
+                  onClick={exitAdminPage}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <ExternalLink size={16} /> {t.backToWorkspace}
+                </button>
+                <LanguageToggle language={language} onChange={setLanguage} t={t} />
+              </MobileOverflowMenu>
             </div>
           </header>
 
@@ -4563,32 +4777,34 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-4">
+        <WorkspaceMenubar
+          t={t}
+          language={language}
+          onLanguageChange={setLanguage}
+          documentTitle={documentTitle}
+          autoSaveState={autoSaveState}
+          isSupabaseConfigured={isSupabaseConfigured}
+          isAuthenticated={isAuthenticated}
+          isGalleryAdmin={isGalleryAdmin}
+          savingDiagram={savingDiagram}
+          copied={copied}
+          exportingDocx={exportingDocx}
+          authSubmitting={authSubmitting}
+          authUiActive={authUiActive}
+          onSave={saveDiagram}
+          onNew={startNewDiagram}
+          onCopyMermaid={copyMermaid}
+          onDownloadMermaid={downloadMermaid}
+          onDownloadSvg={downloadSvg}
+          onDownloadDocx={downloadDocx}
+          onOpenGallery={openGalleryPage}
+          onOpenAdmin={openAdminPage}
+          onSignOut={handleSignOut}
+        />
         <header className="rounded-[28px] bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
             <div className="space-y-4">
               <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {t.appEyebrow}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isGalleryAdmin ? (
-                      <button
-                        onClick={openAdminPage}
-                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                      >
-                        <Shield size={16} /> {t.openModeration}
-                      </button>
-                    ) : null}
-                    <button
-                      onClick={openGalleryPage}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      <LayoutGrid size={16} /> {t.openGallery}
-                    </button>
-                    <LanguageToggle language={language} onChange={setLanguage} t={t} />
-                  </div>
-                </div>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight text-slate-950">{t.appTitle}</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
@@ -4812,49 +5028,6 @@ function App() {
                 </label>
                 <p className="mt-2 text-xs leading-5 text-slate-500">{t.documentTitleHint}</p>
               </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.primaryActions}</div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button
-                    onClick={saveDiagram}
-                    data-testid="save-diagram-button"
-                    disabled={savingDiagram || !isAuthenticated}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
-                  >
-                    <Save size={16} /> {savingDiagram ? t.saving : isAuthenticated ? t.saveDiagram : t.signInToSave}
-                  </button>
-                  <button
-                    onClick={startNewDiagram}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    <FilePlus2 size={16} /> {t.newDiagram}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                    <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
-                  </button>
-                  <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
-                    <Download size={16} /> {t.exportMmd}
-                  </button>
-                  <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                    <Download size={16} /> {t.exportSvg}
-                  </button>
-                  <button
-                    onClick={downloadDocx}
-                    disabled={exportingDocx}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-                  >
-                    <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
-                  </button>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-slate-500">{t.exportHint}</p>
-              </div>
             </div>
           </div>
           {storageError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{storageError}</div> : null}
@@ -4880,7 +5053,7 @@ function App() {
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -5221,7 +5394,7 @@ function App() {
             ))}
           </section>
 
-          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
+          <section className="min-w-0 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-950">{t.output}</h2>
