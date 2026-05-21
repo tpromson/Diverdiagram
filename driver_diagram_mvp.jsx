@@ -71,19 +71,366 @@ const defaultData = {
 };
 
 const defaultDocumentTitle = "Driver Diagram ใหม่";
-const savedDiagramSortOptions = [
-  { value: "updated_desc", label: "Updated ล่าสุด" },
-  { value: "opened_desc", label: "Opened ล่าสุด" },
-  { value: "title_asc", label: "ชื่อ A-Z" },
-];
-const savedDiagramScopeOptions = [
-  { value: "active", label: "Active" },
-  { value: "all", label: "All" },
-  { value: "archived", label: "Archived" },
-];
+const defaultLanguage = "th";
+const translations = {
+  th: {
+    languageLabel: "ภาษา",
+    languageTh: "TH",
+    languageEn: "EN",
+    sharedViewTitle: "Driver Diagram Shared View",
+    loadingSharedDiagram: "กำลังโหลด shared diagram...",
+    backToWorkspace: "กลับไป workspace",
+    sharedReadOnlyDescription: "หน้า shared แบบอ่านอย่างเดียว สามารถ preview, ตรวจ Mermaid code, และ export diagram นี้ได้",
+    copied: "Copied",
+    copyMermaid: "Copy Mermaid",
+    exporting: "กำลัง export...",
+    readOnlySharedLink: "Read-only shared link",
+    shared: "Shared",
+    expires: "Expires",
+    opened: "Opened",
+    output: "output",
+    sharedOutputDescription: "Preview shared diagram, สลับไปดู Mermaid code, หรือ zoom เพื่ออ่านรายละเอียดได้ชัดขึ้น",
+    expand: "ขยาย",
+    preview: "Preview",
+    code: "Code",
+    appEyebrow: "Driver Diagram Workspace",
+    appTitle: "Driver Diagram MVP",
+    appDescription: "สร้าง Driver Diagram พร้อม KPI ทุกระดับ, แก้ไข Mermaid ได้สองทาง, export เอกสาร, และบันทึกขึ้นฐานข้อมูลแบบแยกตามผู้ใช้ใน workspace เดียวกัน",
+    document: "Document",
+    workspace: "Workspace",
+    session: "Session",
+    primary: "primary",
+    secondary: "secondary",
+    changeIdeas: "change ideas",
+    privateCloudSave: "Private Cloud Save",
+    privateCloudSaveTitle: "Private Cloud Save",
+    privateCloudSaveActive: "Diagrams, auto-save, version history, และ share links จะอยู่ใน private workspace นี้",
+    privateCloudSaveInactive: "Sign in ด้วย email เพื่อ save, reopen, auto-save, และ share diagrams ใน private workspace ของคุณ",
+    signedInAs: "Signed in as",
+    signOut: "Sign out",
+    signingOut: "กำลัง sign out...",
+    sending: "กำลังส่ง...",
+    emailSignInLink: "Email Sign-In Link",
+    verifyingSignInLink: "กำลังตรวจ sign-in link...",
+    checkingSession: "กำลังตรวจ session เดิม...",
+    resendLink: "Resend Link",
+    resendHint: "ใช้ปุ่มนี้ถ้า email แรกมาช้า",
+    redirectHint: "เพิ่ม production และ local URLs ใน Supabase Auth redirect URLs เพื่อให้ magic link กลับมาหน้านี้ได้",
+    previewAuthOnly: "Preview auth layout เท่านั้น การ save, autosave, และ private data actions ยังต้อง sign in จริง",
+    privateCloudSaveSummaryActive: "Saved diagrams, version history, และ share links ใน workspace นี้เป็นของ account นี้เท่านั้น",
+    privateCloudSaveSummaryInactive: "Sign in ด้วย email เพื่อ save, reopen, auto-save, และ share diagrams จาก workspace ของคุณ",
+    supabaseConnected: "Supabase connected",
+    supabaseEnvMissing: "Supabase env missing",
+    privateWorkspaceActive: "Private workspace active",
+    verifyingLink: "กำลังตรวจ sign-in link...",
+    checkingSessionShort: "กำลังตรวจ session...",
+    signInForCloudSave: "Sign in เพื่อ cloud save",
+    autoSaving: "Auto-saving...",
+    unsavedChanges: "Unsaved changes",
+    allChangesSaved: "All changes saved",
+    currentId: "Current ID",
+    newUnsavedDocument: "New unsaved document",
+    documentTitle: "Document Title",
+    documentTitlePlaceholder: "ตั้งชื่อเอกสาร",
+    documentTitleHint: "ชื่อนี้จะถูกใช้กับรายการ saved, share title, และชื่อไฟล์ export ด้วย",
+    primaryActions: "Primary Actions",
+    saving: "Saving...",
+    saveDiagram: "Save Diagram",
+    signInToSave: "Sign in to save",
+    newDiagram: "New Diagram",
+    exportAndCode: "Export & Code",
+    copiedMermaid: "Copied Mermaid",
+    exportMmd: "Export .mmd",
+    exportSvg: "Export .svg",
+    exportDocx: "Export .docx",
+    exportHint: "Export จะใช้ document title ปัจจุบันเป็นชื่อไฟล์ และอ้างอิง state ล่าสุดของ form/code",
+    openSharedView: "Open shared view",
+    savedDiagrams: "Saved Diagrams",
+    savedDiagramsDescription: "เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้",
+    shown: "shown",
+    refresh: "Refresh",
+    searchPlaceholder: "Search by title or purpose",
+    envMissingHelp: "ใส่ค่าใน .env.local ตามไฟล์ .env.example ก่อน ระบบถึงจะบันทึกและเปิดรายการจากฐานข้อมูลได้",
+    signInFirstSaved: "Sign in ก่อน แล้ว panel นี้จะแสดงเฉพาะ diagrams ที่ account ของคุณ save ไว้",
+    loadingSavedDiagrams: "กำลังโหลด saved diagrams...",
+    untitledDiagram: "Untitled Diagram",
+    archived: "Archived",
+    shareExpired: "Share expired",
+    updated: "Updated",
+    lastOpened: "Last opened",
+    notOpenedYet: "Not opened yet",
+    sharedUntil: "Shared until",
+    open: "Open",
+    copyShareLink: "Copy share link",
+    createShareLink: "Create 7-day share link",
+    regenerateShareLink: "Regenerate 7-day share link",
+    revokeShareLink: "Revoke share link",
+    favorite: "Favorite",
+    unfavorite: "Unfavorite",
+    rename: "Rename",
+    duplicate: "Duplicate",
+    restore: "Restore",
+    archive: "Archive",
+    deletePermanently: "Delete permanently",
+    save: "Save",
+    cancel: "Cancel",
+    noSearchResultsTitle: "ไม่พบรายการที่ตรงกับคำค้นหา",
+    noSearchResultsBody: "ลองค้นด้วยชื่อที่สั้นลง หรือสลับ sort เพื่อหางานที่ต้องการ",
+    noArchivedTitle: "ยังไม่มีรายการที่ archive ไว้",
+    noSavedTitle: "ยังไม่มีรายการที่บันทึกไว้",
+    noArchivedBody: "รายการที่ archive ไว้จะมาอยู่ตรงนี้ และกด restore กลับไปที่รายการหลักได้",
+    noSavedBody: "เริ่มจากกด Save งานปัจจุบัน แล้วรายการจะโผล่มาใน workspace นี้ทันที",
+    saveCurrentDiagram: "Save Current Diagram",
+    versionHistory: "Version History",
+    versionHistoryDescription: "ย้อนกลับไปยัง snapshot ล่าสุดของเอกสารที่กำลังเปิดอยู่ได้ โดยเก็บ autosave ล่าสุด 10 รายการ และรวมไม่เกิน 50 รายการต่อเอกสาร",
+    versions: "versions",
+    openSavedDiagram: "Open a saved diagram",
+    signInForVersionHistory: "Sign in และ open saved diagram เพื่อดู version history",
+    openSavedFirst: "Open saved diagram ก่อน งานที่ save ใหม่จะเริ่มเก็บ versions อัตโนมัติ",
+    loadingVersionHistory: "กำลังโหลด version history...",
+    saved: "Saved",
+    restoring: "Restoring...",
+    loadToEditor: "Load to editor",
+    restoreAndSave: "Restore & Save",
+    noVersions: "ยังไม่มี versions การ save หรือ auto-save ครั้งถัดไปจะสร้าง snapshot แรก",
+    purposeOutcomeKpi: "purpose & outcome KPI",
+    purposeDescription: "เริ่มจากเป้าหมายหลักและ KPI ระดับผลลัพธ์ เพื่อให้ทุก branch ด้านล่างวิ่งกลับมาหาเป้าหมายเดียวกัน",
+    topLevelGoal: "Top-level goal",
+    purpose: "purpose",
+    purposeKpi: "purpose KPI",
+    primaryDrivers: "primary drivers",
+    primaryDriversDescription: "แตกเป้าหมายเป็น primary driver แล้วค่อยเติม secondary และ change ideas ใต้แต่ละ branch",
+    addPrimary: "Add primary",
+    primaryDriver: "primary driver",
+    primaryDriverHelp: "Main lever for the outcome goal",
+    primaryDriverName: "ชื่อ primary driver",
+    primaryKpi: "primary KPI",
+    addSecondary: "Add secondary",
+    secondaryDriver: "secondary driver",
+    secondaryDriverHelp: "Supporting branch under this primary driver",
+    secondaryDriverName: "ชื่อ secondary driver",
+    secondaryKpi: "secondary KPI",
+    addChangeIdea: "Add change idea",
+    changeIdea: "change idea",
+    changeIdeaHelp: "Concrete experiment or implementation idea",
+    changeIdeaName: "ชื่อ change idea",
+    changeKpi: "change KPI",
+    outputDescription: "Preview diagram ปัจจุบัน หรือแก้ Mermaid โดยตรง แล้ว sync กลับเข้า form เมื่อพร้อม",
+    editMermaidHint: "แก้ Mermaid ตรงนี้ แล้ว apply กลับเข้า form",
+    applyToForm: "Apply to Form",
+    modalDescription: "Full-screen preview สำหรับตรวจโครงสร้าง diagram และอ่านรายละเอียดเล็ก ๆ ก่อน export",
+    close: "Close",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    resetZoom: "Reset zoom",
+    signedInUser: "Signed-in user",
+    metaLoadingSharedTitle: "กำลังโหลด Shared Driver Diagram",
+    metaLoadingSharedDescription: "กำลังเปิด shared driver diagram แบบ read-only",
+    metaUnavailableTitle: "Shared Driver Diagram ไม่พร้อมใช้งาน",
+    metaUnavailableDescription: "Shared driver diagram link นี้ไม่พร้อมใช้งานหรือถูก revoke แล้ว",
+    metaSharedTitleSuffix: "Shared Driver Diagram",
+    metaSharedDescription: "Read-only driver diagram view พร้อม Mermaid preview, code inspection, และ export options",
+    metaAppDescription: "Create, edit, save, share, and export driver diagrams with Mermaid and Supabase.",
+    sortOptions: {
+      updated_desc: "Updated ล่าสุด",
+      opened_desc: "Opened ล่าสุด",
+      title_asc: "ชื่อ A-Z",
+    },
+    scopeOptions: {
+      active: "Active",
+      all: "All",
+      archived: "Archived",
+    },
+  },
+  en: {
+    languageLabel: "Language",
+    languageTh: "TH",
+    languageEn: "EN",
+    sharedViewTitle: "Driver Diagram Shared View",
+    loadingSharedDiagram: "Loading shared diagram...",
+    backToWorkspace: "Back to workspace",
+    sharedReadOnlyDescription: "Shared read-only view. You can preview, inspect the Mermaid code, and export this diagram.",
+    copied: "Copied",
+    copyMermaid: "Copy Mermaid",
+    exporting: "Exporting...",
+    readOnlySharedLink: "Read-only shared link",
+    shared: "Shared",
+    expires: "Expires",
+    opened: "Opened",
+    output: "output",
+    sharedOutputDescription: "Preview the shared diagram, switch to Mermaid code, or zoom in to inspect details more comfortably.",
+    expand: "Expand",
+    preview: "Preview",
+    code: "Code",
+    appEyebrow: "Driver Diagram Workspace",
+    appTitle: "Driver Diagram MVP",
+    appDescription: "Create a Driver Diagram with KPI at every level, edit Mermaid in both directions, export documentation, and save per user in one shared workspace.",
+    document: "Document",
+    workspace: "Workspace",
+    session: "Session",
+    primary: "primary",
+    secondary: "secondary",
+    changeIdeas: "change ideas",
+    privateCloudSave: "Private Cloud Save",
+    privateCloudSaveTitle: "Private Cloud Save",
+    privateCloudSaveActive: "Your diagrams, auto-saves, version history, and share links stay inside this private workspace.",
+    privateCloudSaveInactive: "Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace.",
+    signedInAs: "Signed in as",
+    signOut: "Sign out",
+    signingOut: "Signing out...",
+    sending: "Sending...",
+    emailSignInLink: "Email Sign-In Link",
+    verifyingSignInLink: "Verifying your sign-in link...",
+    checkingSession: "Checking for an existing session...",
+    resendLink: "Resend Link",
+    resendHint: "Use this if the first email takes a while to arrive.",
+    redirectHint: "Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.",
+    previewAuthOnly: "Preview auth layout only. Save, autosave, and private data actions still require a real sign-in.",
+    privateCloudSaveSummaryActive: "Saved diagrams, version history, and share links in this workspace belong only to this account.",
+    privateCloudSaveSummaryInactive: "Sign in with your email to save, reopen, auto-save, and share diagrams from your own workspace.",
+    supabaseConnected: "Supabase connected",
+    supabaseEnvMissing: "Supabase env missing",
+    privateWorkspaceActive: "Private workspace active",
+    verifyingLink: "Verifying sign-in link...",
+    checkingSessionShort: "Checking session...",
+    signInForCloudSave: "Sign in for cloud save",
+    autoSaving: "Auto-saving...",
+    unsavedChanges: "Unsaved changes",
+    allChangesSaved: "All changes saved",
+    currentId: "Current ID",
+    newUnsavedDocument: "New unsaved document",
+    documentTitle: "Document Title",
+    documentTitlePlaceholder: "Name this document",
+    documentTitleHint: "This name is used for saved items, share title, and export filename.",
+    primaryActions: "Primary Actions",
+    saving: "Saving...",
+    saveDiagram: "Save Diagram",
+    signInToSave: "Sign in to save",
+    newDiagram: "New Diagram",
+    exportAndCode: "Export & Code",
+    copiedMermaid: "Copied Mermaid",
+    exportMmd: "Export .mmd",
+    exportSvg: "Export .svg",
+    exportDocx: "Export .docx",
+    exportHint: "Export uses the current document title as the filename and reflects the latest form/code state.",
+    openSharedView: "Open shared view",
+    savedDiagrams: "Saved Diagrams",
+    savedDiagramsDescription: "Open, manage, and continue work from this workspace.",
+    shown: "shown",
+    refresh: "Refresh",
+    searchPlaceholder: "Search by title or purpose",
+    envMissingHelp: "Add values to .env.local from .env.example before saving or opening diagrams from the database.",
+    signInFirstSaved: "Sign in first, then this panel will show only the diagrams saved by your account.",
+    loadingSavedDiagrams: "Loading saved diagrams...",
+    untitledDiagram: "Untitled Diagram",
+    archived: "Archived",
+    shareExpired: "Share expired",
+    updated: "Updated",
+    lastOpened: "Last opened",
+    notOpenedYet: "Not opened yet",
+    sharedUntil: "Shared until",
+    open: "Open",
+    copyShareLink: "Copy share link",
+    createShareLink: "Create 7-day share link",
+    regenerateShareLink: "Regenerate 7-day share link",
+    revokeShareLink: "Revoke share link",
+    favorite: "Favorite",
+    unfavorite: "Unfavorite",
+    rename: "Rename",
+    duplicate: "Duplicate",
+    restore: "Restore",
+    archive: "Archive",
+    deletePermanently: "Delete permanently",
+    save: "Save",
+    cancel: "Cancel",
+    noSearchResultsTitle: "No matching saved diagrams",
+    noSearchResultsBody: "Try a shorter title or switch sort order to find the work you need.",
+    noArchivedTitle: "No archived diagrams yet",
+    noSavedTitle: "No saved diagrams yet",
+    noArchivedBody: "Archived diagrams will appear here, and you can restore them to the main list.",
+    noSavedBody: "Start by saving the current diagram, then it will appear in this workspace.",
+    saveCurrentDiagram: "Save Current Diagram",
+    versionHistory: "Version History",
+    versionHistoryDescription: "Return to recent snapshots for the open document. Keeps the latest 10 auto-save versions and up to 50 versions per document.",
+    versions: "versions",
+    openSavedDiagram: "Open a saved diagram",
+    signInForVersionHistory: "Sign in and open a saved diagram to browse version history.",
+    openSavedFirst: "Open a saved diagram first. New saves will start collecting versions automatically.",
+    loadingVersionHistory: "Loading version history...",
+    saved: "Saved",
+    restoring: "Restoring...",
+    loadToEditor: "Load to editor",
+    restoreAndSave: "Restore & Save",
+    noVersions: "No versions yet. The next save or auto-save will create the first recoverable snapshot.",
+    purposeOutcomeKpi: "purpose & outcome KPI",
+    purposeDescription: "Start with the main goal and outcome KPI so every branch below traces back to one shared purpose.",
+    topLevelGoal: "Top-level goal",
+    purpose: "purpose",
+    purposeKpi: "purpose KPI",
+    primaryDrivers: "primary drivers",
+    primaryDriversDescription: "Break the goal into primary driver items, then add secondary and change ideas under each branch.",
+    addPrimary: "Add primary",
+    primaryDriver: "primary driver",
+    primaryDriverHelp: "Main lever for the outcome goal",
+    primaryDriverName: "primary driver name",
+    primaryKpi: "primary KPI",
+    addSecondary: "Add secondary",
+    secondaryDriver: "secondary driver",
+    secondaryDriverHelp: "Supporting branch under this primary driver",
+    secondaryDriverName: "secondary driver name",
+    secondaryKpi: "secondary KPI",
+    addChangeIdea: "Add change idea",
+    changeIdea: "change idea",
+    changeIdeaHelp: "Concrete experiment or implementation idea",
+    changeIdeaName: "change idea name",
+    changeKpi: "change KPI",
+    outputDescription: "Preview the current diagram or edit Mermaid directly, then sync it back into the form when you are ready.",
+    editMermaidHint: "Edit Mermaid here, then apply it back into the form.",
+    applyToForm: "Apply to Form",
+    modalDescription: "Full-screen preview for reviewing diagram structure and reading small details before export.",
+    close: "Close",
+    zoomOut: "Zoom out",
+    zoomIn: "Zoom in",
+    resetZoom: "Reset zoom",
+    signedInUser: "Signed-in user",
+    metaLoadingSharedTitle: "Loading Shared Driver Diagram",
+    metaLoadingSharedDescription: "Opening a shared driver diagram in read-only mode.",
+    metaUnavailableTitle: "Shared Driver Diagram Unavailable",
+    metaUnavailableDescription: "This shared driver diagram link is unavailable or has been revoked.",
+    metaSharedTitleSuffix: "Shared Driver Diagram",
+    metaSharedDescription: "Read-only driver diagram view with Mermaid preview, code inspection, and export options.",
+    metaAppDescription: "Create, edit, save, share, and export driver diagrams with Mermaid and Supabase.",
+    sortOptions: {
+      updated_desc: "Recently updated",
+      opened_desc: "Recently opened",
+      title_asc: "Title A-Z",
+    },
+    scopeOptions: {
+      active: "Active",
+      all: "All",
+      archived: "Archived",
+    },
+  },
+};
 
-function formatSavedDateTime(value) {
-  return value ? new Date(value).toLocaleString("th-TH") : "-";
+function getSavedDiagramSortOptions(t) {
+  return [
+    { value: "updated_desc", label: t.sortOptions.updated_desc },
+    { value: "opened_desc", label: t.sortOptions.opened_desc },
+    { value: "title_asc", label: t.sortOptions.title_asc },
+  ];
+}
+
+function getSavedDiagramScopeOptions(t) {
+  return [
+    { value: "active", label: t.scopeOptions.active },
+    { value: "all", label: t.scopeOptions.all },
+    { value: "archived", label: t.scopeOptions.archived },
+  ];
+}
+
+function formatSavedDateTime(value, language = defaultLanguage) {
+  return value ? new Date(value).toLocaleString(language === "en" ? "en-US" : "th-TH") : "-";
 }
 
 function ensureDocumentMeta(selector, attributes) {
@@ -955,21 +1302,40 @@ function StatusPill({ tone = "neutral", icon, children }) {
   );
 }
 
-function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset }) {
+function LanguageToggle({ language, onChange, t }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold">
+      <span className="px-2 text-xs uppercase text-slate-500">{t.languageLabel}</span>
+      {["th", "en"].map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onChange(option)}
+          className={`rounded-xl px-3 py-2 transition ${language === option ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+          aria-pressed={language === option}
+        >
+          {option === "th" ? t.languageTh : t.languageEn}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = translations.th }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
       <button
         onClick={onZoomOut}
         disabled={zoom <= PREVIEW_ZOOM_MIN}
         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        title="Zoom out"
+        title={labels.zoomOut}
       >
         <Minus size={16} />
       </button>
       <button
         onClick={onReset}
         className="inline-flex min-w-[72px] items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
-        title="Reset zoom"
+        title={labels.resetZoom}
       >
         <RotateCcw size={14} /> {Math.round(zoom * 100)}%
       </button>
@@ -977,7 +1343,7 @@ function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset }) {
         onClick={onZoomIn}
         disabled={zoom >= PREVIEW_ZOOM_MAX}
         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        title="Zoom in"
+        title={labels.zoomIn}
       >
         <Plus size={16} />
       </button>
@@ -1001,7 +1367,7 @@ function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
   );
 }
 
-function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset }) {
+function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset, t = translations.th }) {
   if (!open) return null;
 
   return (
@@ -1010,15 +1376,15 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 className="text-lg font-bold text-slate-950">{title || defaultDocumentTitle}</h2>
-            <p className="mt-1 text-sm text-slate-500">Full-screen preview for reviewing diagram structure and reading small details before export.</p>
+            <p className="mt-1 text-sm text-slate-500">{t.modalDescription}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} />
+            <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} labels={t} />
             <button
               onClick={onClose}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
             >
-              <X size={16} /> Close
+              <X size={16} /> {t.close}
             </button>
           </div>
         </div>
@@ -1031,6 +1397,7 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
 }
 
 function App() {
+  const [language, setLanguage] = useState(defaultLanguage);
   const [data, setData] = useState(defaultData);
   const [documentTitle, setDocumentTitle] = useState(defaultDocumentTitle);
   const [currentDiagramId, setCurrentDiagramId] = useState("");
@@ -1086,6 +1453,9 @@ function App() {
   const lastSavedSnapshotRef = useRef(buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData)));
   const lastVersionSnapshotRef = useRef(buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData)));
   const mermaidCode = useMemo(() => buildMermaidCode(data), [data]);
+  const t = translations[language] || translations[defaultLanguage];
+  const savedDiagramSortOptions = useMemo(() => getSavedDiagramSortOptions(t), [t]);
+  const savedDiagramScopeOptions = useMemo(() => getSavedDiagramScopeOptions(t), [t]);
   const savedDiagramSelectFields =
     "id, title, purpose_title, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
   const currentSnapshot = useMemo(
@@ -1098,7 +1468,7 @@ function App() {
     [isAuthenticated]
   );
   const authUiActive = isAuthenticated || previewAuthEnabled;
-  const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : "Signed-in user");
+  const authUiEmail = currentUser?.email || session?.user?.email || (previewAuthEnabled ? "preview.user@example.com" : t.signedInUser);
   const isReadOnlySharedView = Boolean(sharedView);
   const filteredSavedDiagrams = useMemo(() => {
     const search = savedSearch.trim().toLowerCase();
@@ -1254,33 +1624,33 @@ function App() {
 
     if (sharedViewLoading) {
       updateDocumentPresentation({
-        title: "Loading Shared Driver Diagram",
-        description: "Opening a shared driver diagram in read-only mode.",
+        title: t.metaLoadingSharedTitle,
+        description: t.metaLoadingSharedDescription,
       });
       return;
     }
 
     if (sharedViewError) {
       updateDocumentPresentation({
-        title: "Shared Driver Diagram Unavailable",
-        description: "This shared driver diagram link is unavailable or has been revoked.",
+        title: t.metaUnavailableTitle,
+        description: t.metaUnavailableDescription,
       });
       return;
     }
 
     if (isReadOnlySharedView) {
       updateDocumentPresentation({
-        title: `${sharedTitle} | Shared Driver Diagram`,
-        description: "Read-only driver diagram view with Mermaid preview, code inspection, and export options.",
+        title: `${sharedTitle} | ${t.metaSharedTitleSuffix}`,
+        description: t.metaSharedDescription,
       });
       return;
     }
 
     updateDocumentPresentation({
-      title: "Driver Diagram MVP",
-      description: "Create, edit, save, share, and export driver diagrams with Mermaid and Supabase.",
+      title: t.appTitle,
+      description: t.metaAppDescription,
     });
-  }, [documentTitle, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading]);
+  }, [documentTitle, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !isAuthenticated || !currentDiagramId) {
@@ -1460,7 +1830,7 @@ function App() {
       try {
         const sanitizedCode = sanitizeMermaidCode(codeInput);
         if (!mermaidRef.current) {
-          const { default: mermaid } = await import("mermaid");
+          const { default: mermaid } = await import("mermaid/dist/mermaid.esm.min.mjs");
           mermaidRef.current = mermaid;
         }
 
@@ -2747,8 +3117,11 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-2xl font-bold tracking-tight">Driver Diagram Shared View</h1>
-          <p className="mt-3 text-sm text-slate-500">Loading shared diagram...</p>
+          <div className="mb-4 flex justify-end">
+            <LanguageToggle language={language} onChange={setLanguage} t={t} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t.sharedViewTitle}</h1>
+          <p className="mt-3 text-sm text-slate-500">{t.loadingSharedDiagram}</p>
         </div>
       </div>
     );
@@ -2758,14 +3131,17 @@ function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-2xl font-bold tracking-tight">Driver Diagram Shared View</h1>
+          <div className="mb-4 flex justify-end">
+            <LanguageToggle language={language} onChange={setLanguage} t={t} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">{t.sharedViewTitle}</h1>
           <div className="mt-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{sharedViewError}</div>
           {isAuthenticated ? (
             <button
               onClick={exitSharedView}
               className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <ExternalLink size={16} /> Back to workspace
+              <ExternalLink size={16} /> {t.backToWorkspace}
             </button>
           ) : null}
         </div>
@@ -2781,19 +3157,20 @@ function App() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">{documentTitle}</h1>
-                <p className="mt-2 text-sm text-slate-500">Shared read-only view. You can preview, inspect the Mermaid code, and export this diagram.</p>
+                <p className="mt-2 text-sm text-slate-500">{t.sharedReadOnlyDescription}</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <LanguageToggle language={language} onChange={setLanguage} t={t} />
                 {isAuthenticated ? (
                   <button
                     onClick={exitSharedView}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                   >
-                    <ExternalLink size={16} /> Back to workspace
+                    <ExternalLink size={16} /> {t.backToWorkspace}
                   </button>
                 ) : null}
                 <button onClick={copyMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                  <Copy size={16} /> {copied ? "Copied" : "Copy Mermaid"}
+                  <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
                 </button>
                 <button onClick={downloadMermaid} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
                   <Download size={16} /> .mmd
@@ -2806,15 +3183,15 @@ function App() {
                   disabled={exportingDocx}
                   className="inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
                 >
-                  <Download size={16} /> {exportingDocx ? "Exporting..." : ".docx"}
+                  <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
                 </button>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-              <div className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">Read-only shared link</div>
-              {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Shared: {formatSavedDateTime(sharedView.shared_at)}</div> : null}
-              {sharedView?.share_expires_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Expires: {formatSavedDateTime(sharedView.share_expires_at)}</div> : null}
-              {sharedOpenedAt ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">Opened: {formatSavedDateTime(sharedOpenedAt)}</div> : null}
+              <div className="rounded-full bg-blue-50 px-3 py-1.5 text-blue-700">{t.readOnlySharedLink}</div>
+              {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.shared}: {formatSavedDateTime(sharedView.shared_at, language)}</div> : null}
+              {sharedView?.share_expires_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.expires}: {formatSavedDateTime(sharedView.share_expires_at, language)}</div> : null}
+              {sharedOpenedAt ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.opened}: {formatSavedDateTime(sharedOpenedAt, language)}</div> : null}
             </div>
             {renderError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
             {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
@@ -2823,8 +3200,8 @@ function App() {
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold">Output</h2>
-                <p className="mt-1 text-sm text-slate-500">Preview the shared diagram, switch to Mermaid code, or zoom in to inspect details more comfortably.</p>
+                <h2 className="text-lg font-bold">{t.output}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.sharedOutputDescription}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {view === "preview" ? (
@@ -2833,6 +3210,7 @@ function App() {
                     onZoomOut={zoomPreviewOut}
                     onZoomIn={zoomPreviewIn}
                     onReset={resetPreviewZoom}
+                    labels={t}
                   />
                 ) : null}
                 {view === "preview" ? (
@@ -2840,7 +3218,7 @@ function App() {
                     onClick={openPreviewModal}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                   >
-                    <Maximize2 size={16} /> Expand
+                    <Maximize2 size={16} /> {t.expand}
                   </button>
                 ) : null}
                 <div className="inline-flex rounded-2xl bg-slate-100 p-1">
@@ -2848,13 +3226,13 @@ function App() {
                   onClick={() => setView("preview")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
                 >
-                  <Eye size={16} /> Preview
+                  <Eye size={16} /> {t.preview}
                 </button>
                 <button
                   onClick={() => setView("code")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
                 >
-                  <Code2 size={16} /> Code
+                  <Code2 size={16} /> {t.code}
                 </button>
                 </div>
               </div>
@@ -2881,6 +3259,7 @@ function App() {
             onZoomOut={zoomPreviewOut}
             onZoomIn={zoomPreviewIn}
             onReset={resetPreviewZoom}
+            t={t}
           />
         </div>
       </div>
@@ -2894,70 +3273,73 @@ function App() {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
             <div className="space-y-4">
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Driver Diagram Workspace
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {t.appEyebrow}
+                  </div>
+                  <LanguageToggle language={language} onChange={setLanguage} t={t} />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">Driver Diagram MVP</h1>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">{t.appTitle}</h1>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    สร้าง Driver Diagram พร้อม KPI ทุกระดับ, แก้ไข Mermaid ได้สองทาง, export เอกสาร, และบันทึกขึ้นฐานข้อมูลแบบแยกตามผู้ใช้ใน workspace เดียวกัน
+                    {t.appDescription}
                   </p>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Document</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.document}</div>
                   <div className="mt-2 text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} primary</span>
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} secondary</span>
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} change ideas</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} {t.primary}</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} {t.secondary}</span>
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} {t.changeIdeas}</span>
                   </div>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
                   <div className="mt-2 text-base font-semibold text-slate-900">
-                    {authUiActive ? authUiEmail : "Private cloud save"}
+                    {authUiActive ? authUiEmail : t.privateCloudSave}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
                     {authUiActive
-                      ? "Saved diagrams, version history, and share links in this workspace belong only to this account."
-                      : "Sign in with your email to save, reopen, auto-save, and share diagrams from your own workspace."}
+                      ? t.privateCloudSaveSummaryActive
+                      : t.privateCloudSaveSummaryInactive}
                   </p>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Session</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <StatusPill
                       tone={isSupabaseConfigured ? "success" : "warning"}
                       icon={<Database size={15} />}
                     >
-                      {isSupabaseConfigured ? "Supabase connected" : "Supabase env missing"}
+                      {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
                     </StatusPill>
                     <StatusPill tone={authUiActive ? "info" : "neutral"}>
                       {authUiActive
-                        ? "Private workspace active"
+                        ? t.privateWorkspaceActive
                         : authVerifyingLink
-                          ? "Verifying sign-in link..."
+                          ? t.verifyingLink
                           : authLoading
-                            ? "Checking session..."
-                            : "Sign in for cloud save"}
+                            ? t.checkingSessionShort
+                            : t.signInForCloudSave}
                     </StatusPill>
                     {isSupabaseConfigured && currentDiagramId ? (
                       <StatusPill
                         tone={autoSaveState === "saving" ? "info" : autoSaveState === "dirty" ? "warning" : "neutral"}
                       >
                         {autoSaveState === "saving"
-                          ? "Auto-saving..."
+                          ? t.autoSaving
                           : autoSaveState === "dirty"
-                            ? "Unsaved changes"
-                            : "All changes saved"}
+                            ? t.unsavedChanges
+                            : t.allChangesSaved}
                       </StatusPill>
                     ) : null}
                   </div>
                   <div className="mt-3 text-xs text-slate-500">
-                    {currentDiagramId ? `Current ID: ${currentDiagramId.slice(0, 8)}` : "New unsaved document"}
+                    {currentDiagramId ? `${t.currentId}: ${currentDiagramId.slice(0, 8)}` : t.newUnsavedDocument}
                   </div>
                 </div>
               </div>
@@ -2965,18 +3347,18 @@ function App() {
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
                 <div className="space-y-3">
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Private Cloud Save</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
                     <p className="mt-1 text-sm text-slate-500">
                       {authUiActive
-                        ? "Your diagrams, auto-saves, version history, and share links stay inside this private workspace."
-                        : "Sign in with your email to save, reopen, and auto-save diagrams in your own private workspace."}
+                        ? t.privateCloudSaveActive
+                        : t.privateCloudSaveInactive}
                     </p>
                   </div>
 
                   {authUiActive ? (
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Signed in as</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
                         <div className="mt-1 truncate text-sm font-medium text-slate-900">
                           {authUiEmail}
                         </div>
@@ -2986,7 +3368,7 @@ function App() {
                         disabled={authSubmitting || !isAuthenticated}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
                       >
-                        <LogOut size={16} /> {authSubmitting ? "Signing out..." : "Sign out"}
+                        <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
                       </button>
                     </div>
                   ) : (
@@ -3009,16 +3391,16 @@ function App() {
                           disabled={authSubmitting || authLoading}
                           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                         >
-                          <Mail size={16} /> {authSubmitting ? "Sending..." : "Email Sign-In Link"}
+                          <Mail size={16} /> {authSubmitting ? t.sending : t.emailSignInLink}
                         </button>
                       </div>
                     </form>
                   )}
 
                   {authVerifyingLink ? (
-                    <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">Verifying your sign-in link...</div>
+                    <div className="rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{t.verifyingSignInLink}</div>
                   ) : authLoading ? (
-                    <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">Checking for an existing session...</div>
+                    <div className="rounded-2xl bg-slate-100 p-3 text-sm text-slate-600">{t.checkingSession}</div>
                   ) : null}
 
                   {!authUiActive && authMessage ? (
@@ -3029,16 +3411,16 @@ function App() {
                         disabled={authSubmitting}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
                       >
-                        <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> Resend Link
+                        <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> {t.resendLink}
                       </button>
-                      <span className="text-xs text-slate-400">Use this if the first email takes a while to arrive.</span>
+                      <span className="text-xs text-slate-400">{t.resendHint}</span>
                     </div>
                   ) : null}
 
-                  <p className="text-xs text-slate-400">Add your production and local URLs to Supabase Auth redirect URLs so the magic link can return here cleanly.</p>
+                  <p className="text-xs text-slate-400">{t.redirectHint}</p>
                   {previewAuthEnabled ? (
                     <div className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">
-                      Preview auth layout only. Save, autosave, and private data actions still require a real sign-in.
+                      {t.previewAuthOnly}
                     </div>
                   ) : null}
                 </div>
@@ -3049,62 +3431,62 @@ function App() {
 
             <div className="space-y-4">
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Document Title</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.documentTitle}</div>
                 <label className="mt-2 block space-y-2">
-                  <span className="sr-only">Document Title</span>
+                  <span className="sr-only">{t.documentTitle}</span>
                 <input
                   value={documentTitle}
                   onChange={(e) => {
                     setDocumentTitle(e.target.value);
                     resetStorageNotice();
                   }}
-                  placeholder="ตั้งชื่อเอกสาร"
+                  placeholder={t.documentTitlePlaceholder}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
                 </label>
-                <p className="mt-2 text-xs leading-5 text-slate-500">ชื่อนี้จะถูกใช้กับรายการ saved, share title, และชื่อไฟล์ export ด้วย</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">{t.documentTitleHint}</p>
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Primary Actions</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.primaryActions}</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <button
                     onClick={saveDiagram}
                     disabled={savingDiagram || !isAuthenticated}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                   >
-                    <Save size={16} /> {savingDiagram ? "Saving..." : isAuthenticated ? "Save Diagram" : "Sign in to save"}
+                    <Save size={16} /> {savingDiagram ? t.saving : isAuthenticated ? t.saveDiagram : t.signInToSave}
                   </button>
                   <button
                     onClick={startNewDiagram}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                   >
-                    <FilePlus2 size={16} /> New Diagram
+                    <FilePlus2 size={16} /> {t.newDiagram}
                   </button>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Export & Code</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                    <Copy size={16} /> {copied ? "Copied Mermaid" : "Copy Mermaid"}
+                    <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
                   </button>
                   <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
-                    <Download size={16} /> Export .mmd
+                    <Download size={16} /> {t.exportMmd}
                   </button>
                   <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                    <Download size={16} /> Export .svg
+                    <Download size={16} /> {t.exportSvg}
                   </button>
                   <button
                     onClick={downloadDocx}
                     disabled={exportingDocx}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
                   >
-                    <Download size={16} /> {exportingDocx ? "Exporting..." : "Export .docx"}
+                    <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
                   </button>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-slate-500">Export uses the current document title as the filename and reflects the latest form/code state.</p>
+                <p className="mt-2 text-xs leading-5 text-slate-500">{t.exportHint}</p>
               </div>
             </div>
           </div>
@@ -3120,7 +3502,7 @@ function App() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                   >
-                    <ExternalLink size={14} /> Open shared view
+                    <ExternalLink size={14} /> {t.openSharedView}
                   </a>
                   <span className="truncate text-xs text-emerald-800">{lastSharedUrl}</span>
                 </div>
@@ -3135,19 +3517,19 @@ function App() {
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Saved Diagrams</h2>
-                  <p className="text-sm text-slate-500">เปิดดู จัดการ และกลับมาทำงานต่อจากรายการใน workspace นี้</p>
+                  <h2 className="text-base font-bold text-slate-900">{t.savedDiagrams}</h2>
+                  <p className="text-sm text-slate-500">{t.savedDiagramsDescription}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
-                    {filteredSavedDiagrams.length} shown
+                    {filteredSavedDiagrams.length} {t.shown}
                   </div>
                   <button
                     onClick={refreshSavedDiagrams}
                     disabled={!isSupabaseConfigured || !isAuthenticated || loadingSavedDiagrams}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> Refresh
+                    <RefreshCw size={16} className={loadingSavedDiagrams ? "animate-spin" : ""} /> {t.refresh}
                   </button>
                 </div>
               </div>
@@ -3158,7 +3540,7 @@ function App() {
                     <input
                       value={savedSearch}
                       onChange={(e) => setSavedSearch(e.target.value)}
-                      placeholder="Search by title or purpose"
+                      placeholder={t.searchPlaceholder}
                       className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none"
                     />
                   </label>
@@ -3189,14 +3571,14 @@ function App() {
               <div className="mt-3 space-y-2">
                 {!isSupabaseConfigured ? (
                   <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-                    ใส่ค่าใน <code>.env.local</code> ตามไฟล์ <code>.env.example</code> ก่อน ระบบถึงจะบันทึกและเปิดรายการจากฐานข้อมูลได้
+                    {t.envMissingHelp}
                   </div>
                 ) : !isAuthenticated ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-600">
-                    Sign in first, then this panel will show only the diagrams saved by your account.
+                    {t.signInFirstSaved}
                   </div>
                 ) : loadingSavedDiagrams ? (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">Loading saved diagrams...</div>
+                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500">{t.loadingSavedDiagrams}</div>
                 ) : filteredSavedDiagrams.length ? (
                   filteredSavedDiagrams.map((item) => (
                     <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
@@ -3215,14 +3597,14 @@ function App() {
                                 disabled={renamingDiagram}
                                 className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                               >
-                                <Check size={15} /> {renamingDiagram ? "Saving..." : "Save"}
+                              <Check size={15} /> {renamingDiagram ? t.saving : t.save}
                               </button>
                               <button
                                 onClick={cancelRenamingDiagram}
                                 disabled={renamingDiagram}
                                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-70"
                               >
-                                <X size={15} /> Cancel
+                                <X size={15} /> {t.cancel}
                               </button>
                             </div>
                           </div>
@@ -3233,20 +3615,20 @@ function App() {
                           >
                             <div className="flex items-center gap-2">
                               {item.is_favorite ? <Star size={14} className="fill-amber-400 text-amber-500" /> : null}
-                              <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || "Untitled Diagram"}</div>
-                              {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Archived</span> : null}
-                              {hasActiveShareLink(item) ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">Shared</span> : null}
+                              <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || t.untitledDiagram}</div>
+                              {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{t.archived}</span> : null}
+                              {hasActiveShareLink(item) ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">{t.shared}</span> : null}
                               {item.share_id && !hasActiveShareLink(item) && !item.share_revoked_at ? (
-                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Share expired</span>
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">{t.shareExpired}</span>
                               ) : null}
                             </div>
                             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                              <span className="rounded-full bg-slate-100 px-2.5 py-1">Updated: {formatSavedDateTime(item.updated_at || item.created_at)}</span>
+                              <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.updated}: {formatSavedDateTime(item.updated_at || item.created_at, language)}</span>
                               <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                                Last opened: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at) : "Not opened yet"}
+                                {t.lastOpened}: {item.last_opened_at ? formatSavedDateTime(item.last_opened_at, language) : t.notOpenedYet}
                               </span>
                               {hasActiveShareLink(item) ? (
-                                <span className="rounded-full bg-slate-100 px-2.5 py-1">Shared until: {formatSavedDateTime(item.share_expires_at)}</span>
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1">{t.sharedUntil}: {formatSavedDateTime(item.share_expires_at, language)}</span>
                               ) : null}
                             </div>
                           </button>
@@ -3257,7 +3639,7 @@ function App() {
                           onClick={() => openDiagram(item.id)}
                           disabled={openingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title="Open"
+                          title={t.open}
                         >
                           <FolderOpen size={16} />
                         </button>
@@ -3265,7 +3647,7 @@ function App() {
                           onClick={() => shareDiagram(item)}
                           disabled={sharingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={hasActiveShareLink(item) ? "Copy share link" : "Create 7-day share link"}
+                          title={hasActiveShareLink(item) ? t.copyShareLink : t.createShareLink}
                         >
                           <Link2 size={16} />
                         </button>
@@ -3273,7 +3655,7 @@ function App() {
                           onClick={() => shareDiagram(item, { regenerate: true })}
                           disabled={sharingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title="Regenerate 7-day share link"
+                          title={t.regenerateShareLink}
                         >
                           <RefreshCw size={16} />
                         </button>
@@ -3284,7 +3666,7 @@ function App() {
                           }}
                           disabled={!hasActiveShareLink(item)}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                          title="Open shared view"
+                          title={t.openSharedView}
                         >
                           <ExternalLink size={16} />
                         </button>
@@ -3292,14 +3674,14 @@ function App() {
                           onClick={() => revokeShareDiagram(item)}
                           disabled={sharingDiagramId === item.id || !item.share_id || Boolean(item.share_revoked_at)}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                          title="Revoke share link"
+                          title={t.revokeShareLink}
                         >
                           <X size={16} />
                         </button>
                         <button
                           onClick={() => toggleFavoriteDiagram(item)}
                           className={`rounded-xl p-2 hover:bg-slate-100 ${item.is_favorite ? "text-amber-500" : "text-slate-600"}`}
-                          title={item.is_favorite ? "Unfavorite" : "Favorite"}
+                          title={item.is_favorite ? t.unfavorite : t.favorite}
                         >
                           <Star size={16} className={item.is_favorite ? "fill-amber-400" : ""} />
                         </button>
@@ -3307,7 +3689,7 @@ function App() {
                           onClick={() => startRenamingDiagram(item)}
                           disabled={renamingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title="Rename"
+                          title={t.rename}
                         >
                           <Pencil size={16} />
                         </button>
@@ -3315,7 +3697,7 @@ function App() {
                           onClick={() => duplicateDiagram(item.id)}
                           disabled={duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title="Duplicate"
+                          title={t.duplicate}
                         >
                           <Copy size={16} />
                         </button>
@@ -3323,7 +3705,7 @@ function App() {
                           onClick={() => toggleArchiveDiagram(item)}
                           disabled={duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={item.archived_at ? "Restore" : "Archive"}
+                          title={item.archived_at ? t.restore : t.archive}
                         >
                           {item.archived_at ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                         </button>
@@ -3331,7 +3713,7 @@ function App() {
                           onClick={() => deleteDiagram(item.id)}
                           disabled={deletingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                          title="Delete permanently"
+                          title={t.deletePermanently}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -3341,25 +3723,25 @@ function App() {
                   ))
                 ) : savedSearch.trim() ? (
                   <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    <div className="font-semibold text-slate-900">ไม่พบรายการที่ตรงกับคำค้นหา</div>
-                    <p className="mt-1">ลองค้นด้วยชื่อที่สั้นลง หรือสลับ sort เพื่อหางานที่ต้องการ</p>
+                    <div className="font-semibold text-slate-900">{t.noSearchResultsTitle}</div>
+                    <p className="mt-1">{t.noSearchResultsBody}</p>
                   </div>
                 ) : (
                   <div className="rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
                     <div className="font-semibold text-slate-900">
-                      {savedScope === "archived" ? "ยังไม่มีรายการที่ archive ไว้" : "ยังไม่มีรายการที่บันทึกไว้"}
+                      {savedScope === "archived" ? t.noArchivedTitle : t.noSavedTitle}
                     </div>
                     <p className="mt-1">
                       {savedScope === "archived"
-                        ? "รายการที่ archive ไว้จะมาอยู่ตรงนี้ และกด restore กลับไปที่รายการหลักได้"
-                        : "เริ่มจากกด Save งานปัจจุบัน แล้วรายการจะโผล่มาใน workspace นี้ทันที"}
+                        ? t.noArchivedBody
+                        : t.noSavedBody}
                     </p>
                     <button
                       onClick={() => saveDiagram()}
                       disabled={savingDiagram}
                       className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                     >
-                      <Save size={16} /> {savingDiagram ? "Saving..." : "Save Current Diagram"}
+                      <Save size={16} /> {savingDiagram ? t.saving : t.saveCurrentDiagram}
                     </button>
                   </div>
                 )}
@@ -3369,25 +3751,25 @@ function App() {
             <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Version History</h2>
-                  <p className="text-sm text-slate-500">ย้อนกลับไปยัง snapshot ล่าสุดของเอกสารที่กำลังเปิดอยู่ได้ โดยเก็บ autosave ล่าสุด 10 รายการ และรวมไม่เกิน 50 รายการต่อเอกสาร</p>
+                  <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
+                  <p className="text-sm text-slate-500">{t.versionHistoryDescription}</p>
                 </div>
                 <div className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
-                  {currentDiagramId ? `${versionHistory.length} versions` : "Open a saved diagram"}
+                  {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
                 </div>
               </div>
               <div className="mt-3 space-y-2">
                 {!isAuthenticated ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    Sign in and open a saved diagram to browse version history.
+                    {t.signInForVersionHistory}
                   </div>
                 ) : !currentDiagramId ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    Open a saved diagram first. New saves will start collecting versions automatically.
+                    {t.openSavedFirst}
                   </div>
                 ) : loadingVersionHistory ? (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    Loading version history...
+                    {t.loadingVersionHistory}
                   </div>
                 ) : versionHistory.length ? (
                   versionHistory.map((version) => (
@@ -3401,7 +3783,7 @@ function App() {
                           </span>
                         </div>
                         <div className="mt-1 text-xs text-slate-500">
-                          Saved: {formatSavedDateTime(version.created_at)}
+                          {t.saved}: {formatSavedDateTime(version.created_at, language)}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -3410,21 +3792,21 @@ function App() {
                           disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
                           className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
                         >
-                          <History size={15} /> {restoringVersionId === version.id ? "Restoring..." : "Load to editor"}
+                          <History size={15} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
                         </button>
                         <button
                           onClick={() => restoreVersion(version, { saveImmediately: true })}
                           disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
                           className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Save size={15} /> {restoringAndSavingVersionId === version.id ? "Saving..." : "Restore & Save"}
+                          <Save size={15} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
                         </button>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    No versions yet. The next save or auto-save will create the first recoverable snapshot.
+                    {t.noVersions}
                   </div>
                 )}
               </div>
@@ -3433,26 +3815,26 @@ function App() {
             <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-bold text-pink-950">Purpose & Outcome KPI</h2>
-                  <p className="mt-1 text-sm text-pink-800/75">เริ่มจากเป้าหมายหลักและ KPI ระดับผลลัพธ์ เพื่อให้ทุก branch ด้านล่างวิ่งกลับมาหาเป้าหมายเดียวกัน</p>
+                  <h2 className="text-base font-bold text-pink-950">{t.purposeOutcomeKpi}</h2>
+                  <p className="mt-1 text-sm text-pink-800/75">{t.purposeDescription}</p>
                 </div>
                 <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
-                  Top-level goal
+                  {t.topLevelGoal}
                 </div>
               </div>
-              <TextAreaField label="Purpose" value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
+              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} />
               <div className="mt-3">
-                <TextAreaField label="Purpose KPI" value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} />
+                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} />
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">Primary Drivers</h2>
-                <p className="text-sm text-slate-500">แตกเป้าหมายเป็นตัวขับเคลื่อนหลัก แล้วค่อยเติม secondary drivers และ change ideas ใต้แต่ละ branch</p>
+                <h2 className="text-lg font-bold text-slate-950">{t.primaryDrivers}</h2>
+                <p className="text-sm text-slate-500">{t.primaryDriversDescription}</p>
               </div>
               <button onClick={addPrimary} className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-                <Plus size={16} /> Add Primary
+                <Plus size={16} /> {t.addPrimary}
               </button>
             </div>
 
@@ -3460,51 +3842,51 @@ function App() {
               <div key={pd.id} className="space-y-3 rounded-3xl border border-blue-100 bg-blue-50 p-4 shadow-sm ring-1 ring-blue-100/70">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <div className="font-bold text-blue-900">Primary Driver {pi + 1}</div>
-                    <div className="text-xs text-blue-800/70">Main lever for the outcome goal</div>
+                    <div className="font-bold text-blue-900">{t.primaryDriver} {pi + 1}</div>
+                    <div className="text-xs text-blue-800/70">{t.primaryDriverHelp}</div>
                   </div>
                   <button onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                     <Trash2 size={16} />
                   </button>
                 </div>
-                <TextAreaField label="ชื่อ Primary Driver" value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} />
-                <TextAreaField label="Primary KPI" value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} />
+                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                 <button onClick={() => addSecondary(pi)} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                  <Plus size={16} /> Add Secondary
+                  <Plus size={16} /> {t.addSecondary}
                 </button>
 
                 {pd.secondaryDrivers.map((sd, si) => (
                   <div key={sd.id} className="ml-0 space-y-3 rounded-3xl border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-amber-900">Secondary Driver {si + 1}</div>
-                        <div className="text-xs text-amber-800/70">Supporting branch under this primary driver</div>
+                        <div className="font-bold text-amber-900">{t.secondaryDriver} {si + 1}</div>
+                        <div className="text-xs text-amber-800/70">{t.secondaryDriverHelp}</div>
                       </div>
                       <button onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                         <Trash2 size={16} />
                       </button>
                     </div>
-                    <TextAreaField label="ชื่อ Secondary Driver" value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} />
-                    <TextAreaField label="Secondary KPI" value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} />
+                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} />
+                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                     <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600">
-                      <Plus size={16} /> Add Change Idea
+                      <Plus size={16} /> {t.addChangeIdea}
                     </button>
 
                     {sd.changeIdeas.map((ci, cii) => (
                       <div key={ci.id} className="ml-0 space-y-3 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm ring-1 ring-orange-100/80 md:ml-5">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-bold text-orange-900">Change Idea {cii + 1}</div>
-                            <div className="text-xs text-orange-800/70">Concrete experiment or implementation idea</div>
+                            <div className="font-bold text-orange-900">{t.changeIdea} {cii + 1}</div>
+                            <div className="text-xs text-orange-800/70">{t.changeIdeaHelp}</div>
                           </div>
                           <button onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                             <Trash2 size={16} />
                           </button>
                         </div>
-                        <TextAreaField label="ชื่อ Change Idea" value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} />
-                        <TextAreaField label="Change KPI" value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} />
+                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} />
+                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} />
                       </div>
                     ))}
                   </div>
@@ -3516,8 +3898,8 @@ function App() {
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">Output</h2>
-                <p className="mt-1 text-sm text-slate-500">Preview the current diagram or edit Mermaid directly, then sync it back into the form when you are ready.</p>
+                <h2 className="text-lg font-bold text-slate-950">{t.output}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t.outputDescription}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {view === "preview" ? (
@@ -3526,6 +3908,7 @@ function App() {
                     onZoomOut={zoomPreviewOut}
                     onZoomIn={zoomPreviewIn}
                     onReset={resetPreviewZoom}
+                    labels={t}
                   />
                 ) : null}
                 {view === "preview" ? (
@@ -3533,7 +3916,7 @@ function App() {
                     onClick={openPreviewModal}
                     className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                   >
-                    <Maximize2 size={16} /> Expand
+                    <Maximize2 size={16} /> {t.expand}
                   </button>
                 ) : null}
                 <div className="flex rounded-2xl bg-slate-100 p-1">
@@ -3541,13 +3924,13 @@ function App() {
                   onClick={() => setView("preview")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white shadow-sm" : "text-slate-500"}`}
                 >
-                  <Eye size={16} /> Preview
+                  <Eye size={16} /> {t.preview}
                 </button>
                 <button
                   onClick={() => setView("code")}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white shadow-sm" : "text-slate-500"}`}
                 >
-                  <Code2 size={16} /> Code
+                  <Code2 size={16} /> {t.code}
                 </button>
                 </div>
               </div>
@@ -3560,12 +3943,12 @@ function App() {
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-slate-500">Edit Mermaid here, then apply it back into the form.</p>
+                  <p className="text-sm text-slate-500">{t.editMermaidHint}</p>
                   <button
                     onClick={applyCodeToForm}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                   >
-                    Apply to Form
+                    {t.applyToForm}
                   </button>
                 </div>
                 {codeSyncError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{codeSyncError}</div> : null}
@@ -3590,6 +3973,7 @@ function App() {
           onZoomOut={zoomPreviewOut}
           onZoomIn={zoomPreviewIn}
           onReset={resetPreviewZoom}
+          t={t}
         />
       </div>
     </div>
