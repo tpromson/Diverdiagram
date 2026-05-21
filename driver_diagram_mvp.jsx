@@ -3959,7 +3959,7 @@ function App() {
                 ) : filteredSavedDiagrams.length ? (
                   filteredSavedDiagrams.map((item) => (
                     <div key={item.id} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                       <div className="min-w-0 flex-1">
                         {renamingDiagramId === item.id ? (
                           <div className="space-y-2">
@@ -3988,11 +3988,13 @@ function App() {
                         ) : (
                           <button
                             onClick={() => openDiagram(item.id)}
-                            className="min-w-0 text-left"
+                            className="min-w-0 w-full text-left"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
                               {item.is_favorite ? <Star size={14} className="fill-amber-400 text-amber-500" /> : null}
                               <div className="truncate font-semibold text-slate-900">{item.title || item.purpose_title || t.untitledDiagram}</div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium">
                               {item.archived_at ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{t.archived}</span> : null}
                               {hasActiveShareLink(item) ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">{t.shared}</span> : null}
                               {item.is_public_gallery ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">{t.inGallery}</span> : null}
@@ -4015,7 +4017,7 @@ function App() {
                           </button>
                         )}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 xl:max-w-[320px]">
                         <button
                           onClick={() => openDiagram(item.id)}
                           disabled={openingDiagramId === item.id}
