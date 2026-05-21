@@ -62,9 +62,9 @@ div::-webkit-scrollbar-track {
 }
 
 .preview-paper {
-  width: max(100%, 1123px);
-  min-height: 794px;
-  padding: 24px;
+  width: max(100%, 1366px);
+  min-height: 768px;
+  padding: 28px 32px;
   border-radius: 24px;
   background: #ffffff;
 }
