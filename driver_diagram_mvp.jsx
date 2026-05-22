@@ -2389,7 +2389,7 @@ function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, 
           {emoji}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-slate-900 leading-tight">
+          <div className="truncate text-base font-semibold text-slate-900 leading-tight">
             {displayTitle}
           </div>
           {purposeTitle && purposeTitle !== title && (
