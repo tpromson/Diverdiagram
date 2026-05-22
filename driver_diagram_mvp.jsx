@@ -4756,27 +4756,31 @@ function App() {
         exportData = data;
       }
       const svgString = buildTemplateSvg(exportData);
-      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-      const url = URL.createObjectURL(svgBlob);
+      const svgHeight = parseInt(svgString.match(/height="(\d+)"/)?.[1] || "600", 10);
+      const canvas = document.createElement("canvas");
+      canvas.width = 1980;
+      canvas.height = Math.max(svgHeight, 600);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 1980;
-        canvas.height = Math.max(img.height, 600);
-        const ctx = canvas.getContext("2d");
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
         canvas.toBlob((blob) => {
           if (blob) {
             triggerBlobDownload(blob, buildExportFilename(documentTitle, "png"));
           }
         }, "image/png");
       };
-      img.src = url;
+      img.onerror = (e) => {
+        console.error("Failed to load SVG as image", e);
+        alert("Failed to export PNG. Please try again.");
+      };
+      const base64 = btoa(unescape(encodeURIComponent(svgString)));
+      img.src = `data:image/svg+xml;base64,${base64}`;
     } catch (error) {
       console.error("PNG export error:", error);
+      alert("Failed to export PNG. Please try again.");
     }
   };
 
