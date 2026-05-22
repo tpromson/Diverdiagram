@@ -2307,7 +2307,7 @@ function SavedDiagramsDrawer({
                     disabled={savingDiagram}
                     className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
                   >
-                    <Save size={16} /> {savingDiagram ? t.saving : t.saveCurrentDiagram}
+                    <Upload size={16} /> {savingDiagram ? t.saving : t.saveCurrentDiagram}
                   </button>
                 </div>
               )}
