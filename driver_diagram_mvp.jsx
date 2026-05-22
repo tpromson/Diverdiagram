@@ -161,6 +161,7 @@ const translations = {
     copiedMermaid: "Copied Mermaid",
     exportMmd: "Export .mmd",
     exportSvg: "Export .svg",
+    exportPng: "Export .png",
     exportDocx: "Export .docx",
     exportHint: "Export จะใช้ document title ปัจจุบันเป็นชื่อไฟล์ และอ้างอิง state ล่าสุดของ form/code",
     openSharedView: "Open shared view",
@@ -394,6 +395,7 @@ const translations = {
     copiedMermaid: "Copied Mermaid",
     exportMmd: "Export .mmd",
     exportSvg: "Export .svg",
+    exportPng: "Export .png",
     exportDocx: "Export .docx",
     exportHint: "Export uses the current document title as the filename and reflects the latest form/code state.",
     openSharedView: "Open shared view",
@@ -1684,6 +1686,7 @@ function WorkspaceMenubar({
   onCopyMermaid,
   onDownloadMermaid,
   onDownloadSvg,
+  onDownloadPng,
   onDownloadDocx,
   onOpenSaved,
   onOpenGallery,
@@ -1823,6 +1826,9 @@ function WorkspaceMenubar({
                 <HeaderActionButton variant="success" onClick={() => runExportAction(onDownloadSvg)}>
                   <Download size={16} /> {t.exportSvg}
                 </HeaderActionButton>
+                <HeaderActionButton variant="orange" onClick={() => runExportAction(onDownloadPng)}>
+                  <Download size={16} /> {t.exportPng}
+                </HeaderActionButton>
                 <HeaderActionButton
                   variant="violet"
                   onClick={() => runExportAction(onDownloadDocx)}
@@ -1862,6 +1868,9 @@ function WorkspaceMenubar({
             </HeaderActionButton>
             <HeaderActionButton variant="success" className="w-full justify-start" onClick={onDownloadSvg}>
               <Download size={16} /> {t.exportSvg}
+            </HeaderActionButton>
+            <HeaderActionButton variant="orange" className="w-full justify-start" onClick={onDownloadPng}>
+              <Download size={16} /> {t.exportPng}
             </HeaderActionButton>
             <HeaderActionButton
               variant="violet"
@@ -4738,6 +4747,39 @@ function App() {
     triggerBlobDownload(blob, buildExportFilename(documentTitle, "svg"));
   };
 
+  const downloadPng = async () => {
+    try {
+      let exportData = data;
+      try {
+        exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
+      } catch (_error) {
+        exportData = data;
+      }
+      const svgString = buildTemplateSvg(exportData);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1980;
+        canvas.height = Math.max(img.height, 600);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            triggerBlobDownload(blob, buildExportFilename(documentTitle, "png"));
+          }
+        }, "image/png");
+      };
+      img.src = url;
+    } catch (error) {
+      console.error("PNG export error:", error);
+    }
+  };
+
   const downloadDocx = async () => {
     try {
       setExportError("");
@@ -5140,6 +5182,11 @@ function App() {
                 <Tooltip label={t.exportSvg}>
                   <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
                     <Download size={16} /> .svg
+                  </button>
+                </Tooltip>
+                <Tooltip label={t.exportPng}>
+                  <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
+                    <Download size={16} /> .png
                   </button>
                 </Tooltip>
                 <Tooltip label={t.exportDocx}>

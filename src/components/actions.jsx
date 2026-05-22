@@ -17,7 +17,9 @@ export function HeaderActionButton({
           ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
           : variant === "violet"
             ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
-            : surfaceButtonClass;
+            : variant === "orange"
+              ? "bg-orange-600 text-white shadow-sm hover:bg-orange-700"
+              : surfaceButtonClass;
 
   return (
     <button
