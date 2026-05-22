@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+async function switchLanguage(page, locale) {
+  const visibleToggle = page.locator(`[data-testid="language-toggle-${locale}"]:visible`);
+  if (await visibleToggle.count()) {
+    await visibleToggle.click({ force: true });
+    return;
+  }
+
+  const overflow = page.getByTestId("mobile-overflow-button");
+  await overflow.click({ force: true });
+  await page.getByRole("button", { name: locale.toUpperCase(), exact: true }).click({ force: true });
+  await overflow.click({ force: true });
+}
+
 test.describe("Driver Diagram smoke flows", () => {
   test("edits the form, syncs Mermaid, and opens preview modal", async ({ page }) => {
     await page.goto("/");
@@ -30,10 +43,10 @@ test.describe("Driver Diagram smoke flows", () => {
   test("switches language and keeps editor interactive", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByTestId("language-toggle-en").click({ force: true });
+    await switchLanguage(page, "en");
     await expect(page.getByText("Create a Driver Diagram with KPI at every level", { exact: false })).toBeVisible();
 
-    await page.getByTestId("language-toggle-th").click({ force: true });
+    await switchLanguage(page, "th");
     await expect(page.getByText("สร้าง Driver Diagram พร้อม KPI ทุกระดับ", { exact: false })).toBeVisible();
 
     await page.getByTestId("code-tab-button").scrollIntoViewIfNeeded();

@@ -13,6 +13,19 @@ try {
   maybeSession = null;
 }
 
+async function switchLanguage(page, locale) {
+  const visibleToggle = page.locator(`[data-testid="language-toggle-${locale}"]:visible`);
+  if (await visibleToggle.count()) {
+    await visibleToggle.click({ force: true });
+    return;
+  }
+
+  const overflow = page.getByTestId("mobile-overflow-button");
+  await overflow.click({ force: true });
+  await page.getByRole("button", { name: locale.toUpperCase(), exact: true }).click({ force: true });
+  await overflow.click({ force: true });
+}
+
 test.describe("Authenticated gallery flows", () => {
   test.skip(!maybeSession || !storageKey, "Requires E2E_SUPABASE_SESSION and Supabase URL/storage key.");
 
@@ -29,7 +42,7 @@ test.describe("Authenticated gallery flows", () => {
   test("saves, shares, and publishes a diagram into the gallery", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByTestId("language-toggle-en").click({ force: true });
+    await switchLanguage(page, "en");
     await expect(page.getByText("Private workspace active")).toBeVisible();
 
     await page.getByTestId("document-title-input").fill("Authenticated Flow Diagram");
