@@ -293,6 +293,8 @@ const translations = {
     changeIdeaName: "ชื่อ change idea",
     changeKpi: "change KPI",
     outputDescription: "Preview diagram ปัจจุบัน หรือแก้ Mermaid โดยตรง แล้ว sync กลับเข้า form เมื่อพร้อม",
+    previewEmptyTitle: "Preview จะขึ้นตรงนี้",
+    previewEmptyBody: "เพิ่มข้อมูลในฟอร์มหรือแก้ Mermaid แล้วภาพ diagram จะอัปเดตในพื้นที่นี้",
     editMermaidHint: "แก้ Mermaid ตรงนี้ แล้ว apply กลับเข้า form",
     applyToForm: "Apply to Form",
     modalDescription: "Full-screen preview สำหรับตรวจโครงสร้าง diagram และอ่านรายละเอียดเล็ก ๆ ก่อน export",
@@ -524,6 +526,8 @@ const translations = {
     changeIdeaName: "change idea name",
     changeKpi: "change KPI",
     outputDescription: "Preview the current diagram or edit Mermaid directly, then sync it back into the form when you are ready.",
+    previewEmptyTitle: "Preview will appear here",
+    previewEmptyBody: "Add content in the form or edit the Mermaid code and the diagram will render in this area.",
     editMermaidHint: "Edit Mermaid here, then apply it back into the form.",
     applyToForm: "Apply to Form",
     modalDescription: "Full-screen preview for reviewing diagram structure and reading small details before export.",
@@ -1727,21 +1731,25 @@ function WorkspaceMenubar({
 
   return (
     <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm ring-1 ring-slate-200/80 backdrop-blur">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
             <GitBranch size={18} />
           </div>
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase text-slate-400">{t.appEyebrow}</div>
-            <div className="truncate text-base font-bold text-slate-950">{title}</div>
+            <div className="line-clamp-2 max-w-[20rem] text-base font-bold leading-tight text-slate-950 sm:max-w-[24rem] lg:max-w-[28rem]">
+              {title}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
+                {syncLabel}
+              </span>
+            </div>
           </div>
-          <span className={`hidden shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 lg:inline-flex ${syncTone}`}>
-            {syncLabel}
-          </span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 2xl:justify-end">
           <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 md:inline-flex">
             {isGalleryAdmin ? (
               <HeaderActionButton onClick={onOpenAdmin}>
@@ -1871,12 +1879,12 @@ function MobileOverflowMenu({ label, children }) {
 
 function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = translations.th }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
+    <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm">
       <IconActionButton
         label={labels.zoomOut}
         onClick={onZoomOut}
         disabled={zoom <= PREVIEW_ZOOM_MIN}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
       >
         <Minus size={16} />
       </IconActionButton>
@@ -1885,7 +1893,7 @@ function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = tran
           type="button"
           aria-label={labels.resetZoom}
           onClick={onReset}
-          className="inline-flex min-w-[72px] items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+          className="inline-flex min-w-[70px] items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"
         >
           <RotateCcw size={14} /> {Math.round(zoom * 100)}%
         </button>
@@ -1894,7 +1902,7 @@ function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = tran
         label={labels.zoomIn}
         onClick={onZoomIn}
         disabled={zoom >= PREVIEW_ZOOM_MAX}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
       >
         <Plus size={16} />
       </IconActionButton>
@@ -1902,9 +1910,26 @@ function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = tran
   );
 }
 
-function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undefined }) {
+function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undefined, labels = translations.th }) {
   if (renderError) {
     return <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>;
+  }
+
+  if (!svg.trim()) {
+    return (
+      <div
+        onWheel={onWheel}
+        className={`preview-surface flex min-h-[16rem] items-center justify-center overflow-auto rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 ${className}`}
+      >
+        <div className="max-w-sm rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-8 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <Eye size={20} />
+          </div>
+          <div className="mt-4 text-base font-semibold text-slate-900">{labels.previewEmptyTitle}</div>
+          <p className="mt-2 text-sm leading-6 text-slate-500">{labels.previewEmptyBody}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -2106,7 +2131,7 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
           </div>
         </div>
         <div className="min-h-0 flex-1 bg-slate-100 p-4">
-          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} onWheel={onWheel} className="h-full" />
+          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} onWheel={onWheel} className="h-full" labels={t} />
         </div>
       </div>
     </div>
@@ -4712,7 +4737,7 @@ function App() {
                   view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
                 }`}
               >
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" />
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} />
               </div>
               <div
                 className={`absolute inset-4 transition-all duration-200 ease-out ${
@@ -5063,7 +5088,7 @@ function App() {
           onOpenAdmin={openAdminPage}
           onSignOut={handleSignOut}
         />
-        <header className="rounded-[28px] bg-slate-50 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+        <header className="rounded-[28px] bg-slate-50 p-4 shadow-sm ring-1 ring-slate-200 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspaceOverview}</div>
@@ -5077,13 +5102,13 @@ function App() {
 
           <div
             className={`grid overflow-hidden transition-all duration-300 ease-out ${
-              workspaceIntroCollapsed ? "mt-4 max-h-64 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+              workspaceIntroCollapsed ? "mt-3 max-h-64 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
             }`}
           >
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="min-w-0">
                 <div className="truncate text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-1.5 flex flex-wrap gap-2">
                   <StatusPill tone={isSupabaseConfigured ? "success" : "warning"} icon={<Database size={15} />}>
                     {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
                   </StatusPill>
@@ -5107,51 +5132,51 @@ function App() {
                   ) : null}
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm lg:min-w-[320px]">
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm lg:min-w-[300px]">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.documentTitle}</div>
-                <div className="mt-2 truncate text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
+                <div className="mt-1.5 truncate text-sm font-semibold text-slate-900 sm:text-base">{documentTitle.trim() || defaultDocumentTitle}</div>
               </div>
             </div>
           </div>
           <div
             className={`grid overflow-hidden transition-all duration-300 ease-out ${
-              workspaceIntroCollapsed ? "max-h-0 opacity-0 pointer-events-none" : "mt-4 max-h-[1600px] opacity-100"
+              workspaceIntroCollapsed ? "max-h-0 opacity-0 pointer-events-none" : "mt-3 max-h-[1600px] opacity-100"
             }`}
           >
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-              <div className="space-y-4">
-                <div className="space-y-3">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+              <div className="space-y-3">
+                <div className="space-y-2">
                   <div>
-                    <p className="max-w-3xl text-sm leading-6 text-slate-500">
+                    <p className="max-w-3xl text-sm leading-5 text-slate-500">
                       {t.appDescription}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-2.5 md:grid-cols-3">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-3.5 shadow-sm">
                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.document}</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <div className="mt-1.5 text-sm font-semibold text-slate-900 sm:text-base">{documentTitle.trim() || defaultDocumentTitle}</div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-slate-500">
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} {t.primary}</span>
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} {t.secondary}</span>
                       <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} {t.changeIdeas}</span>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-3.5 shadow-sm">
                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
-                    <div className="mt-2 text-base font-semibold text-slate-900">
+                    <div className="mt-1.5 text-sm font-semibold text-slate-900 sm:text-base">
                       {authUiActive ? authUiEmail : t.privateCloudSave}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                    <p className="mt-1.5 text-sm leading-5 text-slate-500">
                       {authUiActive
                         ? t.privateCloudSaveSummaryActive
                         : t.privateCloudSaveSummaryInactive}
                     </p>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-3.5 shadow-sm">
                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-1.5 flex flex-wrap gap-2">
                       <StatusPill
                         tone={isSupabaseConfigured ? "success" : "warning"}
                         icon={<Database size={15} />}
@@ -5179,18 +5204,18 @@ function App() {
                         </StatusPill>
                       ) : null}
                     </div>
-                    <div className="mt-3 text-xs text-slate-500">
+                    <div className="mt-2 text-xs text-slate-500">
                       {currentDiagramId ? `${t.currentId}: ${currentDiagramId.slice(0, 8)}` : t.newUnsavedDocument}
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex flex-col gap-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                  <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
-                        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+                        <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-500">
                           {authUiActive
                             ? t.privateCloudSaveActive
                             : t.privateCloudSaveInactive}
@@ -5208,20 +5233,20 @@ function App() {
                     </div>
 
                     {authUiActive ? (
-                      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
                           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
-                          <div className="mt-2 truncate text-base font-semibold text-slate-900">{authUiEmail}</div>
+                          <div className="mt-1.5 truncate text-sm font-semibold text-slate-900 sm:text-base">{authUiEmail}</div>
                           <div className="mt-1 text-xs text-slate-500">
                             {isAuthenticated ? t.privateWorkspaceActive : t.previewAuthOnly}
                           </div>
                         </div>
 
-                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
                               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
-                              <div className="mt-2 truncate text-base font-semibold text-slate-900">
+                              <div className="mt-1.5 truncate text-sm font-semibold text-slate-900 sm:text-base">
                                 {galleryDisplayName || t.galleryDisplayNamePlaceholder}
                               </div>
                               <div className="mt-1 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
@@ -5236,7 +5261,7 @@ function App() {
                             ) : null}
                           </div>
                           {editingGalleryDisplayName ? (
-                            <div className="mt-3 space-y-2">
+                            <div className="mt-2.5 space-y-2">
                               <input
                                 value={galleryDisplayNameDraft}
                                 onChange={(e) => setGalleryDisplayNameDraft(e.target.value)}
@@ -5262,7 +5287,7 @@ function App() {
                         </div>
                       </div>
                     ) : (
-                      <form className="space-y-3" onSubmit={handleSignIn}>
+                      <form className="space-y-2.5" onSubmit={handleSignIn}>
                         <div className="flex flex-col gap-2 sm:flex-row">
                           <input
                             type="email"
@@ -5710,13 +5735,29 @@ function App() {
             ))}
           </section>
 
-          <section className={`min-w-0 lg:h-[82vh] ${workbenchPanelClass}`}>
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <section className={`min-w-0 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className={sectionHeadingClass}>{t.output}</h2>
                 <p className={`mt-1 ${sectionBodyClass}`}>{t.outputDescription}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <div className="flex rounded-2xl bg-slate-50 p-1 ring-1 ring-slate-200">
+                <button
+                  onClick={() => setView("preview")}
+                  data-testid="preview-tab-button"
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
+                >
+                  <Eye size={16} /> {t.preview}
+                </button>
+                <button
+                  onClick={() => setView("code")}
+                  data-testid="code-tab-button"
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
+                >
+                  <Code2 size={16} /> {t.code}
+                </button>
+                </div>
                 {view === "preview" ? (
                   <PreviewZoomControls
                     zoom={previewZoom}
@@ -5735,33 +5776,17 @@ function App() {
                     <Maximize2 size={16} /> {t.expand}
                   </button>
                 ) : null}
-                <div className="flex rounded-2xl bg-slate-50 p-1 ring-1 ring-slate-200">
-                <button
-                  onClick={() => setView("preview")}
-                  data-testid="preview-tab-button"
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
-                >
-                  <Eye size={16} /> {t.preview}
-                </button>
-                <button
-                  onClick={() => setView("code")}
-                  data-testid="code-tab-button"
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
-                >
-                  <Code2 size={16} /> {t.code}
-                </button>
-                </div>
               </div>
             </div>
 
-            <div className="relative min-h-[20rem] lg:h-[73vh]">
+            <div className="relative min-h-[20rem] lg:h-[61vh] xl:h-[57vh]">
               <div
                 data-testid="preview-panel"
                 className={`absolute inset-0 overflow-auto rounded-[24px] border border-slate-200 bg-slate-50 p-4 ring-1 ring-slate-200/70 transition-all duration-200 ease-out ${
                   view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
                 }`}
               >
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" />
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} />
               </div>
               <div
                 className={`absolute inset-0 flex flex-col gap-3 transition-all duration-200 ease-out ${
@@ -5790,12 +5815,12 @@ function App() {
             </div>
 
             <div className={`mt-4 ${workbenchMutedPanelClass}`}>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
                   <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
                 </div>
-                <div className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                <div className="inline-flex w-fit max-w-full shrink-0 items-center rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
                   {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
                 </div>
               </div>
@@ -5867,6 +5892,17 @@ function App() {
           onWheel={handlePreviewWheel}
           t={t}
         />
+        <footer className="border-t border-slate-200 px-2 pt-2 pb-6 text-xs text-slate-500">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>© 2026 tpromsom@gmail.com</div>
+            <a
+              href="mailto:tpromsom@gmail.com?subject=Driver%20Diagram%20Support"
+              className="inline-flex w-fit items-center gap-2 font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              แจ้งปัญหาการใช้งาน
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   );
