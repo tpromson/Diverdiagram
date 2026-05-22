@@ -6,6 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "local:check": "npm run build && npm run design:lint",
+    "local:preview": "npm run build && npm run preview -- --host 127.0.0.1",
     "test:smoke": "playwright test",
     "test:e2e-auth": "playwright test tests/authenticated.e2e.spec.js",
     "design:lint": "design.md lint DESIGN.md",
