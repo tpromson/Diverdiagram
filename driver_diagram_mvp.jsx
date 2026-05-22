@@ -614,6 +614,35 @@ function App() {
     });
   }, [documentTitle, isAdminView, isGalleryView, isReadOnlySharedView, sharedView, sharedViewError, sharedViewLoading, t]);
 
+  // 13. Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      
+      // Ctrl/Cmd + S = Save
+      if (isMod && e.key === 's') {
+        e.preventDefault();
+        saveDiagram();
+      }
+      
+      // Ctrl/Cmd + N = New Diagram
+      if (isMod && e.key === 'n') {
+        e.preventDefault();
+        useDiagramStore.getState().startNewDiagram();
+      }
+      
+      // Ctrl/Cmd + Shift + E = Export Menu (if exists)
+      if (isMod && e.shiftKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        const exportBtn = document.querySelector('[data-testid="export-menu-button"]');
+        if (exportBtn) exportBtn.click();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [saveDiagram]);
+
   // --- Local Event Handlers ---
   const updatePurpose = (field, value) => {
     useDiagramStore.setState((state) => ({
@@ -1421,6 +1450,7 @@ function App() {
                     }}
                     data-testid="document-title-input"
                     placeholder={t.documentTitlePlaceholder}
+                    tabIndex={1}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                   />
                   </label>
@@ -1473,9 +1503,9 @@ function App() {
                   </HeaderActionButton>
                 </div>
               </div>
-              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} />
+              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} />
               <div className="mt-3">
-                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" />
+                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} />
               </div>
             </div>
 
@@ -1500,8 +1530,8 @@ function App() {
                     <Trash2 size={16} />
                   </IconActionButton>
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} />
-                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} />
+                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={5 + pi * 6} />
 
                 <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
                   <Plus size={16} /> {t.addSecondary}
@@ -1518,8 +1548,8 @@ function App() {
                         <Trash2 size={16} />
                       </IconActionButton>
                     </div>
-                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} />
-                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} />
+                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} />
+                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={7 + pi * 6 + si * 4} />
 
                     <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
                       <Plus size={16} /> {t.addChangeIdea}
@@ -1536,8 +1566,8 @@ function App() {
                             <Trash2 size={16} />
                           </IconActionButton>
                         </div>
-                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} />
-                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} />
+                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} />
+                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={9 + pi * 6 + si * 4 + cii * 2} />
                       </div>
                     ))}
                   </div>

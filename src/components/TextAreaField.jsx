@@ -1,6 +1,6 @@
 import React from "react";
 
-export function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = null }) {
+export function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = null, tabIndex }) {
   return (
     <label className="block space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold leading-5 text-slate-700">
@@ -15,6 +15,7 @@ export function TextAreaField({ label, value, onChange, icon, testId = "", input
         onChange={(e) => onChange(e.target.value)}
         rows={2}
         data-testid={testId || undefined}
+        tabIndex={tabIndex}
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
       />
     </label>
