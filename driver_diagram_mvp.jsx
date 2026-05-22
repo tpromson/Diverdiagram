@@ -2381,19 +2381,30 @@ function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, 
   const purposeTitle = diagramData?.purpose?.title || "";
   const emoji = useMemo(() => getThemeEmoji(title, purposeTitle), [title, purposeTitle]);
   const displayTitle = title || purposeTitle || defaultDocumentTitle;
+  
+  const randomImage = useMemo(() => {
+    const seed = Math.random().toString(36).substring(7);
+    return `https://picsum.photos/seed/${seed}/400/200`;
+  }, []);
 
   return (
     <div className={`diagram-thumbnail ${className}`}>
-      <div className="diagram-thumbnail-fallback flex flex-row items-center gap-3 p-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+      <div className="diagram-thumbnail-fallback relative flex flex-row items-center gap-3 p-4 overflow-hidden">
+        <img
+          src={randomImage}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-20"
+          loading="lazy"
+        />
+        <div className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-2xl shadow-sm">
           {emoji}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="relative z-10 min-w-0 flex-1">
           <div className="truncate text-base font-semibold text-slate-900 leading-tight">
             {displayTitle}
           </div>
           {purposeTitle && purposeTitle !== title && (
-            <div className="mt-1 truncate text-xs text-slate-500 leading-tight">
+            <div className="mt-1 truncate text-xs text-slate-600 leading-tight">
               {purposeTitle}
             </div>
           )}
