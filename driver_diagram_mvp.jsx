@@ -4764,20 +4764,23 @@ function App() {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       const img = new Image();
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
       img.onload = () => {
         ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
         canvas.toBlob((blob) => {
           if (blob) {
             triggerBlobDownload(blob, buildExportFilename(documentTitle, "png"));
           }
         }, "image/png");
       };
-      img.onerror = (e) => {
-        console.error("Failed to load SVG as image", e);
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        console.error("Failed to load SVG");
         alert("Failed to export PNG. Please try again.");
       };
-      const base64 = btoa(unescape(encodeURIComponent(svgString)));
-      img.src = `data:image/svg+xml;charset=utf-8;base64,${base64}`;
+      img.src = url;
     } catch (error) {
       console.error("PNG export error:", error);
       alert("Failed to export PNG. Please try again.");
