@@ -1499,6 +1499,7 @@ function App() {
                     onClick={saveDiagram}
                     disabled={savingDiagram || !isAuthenticated}
                     data-testid="save-diagram-button"
+                    tabIndex={100}
                   >
                     <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
                   </HeaderActionButton>
@@ -1568,7 +1569,7 @@ function App() {
                           </IconActionButton>
                         </div>
                         <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} />
-                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={9 + pi * 6 + si * 4 + cii * 2} />
+                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={99} />
                       </div>
                     ))}
                   </div>
