@@ -1836,14 +1836,6 @@ function WorkspaceMenubar({
               </HeaderActionButton>
             </div>
           </div>
-          <HeaderActionButton
-            variant="primary"
-            onClick={onSave}
-            disabled={savingDiagram || !isAuthenticated}
-            data-testid="save-diagram-button"
-          >
-            <Save size={16} /> {saveLabel}
-          </HeaderActionButton>
           <MobileOverflowMenu label={t.more}>
             <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
             <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds={false} />
@@ -5840,12 +5832,22 @@ function App() {
           <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="rounded-[24px] border border-pink-100 bg-pink-50 p-4 shadow-sm ring-1 ring-pink-100/70">
               <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
+                <div className="flex-1">
                   <h2 className="text-base font-bold text-pink-950">{t.purposeOutcomeKpi}</h2>
                   <p className="mt-1 text-sm text-pink-800/75">{t.purposeDescription}</p>
                 </div>
-                <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
-                  {t.topLevelGoal}
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
+                    {t.topLevelGoal}
+                  </div>
+                  <HeaderActionButton
+                    variant="primary"
+                    onClick={saveDiagram}
+                    disabled={savingDiagram || !isAuthenticated}
+                    data-testid="save-diagram-button"
+                  >
+                    <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
+                  </HeaderActionButton>
                 </div>
               </div>
               <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} />
