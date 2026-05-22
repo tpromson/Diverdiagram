@@ -1571,6 +1571,10 @@ function HeaderActionButton({
       ? "bg-slate-900 text-white shadow-sm hover:bg-slate-800"
       : variant === "accent"
         ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+        : variant === "success"
+          ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+          : variant === "violet"
+            ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
         : "border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50";
 
   return (
@@ -1721,11 +1725,11 @@ function WorkspaceMenubar({
               <HeaderActionButton onClick={onDownloadMermaid}>
                 <Download size={16} /> {t.exportMmd}
               </HeaderActionButton>
-              <HeaderActionButton className="bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 border-transparent" onClick={onDownloadSvg}>
+              <HeaderActionButton variant="success" onClick={onDownloadSvg}>
                 <Download size={16} /> {t.exportSvg}
               </HeaderActionButton>
               <HeaderActionButton
-                className="bg-violet-600 text-white shadow-sm hover:bg-violet-700 border-transparent"
+                variant="violet"
                 onClick={onDownloadDocx}
                 disabled={exportingDocx}
               >
@@ -1762,11 +1766,12 @@ function WorkspaceMenubar({
             <HeaderActionButton onClick={onDownloadMermaid} className="w-full justify-start">
               <Download size={16} /> {t.exportMmd}
             </HeaderActionButton>
-            <HeaderActionButton className="w-full justify-start bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 border-transparent" onClick={onDownloadSvg}>
+            <HeaderActionButton variant="success" className="w-full justify-start" onClick={onDownloadSvg}>
               <Download size={16} /> {t.exportSvg}
             </HeaderActionButton>
             <HeaderActionButton
-              className="w-full justify-start bg-violet-600 text-white shadow-sm hover:bg-violet-700 border-transparent"
+              variant="violet"
+              className="w-full justify-start"
               onClick={onDownloadDocx}
               disabled={exportingDocx}
             >
