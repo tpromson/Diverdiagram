@@ -1,6 +1,10 @@
 import React from "react";
 
 export function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = null, tabIndex }) {
+  const handleFocus = (e) => {
+    e.target.select();
+  };
+  
   return (
     <label className="block space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold leading-5 text-slate-700">
@@ -13,6 +17,7 @@ export function TextAreaField({ label, value, onChange, icon, testId = "", input
         ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={handleFocus}
         rows={2}
         data-testid={testId || undefined}
         tabIndex={tabIndex}
