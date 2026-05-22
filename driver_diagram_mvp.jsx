@@ -38,8 +38,12 @@ import {
   EyeOff,
   Undo2,
   MoreHorizontal,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
+import { Tooltip, IconActionButton } from "./src/components/tooltip.jsx";
+import { HeaderActionButton, surfaceButtonClass } from "./src/components/actions.jsx";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const SHARE_LINK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -49,6 +53,9 @@ const PREVIEW_ZOOM_MIN = 0.5;
 const PREVIEW_ZOOM_MAX = 2;
 const PREVIEW_ZOOM_STEP = 0.25;
 const GALLERY_DISPLAY_NAME_STORAGE_KEY = "driver-diagram-gallery-display-name";
+const WORKSPACE_INTRO_COLLAPSED_STORAGE_KEY = "driver-diagram-workspace-intro-collapsed";
+const PREVIEW_VIEW_STORAGE_KEY = "driver-diagram-preview-view";
+const PREVIEW_ZOOM_STORAGE_KEY = "driver-diagram-preview-zoom";
 
 const defaultData = {
   purpose: {
@@ -86,6 +93,9 @@ const translations = {
     languageTh: "TH",
     languageEn: "EN",
     more: "เพิ่มเติม",
+    collapse: "ย่อ",
+    expand: "ขยาย",
+    workspaceOverview: "ภาพรวม workspace",
     sharedViewTitle: "Driver Diagram Shared View",
     loadingSharedDiagram: "กำลังโหลด shared diagram...",
     backToWorkspace: "กลับไป workspace",
@@ -314,6 +324,9 @@ const translations = {
     languageTh: "TH",
     languageEn: "EN",
     more: "More",
+    collapse: "Collapse",
+    expand: "Expand",
+    workspaceOverview: "Workspace overview",
     sharedViewTitle: "Driver Diagram Shared View",
     loadingSharedDiagram: "Loading shared diagram...",
     backToWorkspace: "Back to workspace",
@@ -644,6 +657,26 @@ function getReportGalleryFunctionUrl() {
 function readGalleryDisplayName() {
   if (typeof window === "undefined") return "";
   return window.localStorage.getItem(GALLERY_DISPLAY_NAME_STORAGE_KEY) || "";
+}
+
+function readWorkspaceIntroCollapsed() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(WORKSPACE_INTRO_COLLAPSED_STORAGE_KEY) === "true";
+}
+
+function readPreviewView() {
+  if (typeof window === "undefined") return "preview";
+  const saved = window.localStorage.getItem(PREVIEW_VIEW_STORAGE_KEY);
+  return saved === "code" ? "code" : "preview";
+}
+
+function readPreviewZoom() {
+  if (typeof window === "undefined") return 1;
+  const saved = Number(window.localStorage.getItem(PREVIEW_ZOOM_STORAGE_KEY));
+  if (Number.isFinite(saved) && saved >= PREVIEW_ZOOM_MIN && saved <= PREVIEW_ZOOM_MAX) {
+    return saved;
+  }
+  return 1;
 }
 
 function buildGalleryDisplayName(name, email = "") {
@@ -1501,11 +1534,15 @@ function buildTemplateSvg(diagramData) {
 </svg>`;
 }
 
+const workbenchPanelClass = "rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-200/80";
+const workbenchMutedPanelClass = "rounded-[24px] border border-slate-200 bg-slate-50 p-4 ring-1 ring-slate-200/70";
+const sectionHeadingClass = "text-[20px] font-bold leading-[1.3] text-slate-950";
+const sectionBodyClass = "text-sm leading-6 text-slate-600";
 function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = null }) {
   return (
     <label className="block space-y-2">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200">
+      <div className="flex items-center gap-2 text-sm font-semibold leading-5 text-slate-700">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 ring-1 ring-slate-200">
           {icon}
         </span>
         <span>{label}</span>
@@ -1516,7 +1553,7 @@ function TextAreaField({ label, value, onChange, icon, testId = "", inputRef = n
         onChange={(e) => onChange(e.target.value)}
         rows={2}
         data-testid={testId || undefined}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
       />
     </label>
   );
@@ -1529,8 +1566,8 @@ function StatusPill({ tone = "neutral", icon, children }) {
       : tone === "info"
         ? "bg-blue-50 text-blue-700 ring-blue-100"
         : tone === "warning"
-          ? "bg-amber-50 text-amber-700 ring-amber-100"
-          : "bg-slate-100 text-slate-600 ring-slate-200";
+          ? "bg-amber-100 text-amber-900 ring-amber-200"
+          : "bg-slate-50 text-slate-600 ring-slate-200";
 
   return (
     <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 ${toneClass}`}>
@@ -1542,49 +1579,21 @@ function StatusPill({ tone = "neutral", icon, children }) {
 
 function LanguageToggle({ language, onChange, t, exposeTestIds = false }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 p-1 text-sm font-semibold">
-      <span className="px-2 text-xs uppercase text-slate-500">{t.languageLabel}</span>
+    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 p-1 text-sm font-semibold ring-1 ring-slate-200">
+      <span className="px-2 text-xs uppercase tracking-[0.12em] text-slate-500">{t.languageLabel}</span>
       {["th", "en"].map((option) => (
         <button
           key={option}
           type="button"
           data-testid={exposeTestIds ? `language-toggle-${option}` : undefined}
           onClick={() => onChange(option)}
-          className={`rounded-xl px-3 py-2 transition ${language === option ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+          className={`rounded-xl px-3 py-2 transition ${language === option ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-slate-800"}`}
           aria-pressed={language === option}
         >
           {option === "th" ? t.languageTh : t.languageEn}
         </button>
       ))}
     </div>
-  );
-}
-
-function HeaderActionButton({
-  children,
-  variant = "secondary",
-  className = "",
-  ...props
-}) {
-  const variantClass =
-    variant === "primary"
-      ? "bg-slate-900 text-white shadow-sm hover:bg-slate-800"
-      : variant === "accent"
-        ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
-        : variant === "success"
-          ? "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
-          : variant === "violet"
-            ? "bg-violet-600 text-white shadow-sm hover:bg-violet-700"
-        : "border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50";
-
-  return (
-    <button
-      type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-70 ${variantClass} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -1600,7 +1609,7 @@ function CompactPageBar({
   supportingContent = null,
 }) {
   return (
-    <header className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur">
+    <header className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm ring-1 ring-slate-200/80 backdrop-blur">
       <div className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1656,6 +1665,8 @@ function WorkspaceMenubar({
   onSignOut,
 }) {
   const title = documentTitle.trim() || defaultDocumentTitle;
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef(null);
   const saveLabel = savingDiagram ? t.saving : isAuthenticated ? t.saveDiagram : t.signInToSave;
   const syncLabel =
     isSupabaseConfigured && isAuthenticated
@@ -1669,13 +1680,53 @@ function WorkspaceMenubar({
     autoSaveState === "saving"
       ? "text-blue-700 bg-blue-50 ring-blue-100"
       : autoSaveState === "dirty"
-        ? "text-amber-700 bg-amber-50 ring-amber-100"
+        ? "text-amber-900 bg-amber-100 ring-amber-200"
         : isSupabaseConfigured && isAuthenticated
           ? "text-emerald-700 bg-emerald-50 ring-emerald-100"
-          : "text-slate-600 bg-slate-100 ring-slate-200";
+          : "text-slate-600 bg-slate-50 ring-slate-200";
+
+  useEffect(() => {
+    if (!exportMenuOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!exportMenuRef.current?.contains(event.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setExportMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [exportMenuOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        setExportMenuOpen((open) => !open);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const runExportAction = (action) => {
+    action();
+    setExportMenuOpen(false);
+  };
 
   return (
-    <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm backdrop-blur">
+    <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm ring-1 ring-slate-200/80 backdrop-blur">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
@@ -1712,31 +1763,41 @@ function WorkspaceMenubar({
           <div className="hidden md:block">
             <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds />
           </div>
-          <details className="relative">
-            <summary className="inline-flex list-none items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+          <div ref={exportMenuRef} className="relative">
+            <button
+              type="button"
+              aria-expanded={exportMenuOpen}
+              onClick={() => setExportMenuOpen((open) => !open)}
+              className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition ${surfaceButtonClass}`}
+            >
               <Download size={16} />
               <span className="md:hidden">Export</span>
               <span className="hidden md:inline">{t.exportAndCode}</span>
-            </summary>
-            <div className="absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl">
-              <HeaderActionButton variant="accent" onClick={onCopyMermaid}>
+              <ChevronDown size={16} className={`transition-transform duration-200 ${exportMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+            <div
+              className={`absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-200/80 transition-all duration-200 ease-out ${
+                exportMenuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
+              }`}
+            >
+              <HeaderActionButton variant="accent" onClick={() => runExportAction(onCopyMermaid)}>
                 <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
               </HeaderActionButton>
-              <HeaderActionButton onClick={onDownloadMermaid}>
+              <HeaderActionButton onClick={() => runExportAction(onDownloadMermaid)}>
                 <Download size={16} /> {t.exportMmd}
               </HeaderActionButton>
-              <HeaderActionButton variant="success" onClick={onDownloadSvg}>
+              <HeaderActionButton variant="success" onClick={() => runExportAction(onDownloadSvg)}>
                 <Download size={16} /> {t.exportSvg}
               </HeaderActionButton>
               <HeaderActionButton
                 variant="violet"
-                onClick={onDownloadDocx}
+                onClick={() => runExportAction(onDownloadDocx)}
                 disabled={exportingDocx}
               >
                 <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
               </HeaderActionButton>
             </div>
-          </details>
+          </div>
           <HeaderActionButton
             variant="primary"
             onClick={onSave}
@@ -1797,11 +1858,11 @@ function MobileOverflowMenu({ label, children }) {
     <details className="relative md:hidden">
       <summary
         data-testid="mobile-overflow-button"
-        className="inline-flex list-none items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm marker:content-none hover:bg-slate-50 [&::-webkit-details-marker]:hidden"
+        className={`inline-flex list-none items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold marker:content-none [&::-webkit-details-marker]:hidden ${surfaceButtonClass}`}
       >
         <MoreHorizontal size={16} /> {label}
       </summary>
-      <div className="absolute right-0 z-30 mt-2 flex min-w-[240px] flex-col gap-2 rounded-3xl border border-slate-200 bg-white p-3 shadow-xl">
+      <div className="absolute right-0 z-30 mt-2 flex min-w-[240px] flex-col gap-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-200/80">
         {children}
       </div>
     </details>
@@ -1811,40 +1872,46 @@ function MobileOverflowMenu({ label, children }) {
 function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels = translations.th }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 p-1">
-      <button
+      <IconActionButton
+        label={labels.zoomOut}
         onClick={onZoomOut}
         disabled={zoom <= PREVIEW_ZOOM_MIN}
         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        title={labels.zoomOut}
       >
         <Minus size={16} />
-      </button>
-      <button
-        onClick={onReset}
-        className="inline-flex min-w-[72px] items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
-        title={labels.resetZoom}
-      >
-        <RotateCcw size={14} /> {Math.round(zoom * 100)}%
-      </button>
-      <button
+      </IconActionButton>
+      <Tooltip label={labels.resetZoom}>
+        <button
+          type="button"
+          aria-label={labels.resetZoom}
+          onClick={onReset}
+          className="inline-flex min-w-[72px] items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+        >
+          <RotateCcw size={14} /> {Math.round(zoom * 100)}%
+        </button>
+      </Tooltip>
+      <IconActionButton
+        label={labels.zoomIn}
         onClick={onZoomIn}
         disabled={zoom >= PREVIEW_ZOOM_MAX}
         className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
-        title={labels.zoomIn}
       >
         <Plus size={16} />
-      </button>
+      </IconActionButton>
     </div>
   );
 }
 
-function PreviewCanvas({ svg, renderError, zoom, className = "" }) {
+function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undefined }) {
   if (renderError) {
     return <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>;
   }
 
   return (
-    <div className={`preview-surface overflow-auto rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}>
+    <div
+      onWheel={onWheel}
+      className={`preview-surface overflow-auto rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
+    >
       <div className="preview-paper shadow-sm">
         <div
           className="diagram-preview"
@@ -1934,27 +2001,33 @@ function AdminModerationCard({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <a
-                href={`${window.location.pathname}?share=${item.share_token}`}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <ExternalLink size={16} /> {t.adminOpenReadOnly}
-              </a>
-              <button
-                onClick={() => onModerate(item.share_token, item.gallery_hidden_at ? "restore" : "hide")}
-                disabled={moderationActionToken === item.share_token}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                {item.gallery_hidden_at ? <Undo2 size={16} /> : <EyeOff size={16} />}
-                {item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}
-              </button>
-              <button
-                onClick={() => onModerate(item.share_token, "resolve_reports")}
-                disabled={moderationActionToken === item.share_token || !item.report_count}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                <Shield size={16} /> {t.resolveReports}
-              </button>
+              <Tooltip label={t.adminOpenReadOnly}>
+                <a
+                  href={`${window.location.pathname}?share=${item.share_token}`}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <ExternalLink size={16} /> {t.adminOpenReadOnly}
+                </a>
+              </Tooltip>
+              <Tooltip label={item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}>
+                <button
+                  onClick={() => onModerate(item.share_token, item.gallery_hidden_at ? "restore" : "hide")}
+                  disabled={moderationActionToken === item.share_token}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {item.gallery_hidden_at ? <Undo2 size={16} /> : <EyeOff size={16} />}
+                  {item.gallery_hidden_at ? t.restoreToGallery : t.hideFromGallery}
+                </button>
+              </Tooltip>
+              <Tooltip label={t.resolveReports}>
+                <button
+                  onClick={() => onModerate(item.share_token, "resolve_reports")}
+                  disabled={moderationActionToken === item.share_token || !item.report_count}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                >
+                  <Shield size={16} /> {t.resolveReports}
+                </button>
+              </Tooltip>
             </div>
           </div>
           {item.purpose_title ? (
@@ -1982,12 +2055,40 @@ function AdminModerationCard({
   );
 }
 
-function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset, t = translations.th }) {
-  if (!open) return null;
+function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut, onZoomIn, onReset, onWheel = undefined, t = translations.th }) {
+  const [shouldRender, setShouldRender] = useState(open);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      const frameId = window.requestAnimationFrame(() => setIsVisible(true));
+      return () => window.cancelAnimationFrame(frameId);
+    }
+
+    setIsVisible(false);
+    const timeoutId = window.setTimeout(() => setShouldRender(false), 220);
+    return () => window.clearTimeout(timeoutId);
+  }, [open]);
+
+  if (!shouldRender) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 sm:p-6">
-      <div className="flex h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200">
+    <div
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-3 transition-all duration-200 ease-out sm:p-6 ${
+        isVisible ? "bg-slate-950/55 opacity-100" : "bg-slate-950/0 opacity-0"
+      }`}
+    >
+      <div
+        className={`flex h-[92vh] w-full max-w-[96rem] flex-col overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-200 transition-all duration-200 ease-out ${
+          isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-[0.985] opacity-0"
+        }`}
+      >
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 className="text-lg font-bold text-slate-950">{title || defaultDocumentTitle}</h2>
@@ -2005,7 +2106,7 @@ function PreviewModal({ open, title, svg, renderError, zoom, onClose, onZoomOut,
           </div>
         </div>
         <div className="min-h-0 flex-1 bg-slate-100 p-4">
-          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} className="h-full" />
+          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} onWheel={onWheel} className="h-full" />
         </div>
       </div>
     </div>
@@ -2028,6 +2129,7 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [galleryDisplayName, setGalleryDisplayName] = useState(() => readGalleryDisplayName());
   const [galleryDisplayNameDraft, setGalleryDisplayNameDraft] = useState(() => readGalleryDisplayName());
+  const [workspaceIntroCollapsed, setWorkspaceIntroCollapsed] = useState(() => readWorkspaceIntroCollapsed());
   const [editingGalleryDisplayName, setEditingGalleryDisplayName] = useState(false);
   const [savedDiagrams, setSavedDiagrams] = useState([]);
   const [savedSearch, setSavedSearch] = useState("");
@@ -2052,8 +2154,8 @@ function App() {
   const [codeSyncMessage, setCodeSyncMessage] = useState("");
   const [exportingDocx, setExportingDocx] = useState(false);
   const [exportError, setExportError] = useState("");
-  const [view, setView] = useState("preview");
-  const [previewZoom, setPreviewZoom] = useState(1);
+  const [view, setView] = useState(() => readPreviewView());
+  const [previewZoom, setPreviewZoom] = useState(() => readPreviewZoom());
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [svg, setSvg] = useState("");
   const [renderError, setRenderError] = useState("");
@@ -2213,10 +2315,31 @@ function App() {
   }, [galleryDisplayName]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(WORKSPACE_INTRO_COLLAPSED_STORAGE_KEY, String(workspaceIntroCollapsed));
+  }, [workspaceIntroCollapsed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PREVIEW_VIEW_STORAGE_KEY, view);
+  }, [view]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PREVIEW_ZOOM_STORAGE_KEY, String(previewZoom));
+  }, [previewZoom]);
+
+  useEffect(() => {
     if (!editingGalleryDisplayName) {
       setGalleryDisplayNameDraft(galleryDisplayName);
     }
   }, [editingGalleryDisplayName, galleryDisplayName]);
+
+  useEffect(() => {
+    if (!isAuthenticated || authError || authMessage) {
+      setWorkspaceIntroCollapsed(false);
+    }
+  }, [authError, authMessage, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -2792,6 +2915,17 @@ function App() {
     setPreviewZoom(1);
   };
 
+  const handlePreviewWheel = (event) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+
+    event.preventDefault();
+    const delta = -event.deltaY * 0.0015;
+    setPreviewZoom((current) => {
+      const next = current * Math.exp(delta);
+      return Math.min(PREVIEW_ZOOM_MAX, Math.max(PREVIEW_ZOOM_MIN, Number(next.toFixed(2))));
+    });
+  };
+
   const openPreviewModal = () => {
     setPreviewModalOpen(true);
   };
@@ -3248,6 +3382,36 @@ function App() {
     );
     setSavingDiagram(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+
+      const key = event.key.toLowerCase();
+      const isWorkspaceRoute = !routeState.shareId && !routeState.gallery && !routeState.admin;
+      const isPreviewRoute = isWorkspaceRoute || isReadOnlySharedView;
+
+      if (key === "s" && isWorkspaceRoute && isAuthenticated && !savingDiagram) {
+        event.preventDefault();
+        saveDiagram();
+        return;
+      }
+
+      if (key === "1" && isPreviewRoute) {
+        event.preventDefault();
+        setView("preview");
+        return;
+      }
+
+      if (key === "2" && isPreviewRoute) {
+        event.preventDefault();
+        setView("code");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAuthenticated, isReadOnlySharedView, routeState, saveDiagram, savingDiagram]);
 
   const openDiagram = async (diagramId) => {
     if (!isSupabaseConfigured || !supabase) {
@@ -4412,12 +4576,14 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">{t.sharedViewTitle}</h1>
           <div className="mt-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{sharedViewError}</div>
           {isAuthenticated ? (
-            <button
-              onClick={exitSharedView}
-              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <ExternalLink size={16} /> {t.backToWorkspace}
-            </button>
+            <Tooltip label={t.backToWorkspace}>
+              <button
+                onClick={exitSharedView}
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <ExternalLink size={16} /> {t.backToWorkspace}
+              </button>
+            </Tooltip>
           ) : null}
         </div>
       </div>
@@ -4470,22 +4636,30 @@ function App() {
                 <p className="mt-1 text-sm text-slate-500">{t.exportHint}</p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                  <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
-                </button>
-                <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                  <Download size={16} /> .mmd
-                </button>
-                <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                  <Download size={16} /> .svg
-                </button>
-                <button
-                  onClick={downloadDocx}
-                  disabled={exportingDocx}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-                >
-                  <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
-                </button>
+                <Tooltip label={t.copyMermaid}>
+                  <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
+                  </button>
+                </Tooltip>
+                <Tooltip label={t.exportMmd}>
+                  <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                    <Download size={16} /> .mmd
+                  </button>
+                </Tooltip>
+                <Tooltip label={t.exportSvg}>
+                  <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                    <Download size={16} /> .svg
+                  </button>
+                </Tooltip>
+                <Tooltip label={t.exportDocx}>
+                  <button
+                    onClick={downloadDocx}
+                    disabled={exportingDocx}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
+                  </button>
+                </Tooltip>
               </div>
             </div>
           </section>
@@ -4507,12 +4681,14 @@ function App() {
                   />
                 ) : null}
                 {view === "preview" ? (
-                  <button
-                    onClick={openPreviewModal}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    <Maximize2 size={16} /> {t.expand}
-                  </button>
+                  <Tooltip label={t.expand}>
+                    <button
+                      onClick={openPreviewModal}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      <Maximize2 size={16} /> {t.expand}
+                    </button>
+                  </Tooltip>
                 ) : null}
                 <div className="inline-flex rounded-2xl bg-slate-100 p-1">
                 <button
@@ -4530,16 +4706,25 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              {view === "preview" ? (
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} />
-              ) : (
+            <div className="relative mt-4 min-h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4">
+              <div
+                className={`absolute inset-4 transition-all duration-200 ease-out ${
+                  view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                }`}
+              >
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" />
+              </div>
+              <div
+                className={`absolute inset-4 transition-all duration-200 ease-out ${
+                  view === "code" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                }`}
+              >
                 <textarea
                   value={codeInput}
                   readOnly
-                  className="min-h-[420px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 font-mono text-sm text-slate-800 outline-none"
+                  className="h-full min-h-[388px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 font-mono text-sm text-slate-800 outline-none"
                 />
-              )}
+              </div>
             </div>
           </section>
           <PreviewModal
@@ -4552,6 +4737,7 @@ function App() {
             onZoomOut={zoomPreviewOut}
             onZoomIn={zoomPreviewIn}
             onReset={resetPreviewZoom}
+            onWheel={handlePreviewWheel}
             t={t}
           />
         </div>
@@ -4629,30 +4815,36 @@ function App() {
                   </div>
                   <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-600">{item.purpose_title || item.title || t.untitledDiagram}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <a
-                      href={`${window.location.pathname}?share=${item.share_token}`}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                      <ExternalLink size={16} /> {t.galleryOpenReadOnly}
-                    </a>
+                    <Tooltip label={t.galleryOpenReadOnly}>
+                      <a
+                        href={`${window.location.pathname}?share=${item.share_token}`}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                      >
+                        <ExternalLink size={16} /> {t.galleryOpenReadOnly}
+                      </a>
+                    </Tooltip>
                     {ownedGalleryByShareToken.get(item.share_token) ? (
+                      <Tooltip label={t.removeFromGallery}>
+                        <button
+                          onClick={() =>
+                            toggleGallerySubmission(ownedGalleryByShareToken.get(item.share_token), { publish: false })
+                          }
+                          disabled={gallerySubmittingId === ownedGalleryByShareToken.get(item.share_token)?.id}
+                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          <Upload size={16} /> {t.removeFromGallery}
+                        </button>
+                      </Tooltip>
+                    ) : null}
+                    <Tooltip label={t.reportGallery}>
                       <button
-                        onClick={() =>
-                          toggleGallerySubmission(ownedGalleryByShareToken.get(item.share_token), { publish: false })
-                        }
-                        disabled={gallerySubmittingId === ownedGalleryByShareToken.get(item.share_token)?.id}
+                        onClick={() => reportGalleryItem(item)}
+                        disabled={reportingGalleryToken === item.share_token}
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                       >
-                        <Upload size={16} /> {t.removeFromGallery}
+                        <Flag size={16} /> {reportingGalleryToken === item.share_token ? t.reporting : t.reportGallery}
                       </button>
-                    ) : null}
-                    <button
-                      onClick={() => reportGalleryItem(item)}
-                      disabled={reportingGalleryToken === item.share_token}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      <Flag size={16} /> {reportingGalleryToken === item.share_token ? t.reporting : t.reportGallery}
-                    </button>
+                    </Tooltip>
                   </div>
                 </article>
               ))
@@ -4662,13 +4854,15 @@ function App() {
           </section>
           {galleryHasMore ? (
             <div className="flex justify-center">
-              <button
-                onClick={loadMoreGalleryItems}
-                disabled={galleryLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                <RefreshCw size={16} className={galleryLoading ? "animate-spin" : ""} /> {t.loadMore}
-              </button>
+              <Tooltip label={t.loadMore}>
+                <button
+                  onClick={loadMoreGalleryItems}
+                  disabled={galleryLoading}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <RefreshCw size={16} className={galleryLoading ? "animate-spin" : ""} /> {t.loadMore}
+                </button>
+              </Tooltip>
             </div>
           ) : null}
         </div>
@@ -4746,14 +4940,17 @@ function App() {
                           {admin.created_at ? formatSavedDateTime(admin.created_at, language) : admin.user_id}
                         </div>
                       </div>
-                      <button
-                        onClick={() => updateAdminUsers({ action: "remove_admin", userId: admin.user_id })}
-                        disabled={adminUserAction === admin.user_id || admin.user_id === currentUser?.id}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                        title={admin.user_id === currentUser?.id ? t.adminSelfRemoveBlocked : t.removeAdmin}
-                      >
-                        <Trash2 size={14} /> {adminUserAction === admin.user_id ? t.removingAdmin : t.removeAdmin}
-                      </button>
+                      <Tooltip label={admin.user_id === currentUser?.id ? t.adminSelfRemoveBlocked : t.removeAdmin}>
+                        <button
+                          type="button"
+                          aria-label={admin.user_id === currentUser?.id ? t.adminSelfRemoveBlocked : t.removeAdmin}
+                          onClick={() => updateAdminUsers({ action: "remove_admin", userId: admin.user_id })}
+                          disabled={adminUserAction === admin.user_id || admin.user_id === currentUser?.id}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <Trash2 size={14} /> {adminUserAction === admin.user_id ? t.removingAdmin : t.removeAdmin}
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 ))
@@ -4823,13 +5020,15 @@ function App() {
 
           {adminHasMore ? (
             <div className="flex justify-center">
-              <button
-                onClick={loadMoreAdminQueue}
-                disabled={adminLoading}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-              >
-                <RefreshCw size={16} className={adminLoading ? "animate-spin" : ""} /> {t.loadMore}
-              </button>
+              <Tooltip label={t.loadMore}>
+                <button
+                  onClick={loadMoreAdminQueue}
+                  disabled={adminLoading}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <RefreshCw size={16} className={adminLoading ? "animate-spin" : ""} /> {t.loadMore}
+                </button>
+              </Tooltip>
             </div>
           ) : null}
         </div>
@@ -4864,232 +5063,286 @@ function App() {
           onOpenAdmin={openAdminPage}
           onSignOut={handleSignOut}
         />
-        <header className="rounded-[28px] bg-white/95 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">{t.appTitle}</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    {t.appDescription}
-                  </p>
-                </div>
-              </div>
+        <header className="rounded-[28px] bg-slate-50 p-5 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspaceOverview}</div>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{t.appTitle}</h1>
+            </div>
+            <HeaderActionButton onClick={() => setWorkspaceIntroCollapsed((value) => !value)}>
+              {workspaceIntroCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              {workspaceIntroCollapsed ? t.expand : t.collapse}
+            </HeaderActionButton>
+          </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.document}</div>
-                  <div className="mt-2 text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} {t.primary}</span>
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} {t.secondary}</span>
-                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} {t.changeIdeas}</span>
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
-                  <div className="mt-2 text-base font-semibold text-slate-900">
-                    {authUiActive ? authUiEmail : t.privateCloudSave}
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
+          <div
+            className={`grid overflow-hidden transition-all duration-300 ease-out ${
+              workspaceIntroCollapsed ? "mt-4 max-h-64 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div className="min-w-0">
+                <div className="truncate text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <StatusPill tone={isSupabaseConfigured ? "success" : "warning"} icon={<Database size={15} />}>
+                    {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
+                  </StatusPill>
+                  <StatusPill tone={authUiActive ? "info" : "neutral"}>
                     {authUiActive
-                      ? t.privateCloudSaveSummaryActive
-                      : t.privateCloudSaveSummaryInactive}
-                  </p>
-                </div>
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <StatusPill
-                      tone={isSupabaseConfigured ? "success" : "warning"}
-                      icon={<Database size={15} />}
-                    >
-                      {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
+                      ? t.privateWorkspaceActive
+                      : authVerifyingLink
+                        ? t.verifyingLink
+                        : authLoading
+                          ? t.checkingSessionShort
+                          : t.signInForCloudSave}
+                  </StatusPill>
+                  {isSupabaseConfigured && currentDiagramId ? (
+                    <StatusPill tone={autoSaveState === "saving" ? "info" : autoSaveState === "dirty" ? "warning" : "neutral"}>
+                      {autoSaveState === "saving"
+                        ? t.autoSaving
+                        : autoSaveState === "dirty"
+                          ? t.unsavedChanges
+                          : t.allChangesSaved}
                     </StatusPill>
-                    <StatusPill tone={authUiActive ? "info" : "neutral"}>
-                      {authUiActive
-                        ? t.privateWorkspaceActive
-                        : authVerifyingLink
-                          ? t.verifyingLink
-                          : authLoading
-                            ? t.checkingSessionShort
-                            : t.signInForCloudSave}
-                    </StatusPill>
-                    {isSupabaseConfigured && currentDiagramId ? (
-                      <StatusPill
-                        tone={autoSaveState === "saving" ? "info" : autoSaveState === "dirty" ? "warning" : "neutral"}
-                      >
-                        {autoSaveState === "saving"
-                          ? t.autoSaving
-                          : autoSaveState === "dirty"
-                            ? t.unsavedChanges
-                            : t.allChangesSaved}
-                      </StatusPill>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 text-xs text-slate-500">
-                    {currentDiagramId ? `${t.currentId}: ${currentDiagramId.slice(0, 8)}` : t.newUnsavedDocument}
-                  </div>
+                  ) : null}
                 </div>
               </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
-                      <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
-                        {authUiActive
-                          ? t.privateCloudSaveActive
-                          : t.privateCloudSaveInactive}
-                      </p>
-                    </div>
-                    {authUiActive ? (
-                      <button
-                        onClick={handleSignOut}
-                        disabled={authSubmitting || !isAuthenticated}
-                        className="inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                      >
-                        <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {authUiActive ? (
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
-                        <div className="mt-2 truncate text-base font-semibold text-slate-900">{authUiEmail}</div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {isAuthenticated ? t.privateWorkspaceActive : t.previewAuthOnly}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
-                            <div className="mt-2 truncate text-base font-semibold text-slate-900">
-                              {galleryDisplayName || t.galleryDisplayNamePlaceholder}
-                            </div>
-                            <div className="mt-1 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
-                          </div>
-                          {!editingGalleryDisplayName ? (
-                            <button
-                              onClick={startEditingGalleryDisplayName}
-                              className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                            >
-                              <Pencil size={14} /> {t.changeDisplayName}
-                            </button>
-                          ) : null}
-                        </div>
-                        {editingGalleryDisplayName ? (
-                          <div className="mt-3 space-y-2">
-                            <input
-                              value={galleryDisplayNameDraft}
-                              onChange={(e) => setGalleryDisplayNameDraft(e.target.value)}
-                              placeholder={t.galleryDisplayNamePlaceholder}
-                              className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
-                            />
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                onClick={saveGalleryDisplayName}
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                              >
-                                <Check size={14} /> {t.save}
-                              </button>
-                              <button
-                                onClick={cancelEditingGalleryDisplayName}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                              >
-                                <X size={14} /> {t.cancel}
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (
-                    <form className="space-y-3" onSubmit={handleSignIn}>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <input
-                          type="email"
-                          value={authEmail}
-                          onChange={(e) => {
-                            setAuthEmail(e.target.value);
-                            if (authError) {
-                              setAuthError("");
-                            }
-                          }}
-                          placeholder="you@example.com"
-                          className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                        />
-                        <button
-                          type="submit"
-                          disabled={authSubmitting || authLoading}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
-                        >
-                          <Mail size={16} /> {authSubmitting ? t.sending : t.emailSignInLink}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-
-                  <div className="flex flex-col gap-2">
-                    {authVerifyingLink ? (
-                      <div className="rounded-2xl bg-blue-50 px-3 py-2.5 text-sm text-blue-700">{t.verifyingSignInLink}</div>
-                    ) : authLoading ? (
-                      <div className="rounded-2xl bg-slate-100 px-3 py-2.5 text-sm text-slate-600">{t.checkingSession}</div>
-                    ) : null}
-
-                    {!authUiActive && authMessage ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={requestMagicLink}
-                          disabled={authSubmitting}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
-                        >
-                          <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> {t.resendLink}
-                        </button>
-                        <span className="text-xs text-slate-400">{t.resendHint}</span>
-                      </div>
-                    ) : null}
-
-                    {!authUiActive ? <p className="text-xs text-slate-400">{t.redirectHint}</p> : null}
-                    {previewAuthEnabled && !authUiActive ? (
-                      <div className="rounded-2xl bg-amber-50 px-3 py-2.5 text-sm text-amber-700">
-                        {t.previewAuthOnly}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                {authError ? <div className="mt-3 rounded-2xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{authError}</div> : null}
-                {!authError && authMessage ? (
-                  <div className={`mt-3 rounded-2xl px-3 py-2.5 text-sm ${authUiActive ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
-                    {authMessage}
-                  </div>
-                ) : null}
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm lg:min-w-[320px]">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.documentTitle}</div>
+                <div className="mt-2 truncate text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
               </div>
             </div>
+          </div>
+          <div
+            className={`grid overflow-hidden transition-all duration-300 ease-out ${
+              workspaceIntroCollapsed ? "max-h-0 opacity-0 pointer-events-none" : "mt-4 max-h-[1600px] opacity-100"
+            }`}
+          >
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div>
+                    <p className="max-w-3xl text-sm leading-6 text-slate-500">
+                      {t.appDescription}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.documentTitle}</div>
-                <label className="mt-2 block space-y-2">
-                  <span className="sr-only">{t.documentTitle}</span>
-                <input
-                  value={documentTitle}
-                  onChange={(e) => {
-                    setDocumentTitle(e.target.value);
-                    resetStorageNotice();
-                  }}
-                  data-testid="document-title-input"
-                  placeholder={t.documentTitlePlaceholder}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                />
-                </label>
-                <p className="mt-2 text-xs leading-5 text-slate-500">{t.documentTitleHint}</p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.document}</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">{documentTitle.trim() || defaultDocumentTitle}</div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.primaryCount} {t.primary}</span>
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.secondaryCount} {t.secondary}</span>
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-200">{diagramStats.changeCount} {t.changeIdeas}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">
+                      {authUiActive ? authUiEmail : t.privateCloudSave}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      {authUiActive
+                        ? t.privateCloudSaveSummaryActive
+                        : t.privateCloudSaveSummaryInactive}
+                    </p>
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <StatusPill
+                        tone={isSupabaseConfigured ? "success" : "warning"}
+                        icon={<Database size={15} />}
+                      >
+                        {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
+                      </StatusPill>
+                      <StatusPill tone={authUiActive ? "info" : "neutral"}>
+                        {authUiActive
+                          ? t.privateWorkspaceActive
+                          : authVerifyingLink
+                            ? t.verifyingLink
+                            : authLoading
+                              ? t.checkingSessionShort
+                              : t.signInForCloudSave}
+                      </StatusPill>
+                      {isSupabaseConfigured && currentDiagramId ? (
+                        <StatusPill
+                          tone={autoSaveState === "saving" ? "info" : autoSaveState === "dirty" ? "warning" : "neutral"}
+                        >
+                          {autoSaveState === "saving"
+                            ? t.autoSaving
+                            : autoSaveState === "dirty"
+                              ? t.unsavedChanges
+                              : t.allChangesSaved}
+                        </StatusPill>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 text-xs text-slate-500">
+                      {currentDiagramId ? `${t.currentId}: ${currentDiagramId.slice(0, 8)}` : t.newUnsavedDocument}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{t.privateCloudSaveTitle}</div>
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+                          {authUiActive
+                            ? t.privateCloudSaveActive
+                            : t.privateCloudSaveInactive}
+                        </p>
+                      </div>
+                      {authUiActive ? (
+                        <button
+                          onClick={handleSignOut}
+                          disabled={authSubmitting || !isAuthenticated}
+                          className="inline-flex items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {authUiActive ? (
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.signedInAs}</div>
+                          <div className="mt-2 truncate text-base font-semibold text-slate-900">{authUiEmail}</div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {isAuthenticated ? t.privateWorkspaceActive : t.previewAuthOnly}
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.galleryDisplayName}</div>
+                              <div className="mt-2 truncate text-base font-semibold text-slate-900">
+                                {galleryDisplayName || t.galleryDisplayNamePlaceholder}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">{t.galleryDisplayNameHint}</div>
+                            </div>
+                            {!editingGalleryDisplayName ? (
+                              <button
+                                onClick={startEditingGalleryDisplayName}
+                                className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                              >
+                                <Pencil size={14} /> {t.changeDisplayName}
+                              </button>
+                            ) : null}
+                          </div>
+                          {editingGalleryDisplayName ? (
+                            <div className="mt-3 space-y-2">
+                              <input
+                                value={galleryDisplayNameDraft}
+                                onChange={(e) => setGalleryDisplayNameDraft(e.target.value)}
+                                placeholder={t.galleryDisplayNamePlaceholder}
+                                className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 placeholder:text-slate-400"
+                              />
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={saveGalleryDisplayName}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                                >
+                                  <Check size={14} /> {t.save}
+                                </button>
+                                <button
+                                  onClick={cancelEditingGalleryDisplayName}
+                                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                  <X size={14} /> {t.cancel}
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <form className="space-y-3" onSubmit={handleSignIn}>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <input
+                            type="email"
+                            value={authEmail}
+                            onChange={(e) => {
+                              setAuthEmail(e.target.value);
+                              if (authError) {
+                                setAuthError("");
+                              }
+                            }}
+                            placeholder="you@example.com"
+                            className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                          />
+                          <button
+                            type="submit"
+                            disabled={authSubmitting || authLoading}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                          >
+                            <Mail size={16} /> {authSubmitting ? t.sending : t.emailSignInLink}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                      {authVerifyingLink ? (
+                        <div className="rounded-2xl bg-blue-50 px-3 py-2.5 text-sm text-blue-700">{t.verifyingSignInLink}</div>
+                      ) : authLoading ? (
+                        <div className="rounded-2xl bg-slate-100 px-3 py-2.5 text-sm text-slate-600">{t.checkingSession}</div>
+                      ) : null}
+
+                      {!authUiActive && authMessage ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={requestMagicLink}
+                            disabled={authSubmitting}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70"
+                          >
+                            <RefreshCw size={16} className={authSubmitting ? "animate-spin" : ""} /> {t.resendLink}
+                          </button>
+                          <span className="text-xs text-slate-400">{t.resendHint}</span>
+                        </div>
+                      ) : null}
+
+                      {!authUiActive ? <p className="text-xs text-slate-400">{t.redirectHint}</p> : null}
+                      {previewAuthEnabled && !authUiActive ? (
+                        <div className="rounded-2xl bg-amber-50 px-3 py-2.5 text-sm text-amber-700">
+                          {t.previewAuthOnly}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  {authError ? <div className="mt-3 rounded-2xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{authError}</div> : null}
+                  {!authError && authMessage ? (
+                    <div className={`mt-3 rounded-2xl px-3 py-2.5 text-sm ${authUiActive ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
+                      {authMessage}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.documentTitle}</div>
+                  <label className="mt-2 block space-y-2">
+                    <span className="sr-only">{t.documentTitle}</span>
+                  <input
+                    value={documentTitle}
+                    onChange={(e) => {
+                      setDocumentTitle(e.target.value);
+                      resetStorageNotice();
+                    }}
+                    data-testid="document-title-input"
+                    placeholder={t.documentTitlePlaceholder}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  />
+                  </label>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{t.documentTitleHint}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -5251,98 +5504,98 @@ function App() {
                         )}
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 xl:max-w-[320px]">
-                        <button
+                        <IconActionButton
+                          label={t.open}
                           onClick={() => openDiagram(item.id)}
                           disabled={openingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={t.open}
                         >
                           <FolderOpen size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={hasActiveShareLink(item) ? t.copyShareLink : t.createShareLink}
                           onClick={() => shareDiagram(item)}
                           data-testid={`share-diagram-button-${item.id}`}
                           disabled={sharingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={hasActiveShareLink(item) ? t.copyShareLink : t.createShareLink}
                         >
                           <Link2 size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.regenerateShareLink}
                           onClick={() => shareDiagram(item, { regenerate: true })}
                           disabled={sharingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={t.regenerateShareLink}
                         >
                           <RefreshCw size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.openSharedView}
                           onClick={() => {
                             const shareUrl = `${window.location.origin}${window.location.pathname}?share=${item.share_id}`;
                             window.open(shareUrl, "_blank", "noopener,noreferrer");
                           }}
                           disabled={!hasActiveShareLink(item)}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                          title={t.openSharedView}
                         >
                           <ExternalLink size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.revokeShareLink}
                           onClick={() => revokeShareDiagram(item)}
                           disabled={sharingDiagramId === item.id || !item.share_id || Boolean(item.share_revoked_at)}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                          title={t.revokeShareLink}
                         >
                           <X size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={item.is_public_gallery ? t.removeFromGallery : t.submitToGallery}
                           onClick={() => toggleGallerySubmission(item, { publish: !item.is_public_gallery })}
                           data-testid={`toggle-gallery-button-${item.id}`}
                           disabled={gallerySubmittingId === item.id || sharingDiagramId === item.id}
                           className={`rounded-xl p-2 hover:bg-slate-100 disabled:opacity-50 ${item.is_public_gallery ? "text-emerald-600" : "text-slate-600"}`}
-                          title={item.is_public_gallery ? t.removeFromGallery : t.submitToGallery}
                         >
                           <Upload size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={item.is_favorite ? t.unfavorite : t.favorite}
                           onClick={() => toggleFavoriteDiagram(item)}
                           className={`rounded-xl p-2 hover:bg-slate-100 ${item.is_favorite ? "text-amber-500" : "text-slate-600"}`}
-                          title={item.is_favorite ? t.unfavorite : t.favorite}
                         >
                           <Star size={16} className={item.is_favorite ? "fill-amber-400" : ""} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.rename}
                           onClick={() => startRenamingDiagram(item)}
                           disabled={renamingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={t.rename}
                         >
                           <Pencil size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.duplicate}
                           onClick={() => duplicateDiagram(item.id)}
                           disabled={duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={t.duplicate}
                         >
                           <Copy size={16} />
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={item.archived_at ? t.restore : t.archive}
                           onClick={() => toggleArchiveDiagram(item)}
                           disabled={duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                          title={item.archived_at ? t.restore : t.archive}
                         >
                           {item.archived_at ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-                        </button>
-                        <button
+                        </IconActionButton>
+                        <IconActionButton
+                          label={t.deletePermanently}
                           onClick={() => deleteDiagram(item.id)}
                           disabled={deletingDiagramId === item.id || duplicatingDiagramId === item.id}
                           className="rounded-xl p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                          title={t.deletePermanently}
                         >
                           <Trash2 size={16} />
-                        </button>
+                        </IconActionButton>
                       </div>
                     </div>
                     </div>
@@ -5374,7 +5627,7 @@ function App() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
+            <div className="rounded-[24px] border border-pink-100 bg-pink-50 p-4 shadow-sm ring-1 ring-pink-100/70">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-bold text-pink-950">{t.purposeOutcomeKpi}</h2>
@@ -5390,62 +5643,62 @@ function App() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">{t.primaryDrivers}</h2>
-                <p className="text-sm text-slate-500">{t.primaryDriversDescription}</p>
+                <h2 className={sectionHeadingClass}>{t.primaryDrivers}</h2>
+                <p className={sectionBodyClass}>{t.primaryDriversDescription}</p>
               </div>
-              <button onClick={addPrimary} data-testid="add-primary-button" className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              <HeaderActionButton variant="success" onClick={addPrimary} data-testid="add-primary-button">
                 <Plus size={16} /> {t.addPrimary}
-              </button>
+              </HeaderActionButton>
             </div>
 
             {data.primaryDrivers.map((pd, pi) => (
-              <div key={pd.id} className="space-y-3 rounded-3xl border border-blue-100 bg-blue-50 p-4 shadow-sm ring-1 ring-blue-100/70">
+              <div key={pd.id} className="space-y-3 rounded-[24px] border border-blue-100 bg-blue-50 p-4 shadow-sm ring-1 ring-blue-100/70">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <div className="font-bold text-blue-900">{t.primaryDriver} {pi + 1}</div>
                     <div className="text-xs text-blue-800/70">{t.primaryDriverHelp}</div>
                   </div>
-                  <button onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                  <IconActionButton label={t.deletePermanently} onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                     <Trash2 size={16} />
-                  </button>
+                  </IconActionButton>
                 </div>
                 <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : ""} />
                 <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
 
-                <button onClick={() => addSecondary(pi)} className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
                   <Plus size={16} /> {t.addSecondary}
-                </button>
+                </HeaderActionButton>
 
                 {pd.secondaryDrivers.map((sd, si) => (
-                  <div key={sd.id} className="ml-0 space-y-3 rounded-3xl border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
+                  <div key={sd.id} className="ml-0 space-y-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-bold text-amber-900">{t.secondaryDriver} {si + 1}</div>
                         <div className="text-xs text-amber-800/70">{t.secondaryDriverHelp}</div>
                       </div>
-                      <button onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                      <IconActionButton label={t.deletePermanently} onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                         <Trash2 size={16} />
-                      </button>
+                      </IconActionButton>
                     </div>
                     <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} />
                     <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} />
 
-                    <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600">
+                    <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
                       <Plus size={16} /> {t.addChangeIdea}
                     </button>
 
                     {sd.changeIdeas.map((ci, cii) => (
-                      <div key={ci.id} className="ml-0 space-y-3 rounded-3xl border border-orange-100 bg-white p-4 shadow-sm ring-1 ring-orange-100/80 md:ml-5">
+                      <div key={ci.id} className="ml-0 space-y-3 rounded-[24px] border border-orange-100 bg-orange-50/40 p-4 shadow-sm ring-1 ring-orange-100/80 md:ml-5">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-bold text-orange-900">{t.changeIdea} {cii + 1}</div>
                             <div className="text-xs text-orange-800/70">{t.changeIdeaHelp}</div>
                           </div>
-                          <button onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                          <IconActionButton label={t.deletePermanently} onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
                             <Trash2 size={16} />
-                          </button>
+                          </IconActionButton>
                         </div>
                         <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} />
                         <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} />
@@ -5457,11 +5710,11 @@ function App() {
             ))}
           </section>
 
-          <section className="min-w-0 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:h-[82vh]">
+          <section className={`min-w-0 lg:h-[82vh] ${workbenchPanelClass}`}>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-950">{t.output}</h2>
-                <p className="mt-1 text-sm text-slate-500">{t.outputDescription}</p>
+                <h2 className={sectionHeadingClass}>{t.output}</h2>
+                <p className={`mt-1 ${sectionBodyClass}`}>{t.outputDescription}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {view === "preview" ? (
@@ -5477,23 +5730,23 @@ function App() {
                   <button
                     onClick={openPreviewModal}
                     data-testid="open-preview-modal-button"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${surfaceButtonClass}`}
                   >
                     <Maximize2 size={16} /> {t.expand}
                   </button>
                 ) : null}
-                <div className="flex rounded-2xl bg-slate-100 p-1">
+                <div className="flex rounded-2xl bg-slate-50 p-1 ring-1 ring-slate-200">
                 <button
                   onClick={() => setView("preview")}
                   data-testid="preview-tab-button"
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
                 >
                   <Eye size={16} /> {t.preview}
                 </button>
                 <button
                   onClick={() => setView("code")}
                   data-testid="code-tab-button"
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-950 shadow-sm ring-1 ring-slate-200" : "text-slate-500"}`}
                 >
                   <Code2 size={16} /> {t.code}
                 </button>
@@ -5501,40 +5754,48 @@ function App() {
               </div>
             </div>
 
-            {view === "preview" ? (
-              <div data-testid="preview-panel" className="min-h-[20rem] overflow-auto rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:h-[73vh]">
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} />
+            <div className="relative min-h-[20rem] lg:h-[73vh]">
+              <div
+                data-testid="preview-panel"
+                className={`absolute inset-0 overflow-auto rounded-[24px] border border-slate-200 bg-slate-50 p-4 ring-1 ring-slate-200/70 transition-all duration-200 ease-out ${
+                  view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                }`}
+              >
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" />
               </div>
-            ) : (
-              <div className="space-y-3">
+              <div
+                className={`absolute inset-0 flex flex-col gap-3 transition-all duration-200 ease-out ${
+                  view === "code" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                }`}
+              >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-slate-500">{t.editMermaidHint}</p>
+                  <p className={sectionBodyClass}>{t.editMermaidHint}</p>
                   <button
                     onClick={applyCodeToForm}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
                   >
                     {t.applyToForm}
                   </button>
                 </div>
-                {codeSyncError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{codeSyncError}</div> : null}
-                {!codeSyncError && codeSyncMessage ? <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700">{codeSyncMessage}</div> : null}
+                {codeSyncError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-100">{codeSyncError}</div> : null}
+                {!codeSyncError && codeSyncMessage ? <div className="rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-700 ring-1 ring-emerald-100">{codeSyncMessage}</div> : null}
                 <textarea
                   value={codeInput}
                   onChange={(e) => handleCodeInputChange(e.target.value)}
                   spellCheck={false}
                   data-testid="mermaid-code-input"
-                  className="min-h-[20rem] w-full overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none ring-1 ring-slate-800 lg:h-[73vh]"
+                  className="min-h-0 w-full flex-1 overflow-auto rounded-3xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 outline-none ring-1 ring-slate-800"
                 />
               </div>
-            )}
+            </div>
 
-            <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className={`mt-4 ${workbenchMutedPanelClass}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
-                  <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-slate-500">{t.versionHistoryDescription}</p>
+                  <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
                 </div>
-                <div className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
+                <div className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
                   {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
                 </div>
               </div>
@@ -5603,6 +5864,7 @@ function App() {
           onZoomOut={zoomPreviewOut}
           onZoomIn={zoomPreviewIn}
           onReset={resetPreviewZoom}
+          onWheel={handlePreviewWheel}
           t={t}
         />
       </div>
