@@ -5603,6 +5603,7 @@ function App() {
           onCopyMermaid={copyMermaid}
           onDownloadMermaid={downloadMermaid}
           onDownloadSvg={downloadSvg}
+          onDownloadPng={downloadPng}
           onDownloadDocx={downloadDocx}
           onOpenSaved={() => setSavedDrawerOpen(true)}
           onOpenGallery={openGalleryPage}
