@@ -843,7 +843,7 @@ function getCachedThumbnailMarkup(diagramData, mermaidCode) {
 
 function buildMermaidCode(data) {
   const lines = [
-    "flowchart LR",
+    "flowchart RL",
     "",
     "    subgraph P0[\" \"]",
     "        direction TB",
@@ -1605,8 +1605,7 @@ function StatusPill({ tone = "neutral", icon, children }) {
 
 function LanguageToggle({ language, onChange, t, exposeTestIds = false }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 p-1 text-sm font-semibold ring-1 ring-slate-200">
-      <span className="px-2 text-xs uppercase tracking-[0.12em] text-slate-500">{t.languageLabel}</span>
+    <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-50 p-1 text-sm font-semibold ring-1 ring-slate-200">
       {["th", "en"].map((option) => (
         <button
           key={option}
@@ -1753,14 +1752,14 @@ function WorkspaceMenubar({
   };
 
   return (
-    <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm ring-1 ring-slate-200/80 backdrop-blur">
+    <nav className="sticky top-3 z-40 rounded-[24px] border border-sky-200 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 px-3 py-3 shadow-sm ring-1 ring-sky-100 backdrop-blur">
       <div className="flex flex-col gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
             <GitBranch size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
+            <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700/70 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
               {t.appEyebrow}
             </div>
             <div
@@ -1778,7 +1777,7 @@ function WorkspaceMenubar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 md:inline-flex">
+          <div className="hidden items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-2 py-2 md:inline-flex">
             {isGalleryAdmin ? (
               <HeaderActionButton onClick={onOpenAdmin}>
                 <Shield size={16} /> {t.openModeration}
@@ -2847,7 +2846,7 @@ function App() {
 
       const normalizedData = normalizeStoredDiagramData(row.diagram_data);
       const nextTitle = row.title || defaultDocumentTitle;
-      const nextCode = sanitizeMermaidCode(row.mermaid_code || buildMermaidCode(normalizedData));
+      const nextCode = buildMermaidCode(normalizedData);
 
       codeSourceRef.current = "code";
       setSharedView(row);
@@ -3482,7 +3481,7 @@ function App() {
   const applyDiagramToEditor = ({ title, diagramData, mermaidCode }) => {
     const normalizedData = resolveDiagramDataForEditor(diagramData, mermaidCode);
     const nextTitle = title || defaultDocumentTitle;
-    const nextCode = sanitizeMermaidCode(mermaidCode || buildMermaidCode(normalizedData));
+    const nextCode = buildMermaidCode(normalizedData);
 
     codeSourceRef.current = "code";
     setDocumentTitle(nextTitle);
@@ -5469,7 +5468,7 @@ function App() {
           onOpenAdmin={openAdminPage}
           onSignOut={handleSignOut}
         />
-        <header className="rounded-[28px] bg-slate-50 p-4 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+        <header className="rounded-[28px] bg-gradient-to-br from-blue-50 via-sky-50 to-white p-4 shadow-sm ring-1 ring-blue-100 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspaceOverview}</div>
