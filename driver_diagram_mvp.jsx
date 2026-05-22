@@ -2319,31 +2319,31 @@ function SavedDiagramsDrawer({
   );
 }
 
-const THEME_IMAGES = {
-  healthcare: "https://images.unsplash.com/photo-1519494026892-80bbd2d0fd00?w=400&h=300&fit=crop",
-  hospital: "https://images.unsplash.com/photo-1519494026892-80bbd2d0fd00?w=400&h=300&fit=crop",
-  patient: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=300&fit=crop",
-  clinic: "https://images.unsplash.com/photo-1586773860418-d46526d2ad9e?w=400&h=300&fit=crop",
-  doctor: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=300&fit=crop",
-  nurse: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=300&fit=crop",
-  staff: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&h=300&fit=crop",
-  opd: "https://images.unsplash.com/photo-1516549655169-df83a2e67b5a?w=400&h=300&fit=crop",
-  waiting: "https://images.unsplash.com/photo-1631217868299-3c7a0957b16b?w=400&h=300&fit=crop",
-  appointment: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&h=300&fit=crop",
-  kpi: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop",
-  business: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop",
-  process: "https://images.unsplash.com/photo-1553877522-43269d4ea056?w=400&h=300&fit=crop",
-  improve: "https://images.unsplash.com/photo-1533750349088-cd871a92f312?w=400&h=300&fit=crop",
-  quality: "https://images.unsplash.com/photo-1504868584819-f8e8b4ff6b97?w=400&h=300&fit=crop",
-  safety: "https://images.unsplash.com/photo-1577858530471-e2e94cad7c59?w=400&h=300&fit=crop",
-  emergency: "https://images.unsplash.com/photo-1583912268183-2c9674da6d79?w=400&h=300&fit=crop",
-  surgery: "https://images.unsplash.com/photo-1586773860418-d46526d2ad9e?w=400&h=300&fit=crop",
-  pharmacy: "https://images.unsplash.com/photo-1585435557341-3e692e2a13c7?w=400&h=300&fit=crop",
-  lab: "https://images.unsplash.com/photo-1579154204601-01588fa351d7?w=400&h=300&fit=crop",
-  default: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop",
+const THEME_EMOJI = {
+  healthcare: "🏥",
+  hospital: "🏥",
+  patient: "🩺",
+  clinic: "🏥",
+  doctor: "👨‍⚕️",
+  nurse: "👩‍⚕️",
+  staff: "👥",
+  opd: "⏱️",
+  waiting: "⏳",
+  appointment: "📅",
+  kpi: "📊",
+  business: "💼",
+  process: "⚙️",
+  improve: "📈",
+  quality: "✅",
+  safety: "🛡️",
+  emergency: "🚑",
+  surgery: "🏥",
+  pharmacy: "💊",
+  lab: "🔬",
+  default: "🎯",
 };
 
-function getThemeImage(title = "", purposeTitle = "") {
+function getThemeEmoji(title = "", purposeTitle = "") {
   const text = `${title} ${purposeTitle}`.toLowerCase();
   
   const themeMap = {
@@ -2365,35 +2365,38 @@ function getThemeImage(title = "", purposeTitle = "") {
     safety: ["safety", "ความปลอดภัย", "safety"],
     emergency: ["emergency", "ฉุกเฉิน", "ห้องฉุกเฉิน"],
     surgery: ["surgery", "ผ่าตัด", "operation"],
-    pharmacy: ["pharmacy", " pharmacy", "ยา", "เวชภัณฑ์"],
+    pharmacy: ["pharmacy", "ยา", "เวชภัณฑ์"],
     lab: ["lab", "laboratory", "แล็บ", "ตรวจ"],
   };
 
   for (const [theme, keywords] of Object.entries(themeMap)) {
     if (keywords.some((kw) => text.includes(kw))) {
-      return THEME_IMAGES[theme] || THEME_IMAGES.default;
+      return THEME_EMOJI[theme] || THEME_EMOJI.default;
     }
   }
-  return THEME_IMAGES.default;
+  return THEME_EMOJI.default;
 }
 
 function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, className = "" }) {
   const purposeTitle = diagramData?.purpose?.title || "";
-  const themeImage = useMemo(() => getThemeImage(title, purposeTitle), [title, purposeTitle]);
+  const emoji = useMemo(() => getThemeEmoji(title, purposeTitle), [title, purposeTitle]);
+  const displayTitle = title || purposeTitle || defaultDocumentTitle;
 
   return (
     <div className={`diagram-thumbnail ${className}`}>
-      <div className="diagram-thumbnail-fallback">
-        <img
-          src={themeImage}
-          alt={title || defaultDocumentTitle}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent">
-          <span className="text-sm font-semibold text-white drop-shadow-lg px-2 text-center line-clamp-2">
-            {title || defaultDocumentTitle}
-          </span>
+      <div className="diagram-thumbnail-fallback flex flex-row items-center gap-3 p-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
+          {emoji}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-slate-900 leading-tight">
+            {displayTitle}
+          </div>
+          {purposeTitle && purposeTitle !== title && (
+            <div className="mt-1 truncate text-xs text-slate-500 leading-tight">
+              {purposeTitle}
+            </div>
+          )}
         </div>
       </div>
     </div>
