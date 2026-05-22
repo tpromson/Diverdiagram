@@ -740,6 +740,14 @@ export const useDiagramStore = create((set, get) => ({
       codeSyncError: "",
       codeSyncMessage: ""
     });
+    setTimeout(() => {
+      const el = document.querySelector('[data-testid="document-title-input"]');
+      if (el) {
+        el.focus();
+        el.select();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   },
 
   cancelRenamingDiagram: () => set({
