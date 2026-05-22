@@ -9,7 +9,11 @@ async function switchLanguage(page, locale) {
 
   const overflow = page.getByTestId("mobile-overflow-button");
   await overflow.click({ force: true });
-  await page.getByRole("button", { name: locale.toUpperCase(), exact: true }).click({ force: true });
+  await page.evaluate((locale) => {
+    const buttons = document.querySelectorAll('button');
+    const btn = Array.from(buttons).find(b => b.textContent.trim() === locale.toUpperCase());
+    if (btn) btn.click();
+  }, locale.toUpperCase());
   await overflow.click({ force: true });
 }
 

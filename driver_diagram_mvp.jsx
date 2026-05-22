@@ -5956,7 +5956,7 @@ function App() {
                     <Trash2 size={16} />
                   </IconActionButton>
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={`primary-title-input-${pd.id}`} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} />
                 <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                 <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
