@@ -1786,7 +1786,7 @@ function WorkspaceMenubar({
             <HeaderActionButton onClick={onOpenGallery}>
               <LayoutGrid size={16} /> {t.openGallery}
             </HeaderActionButton>
-            <HeaderActionButton onClick={onNew}>
+            <HeaderActionButton onClick={onNew} className="text-pink-700">
               <FilePlus2 size={16} /> {t.newDiagram}
             </HeaderActionButton>
             {authUiActive ? (
@@ -1850,7 +1850,7 @@ function WorkspaceMenubar({
             <HeaderActionButton onClick={onOpenGallery} className="w-full justify-start">
               <LayoutGrid size={16} /> {t.openGallery}
             </HeaderActionButton>
-            <HeaderActionButton onClick={onNew} className="w-full justify-start">
+            <HeaderActionButton onClick={onNew} className="w-full justify-start text-pink-700">
               <FilePlus2 size={16} /> {t.newDiagram}
             </HeaderActionButton>
             <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
