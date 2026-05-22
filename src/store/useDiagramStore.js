@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "../supabaseClient.js";
 import { defaultData, MAX_AUTOSAVE_VERSIONS, MAX_VERSION_HISTORY } from "../utils/constants.js";
+import { create } from "zustand";
+
+// Check if defaultData is being mutated
+console.log('defaultData at module load:', JSON.stringify(defaultData).substring(0, 200));
 import { defaultDocumentTitle, defaultLanguage, translations } from "../utils/translations.js";
 import {
   uid,
