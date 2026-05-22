@@ -720,6 +720,7 @@ export const useDiagramStore = create((set, get) => ({
   },
 
   startNewDiagram: () => {
+    console.log('startNewDiagram called');
     const emptySnap = buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData));
     set({
       codeSource: "form",

@@ -147,7 +147,7 @@ export function WorkspaceMenubar() {
             <HeaderActionButton onClick={openGalleryPage}>
               <LayoutGrid size={16} /> {t.openGallery}
             </HeaderActionButton>
-            <HeaderActionButton onClick={startNewDiagram} className="!text-pink-600">
+            <HeaderActionButton onClick={() => { console.log('New Diagram clicked'); startNewDiagram(); }} className="!text-pink-600">
               <FilePlus2 size={16} /> {t.newDiagram}
             </HeaderActionButton>
             {authUiActive ? (
