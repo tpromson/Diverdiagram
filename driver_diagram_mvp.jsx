@@ -3610,13 +3610,21 @@ function App() {
 
   const addPrimary = () => {
     codeSourceRef.current = "form";
+    const newId = uid();
     setData((d) => ({
       ...d,
       primaryDrivers: [
         ...d.primaryDrivers,
-        { id: uid(), title: "Primary Driver ใหม่", kpi: "ระบุ KPI", secondaryDrivers: [] },
+        { id: newId, title: "Primary Driver ใหม่", kpi: "ระบุ KPI", secondaryDrivers: [] },
       ],
     }));
+    setTimeout(() => {
+      const el = document.querySelector(`[data-testid="primary-title-input-${newId}"]`);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
   };
 
   const updatePrimary = (pi, field, value) => {
@@ -3634,6 +3642,7 @@ function App() {
 
   const addSecondary = (pi) => {
     codeSourceRef.current = "form";
+    const newId = uid();
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -3642,12 +3651,19 @@ function App() {
               ...p,
               secondaryDrivers: [
                 ...p.secondaryDrivers,
-                { id: uid(), title: "Secondary Driver ใหม่", kpi: "ระบุ KPI", changeIdeas: [] },
+                { id: newId, title: "Secondary Driver ใหม่", kpi: "ระบุ KPI", changeIdeas: [] },
               ],
             }
           : p
       ),
     }));
+    setTimeout(() => {
+      const el = document.querySelector(`[data-testid="secondary-title-input-${newId}"]`);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
   };
 
   const updateSecondary = (pi, si, field, value) => {
@@ -3681,6 +3697,7 @@ function App() {
 
   const addChange = (pi, si) => {
     codeSourceRef.current = "form";
+    const newId = uid();
     setData((d) => ({
       ...d,
       primaryDrivers: d.primaryDrivers.map((p, i) =>
@@ -3693,7 +3710,7 @@ function App() {
                       ...s,
                       changeIdeas: [
                         ...s.changeIdeas,
-                        { id: uid(), title: "Change Idea ใหม่", kpi: "ระบุ KPI" },
+                        { id: newId, title: "Change Idea ใหม่", kpi: "ระบุ KPI" },
                       ],
                     }
                   : s
@@ -3702,6 +3719,13 @@ function App() {
           : p
       ),
     }));
+    setTimeout(() => {
+      const el = document.querySelector(`[data-testid="change-title-input-${newId}"]`);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
   };
 
   const updateChange = (pi, si, ci, field, value) => {
@@ -5877,7 +5901,7 @@ function App() {
                     <Trash2 size={16} />
                   </IconActionButton>
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : ""} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={`primary-title-input-${pd.id}`} />
                 <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                 <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
@@ -5895,7 +5919,7 @@ function App() {
                         <Trash2 size={16} />
                       </IconActionButton>
                     </div>
-                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} />
+                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} />
                     <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} />
 
                     <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
@@ -5913,7 +5937,7 @@ function App() {
                             <Trash2 size={16} />
                           </IconActionButton>
                         </div>
-                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} />
+                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} />
                         <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} />
                       </div>
                     ))}
