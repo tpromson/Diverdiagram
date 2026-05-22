@@ -5170,42 +5170,48 @@ function App() {
           />
 
           <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
                 <p className="mt-1 text-sm text-slate-500">{t.exportHint}</p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <Tooltip label={t.copyMermaid}>
-                  <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                    <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
-                  </button>
-                </Tooltip>
-                <Tooltip label={t.exportMmd}>
-                  <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                    <Download size={16} /> .mmd
-                  </button>
-                </Tooltip>
-                <Tooltip label={t.exportSvg}>
-                  <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                    <Download size={16} /> .svg
-                  </button>
-                </Tooltip>
-                <Tooltip label={t.exportPng}>
-                  <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
-                    <Download size={16} /> .png
-                  </button>
-                </Tooltip>
-                <Tooltip label={t.exportDocx}>
-                  <button
-                    onClick={downloadDocx}
-                    disabled={exportingDocx}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-                  >
-                    <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
-                  </button>
-                </Tooltip>
-              </div>
+              <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.copyMermaid}</div>
+                  <Tooltip label={t.copyMermaid}>
+                    <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 w-full sm:w-auto">
+                      <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
+                    </button>
+                  </Tooltip>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportDiagram || 'Download'}</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Tooltip label={t.exportMmd}>
+                      <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                        <Download size={16} /> .mmd
+                      </button>
+                    </Tooltip>
+                    <Tooltip label={t.exportSvg}>
+                      <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                        <Download size={16} /> .svg
+                      </button>
+                    </Tooltip>
+                    <Tooltip label={t.exportPng}>
+                      <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
+                        <Download size={16} /> .png
+                      </button>
+                    </Tooltip>
+                    <Tooltip label={t.exportDocx}>
+                      <button
+                        onClick={downloadDocx}
+                        disabled={exportingDocx}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                      >
+                        <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
             </div>
           </section>
 
