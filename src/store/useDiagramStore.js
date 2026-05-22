@@ -24,9 +24,6 @@ import { buildMermaidCode, sanitizeMermaidCode, buildTemplateSvg, parseMermaidCo
 import { useAuthStore } from "./useAuthStore.js";
 import { useUIStore } from "./useUIStore.js";
 
-// Check if defaultData is being mutated
-console.log('defaultData at module load:', JSON.stringify(defaultData).substring(0, 200));
-
 const savedDiagramSelectFields =
   "id, title, purpose_title, diagram_data, mermaid_code, thumbnail_svg, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
 
@@ -723,12 +720,7 @@ export const useDiagramStore = create((set, get) => ({
   },
 
   startNewDiagram: () => {
-    console.log('startNewDiagram called');
     const emptySnap = buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData));
-    console.log('Setting store state...');
-    console.log('defaultData:', JSON.stringify(defaultData).substring(0, 100));
-    const newData = normalizeStoredDiagramData(defaultData);
-    console.log('newData:', JSON.stringify(newData).substring(0, 100));
     set({
       codeSource: "form",
       lastSavedSnapshot: emptySnap,
@@ -748,7 +740,6 @@ export const useDiagramStore = create((set, get) => ({
       codeSyncError: "",
       codeSyncMessage: ""
     });
-    console.log('Store state set complete, documentTitle:', get().documentTitle, 'data.title:', get().data?.purpose?.title);
   },
 
   cancelRenamingDiagram: () => set({
