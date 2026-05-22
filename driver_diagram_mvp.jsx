@@ -1336,9 +1336,9 @@ function buildTemplateSvg(diagramData) {
     const kpiLineHeight = kind === "purpose" ? 20 : 18;
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
-    const separatorGap = kpiLines.length ? 4 : 0;
+    const separatorGap = kpiLines.length ? 14 : 0;
     const separatorY = paddingTop + titleLines.length * titleLineHeight + separatorGap;
-    const kpiTop = separatorY + (kpiLines.length ? 8 : 0);
+    const kpiTop = separatorY + (kpiLines.length ? 18 : 0);
     const height = Math.max(
       kind === "purpose" ? 158 : kind === "change" ? 150 : 126,
       paddingTop +
