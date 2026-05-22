@@ -5980,7 +5980,7 @@ function App() {
                           disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
                           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
                         >
-                          <Save size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
+                          <RefreshCw size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
                         </button>
                       </div>
                     </div>
