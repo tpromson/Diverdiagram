@@ -1,10 +1,6 @@
 import { create } from "zustand";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "../supabaseClient.js";
 import { defaultData, MAX_AUTOSAVE_VERSIONS, MAX_VERSION_HISTORY } from "../utils/constants.js";
-import { create } from "zustand";
-
-// Check if defaultData is being mutated
-console.log('defaultData at module load:', JSON.stringify(defaultData).substring(0, 200));
 import { defaultDocumentTitle, defaultLanguage, translations } from "../utils/translations.js";
 import {
   uid,
@@ -27,6 +23,9 @@ import {
 import { buildMermaidCode, sanitizeMermaidCode, buildTemplateSvg, parseMermaidCode } from "../utils/mermaidParser.js";
 import { useAuthStore } from "./useAuthStore.js";
 import { useUIStore } from "./useUIStore.js";
+
+// Check if defaultData is being mutated
+console.log('defaultData at module load:', JSON.stringify(defaultData).substring(0, 200));
 
 const savedDiagramSelectFields =
   "id, title, purpose_title, diagram_data, mermaid_code, thumbnail_svg, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
