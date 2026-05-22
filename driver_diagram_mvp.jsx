@@ -1783,9 +1783,6 @@ function WorkspaceMenubar({
                 <Shield size={16} /> {t.openModeration}
               </HeaderActionButton>
             ) : null}
-            <HeaderActionButton onClick={onOpenSaved}>
-              <FolderOpen size={16} /> {t.savedDiagrams}
-            </HeaderActionButton>
             <HeaderActionButton onClick={onOpenGallery}>
               <LayoutGrid size={16} /> {t.openGallery}
             </HeaderActionButton>
@@ -1798,8 +1795,11 @@ function WorkspaceMenubar({
               </HeaderActionButton>
             ) : null}
           </div>
-          <div className="hidden md:block">
+          <div className="hidden items-center gap-2 md:flex">
             <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds />
+            <HeaderActionButton onClick={onOpenSaved}>
+              <FolderOpen size={16} /> {t.savedDiagrams}
+            </HeaderActionButton>
           </div>
           <div ref={exportMenuRef} className="relative">
             <button
