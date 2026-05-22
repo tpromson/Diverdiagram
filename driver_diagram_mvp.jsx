@@ -4777,7 +4777,7 @@ function App() {
         alert("Failed to export PNG. Please try again.");
       };
       const base64 = btoa(unescape(encodeURIComponent(svgString)));
-      img.src = `data:image/svg+xml;base64,${base64}`;
+      img.src = `data:image/svg+xml;charset=utf-8;base64,${base64}`;
     } catch (error) {
       console.error("PNG export error:", error);
       alert("Failed to export PNG. Please try again.");
