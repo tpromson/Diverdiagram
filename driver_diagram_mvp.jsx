@@ -1797,7 +1797,7 @@ function WorkspaceMenubar({
           </div>
           <div className="hidden items-center gap-2 md:flex">
             <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds />
-            <HeaderActionButton onClick={onOpenSaved}>
+            <HeaderActionButton variant="accent" onClick={onOpenSaved}>
               <FolderOpen size={16} /> {t.savedDiagrams}
             </HeaderActionButton>
           </div>
@@ -1806,7 +1806,7 @@ function WorkspaceMenubar({
               type="button"
               aria-expanded={exportMenuOpen}
               onClick={() => setExportMenuOpen((open) => !open)}
-              className={`inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition ${surfaceButtonClass}`}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition border border-violet-200 bg-violet-50 text-violet-700 shadow-sm hover:bg-violet-100"
             >
               <Download size={16} />
               <span className="md:hidden">Export</span>
