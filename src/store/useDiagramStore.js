@@ -723,6 +723,9 @@ export const useDiagramStore = create((set, get) => ({
     console.log('startNewDiagram called');
     const emptySnap = buildDiagramSnapshot(defaultDocumentTitle, defaultData, buildMermaidCode(defaultData));
     console.log('Setting store state...');
+    console.log('defaultData:', JSON.stringify(defaultData).substring(0, 100));
+    const newData = normalizeStoredDiagramData(defaultData);
+    console.log('newData:', JSON.stringify(newData).substring(0, 100));
     set({
       codeSource: "form",
       lastSavedSnapshot: emptySnap,
@@ -742,7 +745,7 @@ export const useDiagramStore = create((set, get) => ({
       codeSyncError: "",
       codeSyncMessage: ""
     });
-    console.log('Store state set complete, documentTitle:', get().documentTitle);
+    console.log('Store state set complete, documentTitle:', get().documentTitle, 'data.title:', get().data?.purpose?.title);
   },
 
   cancelRenamingDiagram: () => set({
