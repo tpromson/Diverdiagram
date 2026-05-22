@@ -484,6 +484,7 @@ export const useDiagramStore = create((set, get) => ({
       const el = document.querySelector(`[data-testid="primary-title-input-${newId}"]`);
       if (el) {
         el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 200);
   },
@@ -531,6 +532,7 @@ export const useDiagramStore = create((set, get) => ({
       const el = document.querySelector(`[data-testid="secondary-title-input-${newId}"]`);
       if (el) {
         el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 200);
   },
@@ -598,6 +600,7 @@ export const useDiagramStore = create((set, get) => ({
       const el = document.querySelector(`[data-testid="change-title-input-${newId}"]`);
       if (el) {
         el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 200);
   },
