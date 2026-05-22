@@ -44,10 +44,10 @@ test.describe("Driver Diagram smoke flows", () => {
     await page.goto("/");
 
     await switchLanguage(page, "en");
-    await expect(page.getByText("Create a Driver Diagram with KPI at every level", { exact: false })).toBeVisible();
+    await expect(page.getByText("Workspace overview", { exact: false })).toBeVisible();
 
     await switchLanguage(page, "th");
-    await expect(page.getByText("สร้าง Driver Diagram พร้อม KPI ทุกระดับ", { exact: false })).toBeVisible();
+    await expect(page.getByText("ภาพรวม workspace", { exact: false })).toBeVisible();
 
     await page.getByTestId("code-tab-button").scrollIntoViewIfNeeded();
     await page.getByTestId("code-tab-button").click({ force: true });
