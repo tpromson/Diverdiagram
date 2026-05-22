@@ -1797,44 +1797,44 @@ function WorkspaceMenubar({
           </div>
           <div className="hidden items-center gap-2 md:flex">
             <LanguageToggle language={language} onChange={onLanguageChange} t={t} exposeTestIds />
+            <div ref={exportMenuRef} className="relative">
+              <button
+                type="button"
+                aria-expanded={exportMenuOpen}
+                onClick={() => setExportMenuOpen((open) => !open)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition border border-violet-200 bg-violet-50 text-violet-700 shadow-sm hover:bg-violet-100"
+              >
+                <Download size={16} />
+                <span className="md:hidden">Export</span>
+                <span className="hidden md:inline">{t.exportAndCode}</span>
+                <ChevronDown size={16} className={`transition-transform duration-200 ${exportMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+              <div
+                className={`absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-200/80 transition-all duration-200 ease-out ${
+                  exportMenuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
+                }`}
+              >
+                <HeaderActionButton variant="accent" onClick={() => runExportAction(onCopyMermaid)}>
+                  <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
+                </HeaderActionButton>
+                <HeaderActionButton onClick={() => runExportAction(onDownloadMermaid)}>
+                  <Download size={16} /> {t.exportMmd}
+                </HeaderActionButton>
+                <HeaderActionButton variant="success" onClick={() => runExportAction(onDownloadSvg)}>
+                  <Download size={16} /> {t.exportSvg}
+                </HeaderActionButton>
+                <HeaderActionButton
+                  variant="violet"
+                  onClick={() => runExportAction(onDownloadDocx)}
+                  disabled={exportingDocx}
+                >
+                  <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
+                </HeaderActionButton>
+              </div>
+            </div>
             <HeaderActionButton variant="accent" onClick={onOpenSaved}>
               <FolderOpen size={16} /> {t.savedDiagrams}
             </HeaderActionButton>
-          </div>
-          <div ref={exportMenuRef} className="relative">
-            <button
-              type="button"
-              aria-expanded={exportMenuOpen}
-              onClick={() => setExportMenuOpen((open) => !open)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition border border-violet-200 bg-violet-50 text-violet-700 shadow-sm hover:bg-violet-100"
-            >
-              <Download size={16} />
-              <span className="md:hidden">Export</span>
-              <span className="hidden md:inline">{t.exportAndCode}</span>
-              <ChevronDown size={16} className={`transition-transform duration-200 ${exportMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-            <div
-              className={`absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-200/80 transition-all duration-200 ease-out ${
-                exportMenuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
-              }`}
-            >
-              <HeaderActionButton variant="accent" onClick={() => runExportAction(onCopyMermaid)}>
-                <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
-              </HeaderActionButton>
-              <HeaderActionButton onClick={() => runExportAction(onDownloadMermaid)}>
-                <Download size={16} /> {t.exportMmd}
-              </HeaderActionButton>
-              <HeaderActionButton variant="success" onClick={() => runExportAction(onDownloadSvg)}>
-                <Download size={16} /> {t.exportSvg}
-              </HeaderActionButton>
-              <HeaderActionButton
-                variant="violet"
-                onClick={() => runExportAction(onDownloadDocx)}
-                disabled={exportingDocx}
-              >
-                <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
-              </HeaderActionButton>
-            </div>
           </div>
           <MobileOverflowMenu label={t.more}>
             <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
