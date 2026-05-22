@@ -1960,7 +1960,7 @@ function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undef
   return (
     <div
       onWheel={onWheel}
-      className={`preview-surface rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
+      className={`preview-surface overflow-auto rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
     >
       <div className="preview-paper shadow-sm">
         <div
@@ -5173,13 +5173,13 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="relative mt-4 min-h-[600px] rounded-3xl border border-slate-200 bg-slate-50 p-4">
+            <div className="relative mt-4 min-h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4">
               <div
                 className={`absolute inset-4 transition-all duration-200 ease-out ${
                   view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
                 }`}
               >
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full overflow-hidden" labels={t} />
+                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} />
               </div>
               <div
                 className={`absolute inset-4 transition-all duration-200 ease-out ${
