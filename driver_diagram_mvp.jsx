@@ -1330,9 +1330,9 @@ function buildTemplateSvg(diagramData) {
   const makeCard = (kind, title, kpi, width, accentColor = null) => {
     const titleLines = wrapSvgText(title, kind === "purpose" ? 26 : kind === "change" ? 27 : 25);
     const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", kind === "change" ? 31 : 28).filter(Boolean);
-    const titleFontSize = kind === "purpose" ? 18 : 16;
+    const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
-    const titleLineHeight = kind === "purpose" ? 27 : 25;
+    const titleLineHeight = kind === "purpose" ? 36 : 25;
     const kpiLineHeight = kind === "purpose" ? 20 : 18;
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
@@ -1340,7 +1340,7 @@ function buildTemplateSvg(diagramData) {
     const separatorY = paddingTop + titleLines.length * titleLineHeight + separatorGap;
     const kpiTop = separatorY + (kpiLines.length ? 18 : 0);
     const height = Math.max(
-      kind === "purpose" ? 158 : kind === "change" ? 150 : 126,
+      kind === "purpose" ? 180 : kind === "change" ? 150 : 126,
       paddingTop +
         titleLines.length * titleLineHeight +
         (kpiLines.length ? 18 + kpiLines.length * kpiLineHeight : 0) +
