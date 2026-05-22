@@ -1732,18 +1732,18 @@ function WorkspaceMenubar({
 
   return (
     <nav className="sticky top-3 z-40 rounded-[24px] border border-slate-200 bg-white/95 px-3 py-3 shadow-sm ring-1 ring-slate-200/80 backdrop-blur">
-      <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
             <GitBranch size={18} />
           </div>
-          <div className="min-w-0">
-            <div className="max-w-[16rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:max-w-[18rem] lg:max-w-[20rem] xl:max-w-[24rem]">
+          <div className="min-w-0 flex-1">
+            <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
               {t.appEyebrow}
             </div>
             <div
               title={title}
-              className="mt-1 max-w-[16rem] truncate text-lg font-bold leading-tight text-slate-950 sm:max-w-[18rem] lg:max-w-[20rem] xl:max-w-[24rem]"
+              className="mt-1 max-w-[18rem] truncate text-lg font-bold leading-tight text-slate-950 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]"
             >
               {title}
             </div>
@@ -1755,7 +1755,7 @@ function WorkspaceMenubar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 2xl:justify-end">
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
           <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 md:inline-flex">
             {isGalleryAdmin ? (
               <HeaderActionButton onClick={onOpenAdmin}>
