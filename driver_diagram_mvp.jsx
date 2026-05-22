@@ -1305,7 +1305,7 @@ function buildTemplateSvg(diagramData) {
     bottomPad: 72,
     groupGap: 74,
     blockGap: 30,
-    cardGap: 5,
+    cardGap: 0,
     goalW: 420,
     primaryW: 392,
     secondaryW: 392,
