@@ -197,9 +197,15 @@ function App() {
   const saveGalleryDisplayName = useAuthStore((state) => state.saveGalleryDisplayName);
 
   // --- Diagram Store Hooks ---
-  const data = useDiagramStore((state) => { console.log('data selector called:', state.data?.purpose?.title); return state.data; });
+  const data = useDiagramStore((state) => { 
+    console.log('data selector called, docTitle:', state.documentTitle, 'data:', state.data?.purpose?.title); 
+    return state.data; 
+  });
   const setData = useDiagramStore((state) => state.setData);
-  const documentTitle = useDiagramStore((state) => { console.log('documentTitle selector called:', state.documentTitle); return state.documentTitle; });
+  const documentTitle = useDiagramStore((state) => { 
+    console.log('documentTitle selector called, docTitle:', state.documentTitle, 'data:', state.data?.purpose?.title); 
+    return state.documentTitle; 
+  });
   const setDocumentTitle = useDiagramStore((state) => state.setDocumentTitle);
   const currentDiagramId = useDiagramStore((state) => state.currentDiagramId);
   const codeInput = useDiagramStore((state) => state.codeInput);
