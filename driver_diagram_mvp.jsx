@@ -813,13 +813,13 @@ function getThumbnailMarkup(diagramData, mermaidCode) {
 }
 
 function buildStoredThumbnailSvg(diagramData, mermaidCode) {
-  return getThumbnailMarkup(diagramData, mermaidCode);
+  // Return empty string to use theme image thumbnails instead of Mermaid SVG
+  return "";
 }
 
 function getStoredThumbnailMarkup(thumbnailSvg, diagramData, mermaidCode) {
-  const stored = String(thumbnailSvg || "").trim();
-  if (stored) return stored;
-  return getThumbnailMarkup(diagramData, mermaidCode);
+  // Always use theme image - ignore stored thumbnail_svg
+  return "";
 }
 
 const thumbnailMarkupCache = new Map();
@@ -2378,40 +2378,24 @@ function getThemeImage(title = "", purposeTitle = "") {
 }
 
 function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, className = "" }) {
-  const markup = useMemo(() => {
-    try {
-      return getStoredThumbnailMarkup(thumbnailSvg, diagramData, mermaidCode);
-    } catch (_error) {
-      return "";
-    }
-  }, [diagramData, mermaidCode, thumbnailSvg]);
-
   const purposeTitle = diagramData?.purpose?.title || "";
   const themeImage = useMemo(() => getThemeImage(title, purposeTitle), [title, purposeTitle]);
 
   return (
     <div className={`diagram-thumbnail ${className}`}>
-      {markup ? (
-        <div
-          className="diagram-thumbnail-inner"
-          aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: markup }}
+      <div className="diagram-thumbnail-fallback">
+        <img
+          src={themeImage}
+          alt={title || defaultDocumentTitle}
+          className="h-full w-full object-cover"
+          loading="lazy"
         />
-      ) : (
-        <div className="diagram-thumbnail-fallback">
-          <img
-            src={themeImage}
-            alt={title || defaultDocumentTitle}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent">
-            <span className="text-sm font-semibold text-white drop-shadow-lg px-2 text-center line-clamp-2">
-              {title || defaultDocumentTitle}
-            </span>
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/60 to-transparent">
+          <span className="text-sm font-semibold text-white drop-shadow-lg px-2 text-center line-clamp-2">
+            {title || defaultDocumentTitle}
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }
