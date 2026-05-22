@@ -856,7 +856,7 @@ function buildMermaidCode(data) {
   data.primaryDrivers.forEach((pd, i) => {
     const p = `PD${i + 1}`;
     const pk = `PDKPI${i + 1}`;
-    lines.push(`    Purpose --> ${p}`);
+    lines.push(`    ${p} --> Purpose`);
     lines.push(`    subgraph ${p}G[\" \"]`);
     lines.push("        direction TB");
     lines.push(`        ${p}[${formatNodeLabel(`Primary Driver ${i + 1}`, pd.title)}]`);
@@ -866,7 +866,7 @@ function buildMermaidCode(data) {
     pd.secondaryDrivers.forEach((sd, j) => {
       const s = `S${i + 1}_${j + 1}`;
       const sk = `SKPI${i + 1}_${j + 1}`;
-      lines.push(`    ${p} --> ${s}`);
+      lines.push(`    ${s} --> ${p}`);
       lines.push(`    subgraph ${s}G[\" \"]`);
       lines.push("        direction TB");
       lines.push(`        ${s}[${formatNodeLabel("Secondary Driver", sd.title)}]`);
@@ -876,7 +876,7 @@ function buildMermaidCode(data) {
       sd.changeIdeas.forEach((ci, k) => {
         const c = `C${i + 1}_${j + 1}_${k + 1}`;
         const ck = `CKPI${i + 1}_${j + 1}_${k + 1}`;
-        lines.push(`    ${s} --> ${c}`);
+        lines.push(`    ${c} --> ${s}`);
         lines.push(`    subgraph ${c}G[\" \"]`);
         lines.push("        direction TB");
         lines.push(`        ${c}[${formatNodeLabel("Change Idea", ci.title)}]`);
@@ -1116,6 +1116,15 @@ function parseMermaidCode(code) {
   const nodeMap = parseNodeDefinitions(normalized);
   const nodeGroups = parseSubgraphMembership(normalized);
   const adjacency = parseEdges(normalized);
+  const reverseAdjacency = new Map();
+  adjacency.forEach((targets, from) => {
+    targets.forEach((to) => {
+      const existing = reverseAdjacency.get(to) || [];
+      if (!existing.includes(from)) {
+        reverseAdjacency.set(to, [...existing, from]);
+      }
+    });
+  });
   const kpiByNodeId = findAssociatedKpis(nodeMap, nodeGroups);
 
   if (!nodeMap.size) {
@@ -1125,15 +1134,22 @@ function parseMermaidCode(code) {
   const purposeNode =
     nodeMap.get("Purpose") ||
     Array.from(nodeMap.values()).find((node) => node.type === "purpose") ||
-    Array.from(nodeMap.values()).find((node) => (adjacency.get(node.id) || []).some((targetId) => nodeMap.get(targetId)?.type === "primary"));
+    Array.from(nodeMap.values()).find((node) => {
+      const outgoingPrimary = (adjacency.get(node.id) || []).some((targetId) => nodeMap.get(targetId)?.type === "primary");
+      const incomingPrimary = (reverseAdjacency.get(node.id) || []).some((sourceId) => nodeMap.get(sourceId)?.type === "primary");
+      return outgoingPrimary || incomingPrimary;
+    });
 
   if (!purposeNode) {
     throw new Error("A Purpose/Goal node is required.");
   }
 
-  const primaryIds = (adjacency.get(purposeNode.id) || []).filter((nodeId) => {
+  const primaryIds = [
+    ...(adjacency.get(purposeNode.id) || []),
+    ...(reverseAdjacency.get(purposeNode.id) || []),
+  ].filter((nodeId, index, list) => {
     const node = nodeMap.get(nodeId);
-    return node && node.type !== "kpi";
+    return node && node.type === "primary" && list.indexOf(nodeId) === index;
   });
 
   if (!primaryIds.length) {
@@ -1147,9 +1163,12 @@ function parseMermaidCode(code) {
     },
     primaryDrivers: primaryIds.map((primaryId) => {
       const primaryNode = nodeMap.get(primaryId);
-      const secondaryIds = (adjacency.get(primaryId) || []).filter((nodeId) => {
+      const secondaryIds = [
+        ...(adjacency.get(primaryId) || []),
+        ...(reverseAdjacency.get(primaryId) || []),
+      ].filter((nodeId, index, list) => {
         const node = nodeMap.get(nodeId);
-        return node && node.type !== "kpi";
+        return node && node.type === "secondary" && list.indexOf(nodeId) === index;
       });
 
       return {
@@ -1158,9 +1177,12 @@ function parseMermaidCode(code) {
         kpi: kpiByNodeId.get(primaryId) || "",
         secondaryDrivers: secondaryIds.map((secondaryId) => {
           const secondaryNode = nodeMap.get(secondaryId);
-          const changeIds = (adjacency.get(secondaryId) || []).filter((nodeId) => {
+          const changeIds = [
+            ...(adjacency.get(secondaryId) || []),
+            ...(reverseAdjacency.get(secondaryId) || []),
+          ].filter((nodeId, index, list) => {
             const node = nodeMap.get(nodeId);
-            return node && node.type !== "kpi";
+            return node && node.type === "change" && list.indexOf(nodeId) === index;
           });
 
           return {
