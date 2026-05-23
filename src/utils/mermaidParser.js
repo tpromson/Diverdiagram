@@ -489,8 +489,8 @@ export function buildTemplateSvg(diagramData) {
   };
 
   const makeCard = (kind, title, kpi, width, accentColor = null) => {
-    const titleLines = wrapSvgText(title, kind === "purpose" ? 30 : 32);
-    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", 34).filter(Boolean);
+    const titleLines = wrapSvgText(title, kind === "purpose" ? 50 : 55);
+    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", 50).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
     const titleLineHeight = kind === "purpose" ? 36 : 25;
