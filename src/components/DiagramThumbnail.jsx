@@ -86,11 +86,11 @@ export function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermai
           <div className="truncate text-base font-semibold text-slate-900 leading-tight">
             {displayTitle}
           </div>
-          {displayPurposeTitle && displayPurposeTitle !== title && (
-            <div className="mt-1 truncate text-xs text-slate-600 leading-tight">
+          {displayPurposeTitle ? (
+            <div className="mt-1 line-clamp-2 text-xs text-slate-600 leading-tight">
               {displayPurposeTitle}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
