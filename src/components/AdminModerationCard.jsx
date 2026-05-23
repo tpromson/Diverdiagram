@@ -18,6 +18,7 @@ export function AdminModerationCard({
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <DiagramThumbnail
           title={item.title || item.purpose_title || t.untitledDiagram}
+          purposeTitle={item.purpose_title}
           thumbnailSvg={item.thumbnail_svg}
           diagramData={item.diagram_data}
           mermaidCode={item.mermaid_code}

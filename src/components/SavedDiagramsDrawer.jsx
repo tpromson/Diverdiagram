@@ -207,6 +207,7 @@ export function SavedDiagramsDrawer() {
                   <div key={item.id} data-testid={`saved-diagram-card-${item.id}`} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 transition hover:ring-slate-300">
                     <DiagramThumbnail
                       title={item.title || item.purpose_title || t.untitledDiagram}
+                      purposeTitle={item.purpose_title}
                       thumbnailSvg={item.thumbnail_svg}
                       diagramData={item.diagram_data}
                       mermaidCode={item.mermaid_code}

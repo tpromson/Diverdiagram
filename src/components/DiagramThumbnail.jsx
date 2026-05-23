@@ -58,11 +58,12 @@ export function getThemeEmoji(title = "", purposeTitle = "") {
   return THEME_EMOJI.default;
 }
 
-export function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, className = "" }) {
-  const purposeTitle = diagramData?.purpose?.title || "";
-  const emoji = useMemo(() => getThemeEmoji(title, purposeTitle), [title, purposeTitle]);
+export function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermaidCode, purposeTitle, className = "" }) {
+  const diagramPurposeTitle = diagramData?.purpose?.title || "";
+  const displayPurposeTitle = purposeTitle || diagramPurposeTitle;
+  const emoji = useMemo(() => getThemeEmoji(title, displayPurposeTitle), [title, displayPurposeTitle]);
   const defaultDocumentTitle = "Driver Diagram ใหม่";
-  const displayTitle = title || purposeTitle || defaultDocumentTitle;
+  const displayTitle = title || displayPurposeTitle || defaultDocumentTitle;
   
   const randomImage = useMemo(() => {
     const seed = Math.random().toString(36).substring(7);
@@ -85,9 +86,9 @@ export function DiagramThumbnail({ title, thumbnailSvg = "", diagramData, mermai
           <div className="truncate text-base font-semibold text-slate-900 leading-tight">
             {displayTitle}
           </div>
-          {purposeTitle && purposeTitle !== title && (
+          {displayPurposeTitle && displayPurposeTitle !== title && (
             <div className="mt-1 truncate text-xs text-slate-600 leading-tight">
-              {purposeTitle}
+              {displayPurposeTitle}
             </div>
           )}
         </div>
