@@ -439,8 +439,8 @@ export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
   };
 
   const segmentText = (input) => {
-    // Regex matching parentheticals, math/Thai comparisons, and percentages to keep them whole
-    const keeperRegex = /(\s*\(.+?\)|^[<>]=?|=|\s+[<>]=?|=|\s*(?:[<>]=?|=|\u2264|\u2265|&lt;|&gt;)\s*\d+(?:\.\d+)?%?|\s*(?:มากกว่าหรือเท่ากับ|น้อยกว่าหรือเท่ากับ|มากกว่า|น้อยกว่า|เท่ากับ)\s*\d+(?:\.\d+)?%?|\s*\d+(?:\.\d+)?%)/gi;
+    // Regex matching parentheticals, math/Thai comparisons, and percentages to keep them whole (precedence calibrated)
+    const keeperRegex = /(\s*\(.+?\)|\s*(?:มากกว่าหรือเท่ากับ|น้อยกว่าหรือเท่ากับ|มากกว่า|น้อยกว่า|เท่ากับ)\s*\d+(?:\.\d+)?%?|\s*(?:[<>]=?|=|\u2264|\u2265|&lt;|&gt;)\s*\d+(?:\.\d+)?%?|\s*\d+(?:\.\d+)?%|\s*[<>]=?|\s*=)/gi;
     
     const parts = input.split(keeperRegex).filter(Boolean);
     const allTokens = [];
