@@ -10,6 +10,8 @@
     "local:preview": "npm run build && npm run preview -- --host 127.0.0.1",
     "test:smoke": "playwright test",
     "test:e2e-auth": "playwright test tests/authenticated.e2e.spec.js",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "design:lint": "design.md lint DESIGN.md",
     "design:lint:json": "design.md lint DESIGN.md --format json",
     "design:spec": "design.md spec"
@@ -31,6 +33,8 @@
   "devDependencies": {
     "@google/design.md": "^0.1.1",
     "@playwright/test": "^1.56.1",
-    "vite": "^8.0.13"
+    "@vitest/ui": "^4.1.7",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.7"
   }
 }
