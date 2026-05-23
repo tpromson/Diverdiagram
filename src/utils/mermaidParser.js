@@ -600,8 +600,8 @@ export function buildTemplateSvg(diagramData) {
     const paddingTop = kind === "purpose" ? 22 : 20;
 
     const availableWidth = width - 2 * paddingX;
-    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.50 : 0.48)));
-    const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.48));
+    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.50 : 0.57)));
+    const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.58));
     
     // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
     const titleLines = wrapSvgText(singleLineTitle, titleMaxChars);
