@@ -684,6 +684,9 @@ function App() {
 
   const startNewDiagram = () => {
     storeStartNewDiagram();
+    if (workspaceIntroCollapsed) {
+      setWorkspaceIntroCollapsed(false);
+    }
     window.setTimeout(() => {
       purposeTitleInputRef.current?.focus();
     }, 0);
