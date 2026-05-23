@@ -1726,9 +1726,9 @@ function App() {
         <PreviewModal />
         <footer className="border-t border-slate-200 px-2 pt-2 pb-6 text-xs text-slate-500">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>© 2026 tpromsom@gmail.com</div>
+            <div>© 2026 tpromson@gmail.com</div>
             <a
-              href="mailto:tpromsom@gmail.com?subject=Driver%20Diagram%20Support"
+              href="mailto:tpromson@gmail.com?subject=Driver%20Diagram%20Support"
               className="inline-flex w-fit items-center gap-2 font-medium text-slate-600 transition hover:text-slate-900"
             >
               แจ้งปัญหาการใช้งาน
