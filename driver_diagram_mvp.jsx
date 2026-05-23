@@ -1477,15 +1477,19 @@ function App() {
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="rounded-[24px] border border-pink-100 bg-pink-50 p-4 shadow-sm ring-1 ring-pink-100/70">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <h2 className="text-base font-bold text-pink-950">{t.purposeOutcomeKpi}</h2>
-                  <p className="mt-1 text-sm text-pink-800/75">{t.purposeDescription}</p>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
+                  {t.topLevelGoal}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
-                    {t.topLevelGoal}
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => useUIStore.getState().setAutoSaveEnabled(!autoSaveEnabled)}
+                  title={autoSaveEnabled ? "Auto-save ON" : "Auto-save OFF"}
+                  className={`rounded-full px-2 py-1 text-[10px] font-bold transition ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300" : "bg-slate-200 text-slate-500 hover:bg-slate-300"}`}
+                >
+                  {autoSaveEnabled ? "AUTO ON" : "AUTO OFF"}
+                </button>
+                <div className="ml-auto">
                   <HeaderActionButton
                     variant="primary"
                     onClick={saveDiagram}
@@ -1496,16 +1500,6 @@ function App() {
                     <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
                   </HeaderActionButton>
                 </div>
-              </div>
-              <div className="mb-4 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => useUIStore.getState().setAutoSaveEnabled(!autoSaveEnabled)}
-                  title={autoSaveEnabled ? "Auto-save ON" : "Auto-save OFF"}
-                  className={`rounded-full px-2 py-1 text-[10px] font-bold transition ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300" : "bg-slate-200 text-slate-500 hover:bg-slate-300"}`}
-                >
-                  {autoSaveEnabled ? "AUTO ON" : "AUTO OFF"}
-                </button>
               </div>
               <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} />
               <div className="mt-3">
