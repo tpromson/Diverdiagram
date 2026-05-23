@@ -587,24 +587,29 @@ export function buildTemplateSvg(diagramData) {
     // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
     const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
     
-    // Wrap text lines properly to prevent overflowing card width (calibrated for Thai/English & larger fonts)
-    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 22 : 26, 3);
-    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 30, 3).filter(Boolean);
+    // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
+    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 22 : 26);
+    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 30).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 28 : 18;
     const kpiFontSize = kind === "purpose" ? 16 : 15;
     const titleLineHeight = kind === "purpose" ? 40 : 28;
     const kpiLineHeight = kind === "purpose" ? 24 : 22;
+    
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
+    
+    // Correct baseline vertical offset for premium typography rendering (prevent top-line touch & fill bottom empty space)
+    const titleBaseline = paddingTop + titleFontSize * 0.8;
     const separatorGap = kpiLines.length ? 14 : 0;
-    const separatorY = paddingTop + titleLines.length * titleLineHeight + separatorGap;
-    const kpiTop = separatorY + (kpiLines.length ? 18 : 0);
+    const titleLinesCount = Math.max(1, titleLines.length);
+    const separatorY = titleBaseline + (titleLinesCount - 1) * titleLineHeight + separatorGap + titleFontSize * 0.2;
+    const kpiTop = separatorY + (kpiLines.length ? 18 + kpiFontSize * 0.8 : 0);
+    const kpiLinesCount = Math.max(1, kpiLines.length);
+    
+    const calculatedHeight = (kpiLines.length ? kpiTop + (kpiLinesCount - 1) * kpiLineHeight : separatorY) + 28;
     const height = Math.max(
       kind === "purpose" ? 180 : kind === "change" ? 150 : 126,
-      paddingTop +
-        titleLines.length * titleLineHeight +
-        (kpiLines.length ? 18 + kpiLines.length * kpiLineHeight : 0) +
-        28
+      calculatedHeight
     );
 
     return {
@@ -614,13 +619,13 @@ export function buildTemplateSvg(diagramData) {
       titleLines,
       kpiLines,
       paddingX,
-      paddingTop,
+      paddingTop: titleBaseline, // Serves as the first title line baseline
       titleFontSize,
       kpiFontSize,
       titleLineHeight,
       kpiLineHeight,
       separatorY,
-      kpiTop,
+      kpiTop, // Serves as the first KPI line baseline
       accentColor,
     };
   };
