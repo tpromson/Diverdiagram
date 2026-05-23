@@ -591,16 +591,16 @@ export function buildTemplateSvg(diagramData) {
     // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
     const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
     
-    const titleFontSize = kind === "purpose" ? 28 : 18;
-    const kpiFontSize = kind === "purpose" ? 16 : 15;
-    const titleLineHeight = kind === "purpose" ? 40 : 28;
-    const kpiLineHeight = kind === "purpose" ? 24 : 22;
+    const titleFontSize = kind === "purpose" ? 24 : 18;
+    const kpiFontSize = kind === "purpose" ? 15 : 15;
+    const titleLineHeight = kind === "purpose" ? 34 : 28;
+    const kpiLineHeight = kind === "purpose" ? 22 : 22;
     
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
 
     const availableWidth = width - 2 * paddingX;
-    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.50 : 0.57)));
+    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.51 : 0.57)));
     const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.58));
     
     // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
