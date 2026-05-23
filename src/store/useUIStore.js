@@ -4,6 +4,8 @@ import {
   readPreviewView,
   readPreviewZoom,
   readWorkspaceIntroCollapsed,
+  readAutoSaveEnabled,
+  writeAutoSaveEnabled,
   replaceAppLocation,
 } from "../utils/helpers.js";
 import { defaultLanguage } from "../utils/translations.js";
@@ -28,6 +30,7 @@ export const useUIStore = create((set) => ({
   savedSort: "updated_desc",
   savedScope: "active",
   workspaceIntroCollapsed: readWorkspaceIntroCollapsed(),
+  autoSaveEnabled: readAutoSaveEnabled(),
 
   setLanguage: (language) => set({ language }),
   setRouteState: (routeState) => set({ routeState }),
@@ -82,6 +85,11 @@ export const useUIStore = create((set) => ({
       window.localStorage.setItem(WORKSPACE_INTRO_COLLAPSED_STORAGE_KEY, String(workspaceIntroCollapsed));
     }
     set({ workspaceIntroCollapsed });
+  },
+
+  setAutoSaveEnabled: (autoSaveEnabled) => {
+    writeAutoSaveEnabled(autoSaveEnabled);
+    set({ autoSaveEnabled });
   },
 
   openGalleryPage: () => {

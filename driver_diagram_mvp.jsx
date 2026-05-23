@@ -165,6 +165,7 @@ function App() {
   const setSavedScope = useUIStore((state) => state.setSavedScope);
   const workspaceIntroCollapsed = useUIStore((state) => state.workspaceIntroCollapsed);
   const setWorkspaceIntroCollapsed = useUIStore((state) => state.setWorkspaceIntroCollapsed);
+  const autoSaveEnabled = useUIStore((state) => state.autoSaveEnabled);
   
   const openGalleryPage = useUIStore((state) => state.openGalleryPage);
   const openAdminPage = useUIStore((state) => state.openAdminPage);
@@ -462,6 +463,9 @@ function App() {
     if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
       return;
     }
+    if (!autoSaveEnabled) {
+      return;
+    }
     if (currentSnapshot === lastSavedSnapshot) {
       return;
     }
@@ -476,7 +480,7 @@ function App() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSnapshot, lastSavedSnapshot, currentDiagramId, deletingDiagramId, isAuthenticated, loadingSavedDiagrams, openingDiagramId, savingDiagram, saveDiagram]);
+  }, [currentSnapshot, lastSavedSnapshot, currentDiagramId, deletingDiagramId, isAuthenticated, loadingSavedDiagrams, openingDiagramId, savingDiagram, saveDiagram, autoSaveEnabled]);
 
   // 7. Mermaid Render Canvas Loop
   useEffect(() => {

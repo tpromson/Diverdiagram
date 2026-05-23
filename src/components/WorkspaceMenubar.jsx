@@ -27,6 +27,8 @@ export function WorkspaceMenubar() {
   const setLanguage = useUIStore((state) => state.setLanguage);
   const setSavedDrawerOpen = useUIStore((state) => state.setSavedDrawerOpen);
   const exitAllViews = useUIStore((state) => state.exitAllViews);
+  const setAutoSaveEnabled = useUIStore((state) => state.setAutoSaveEnabled);
+  const autoSaveEnabled = useUIStore((state) => state.autoSaveEnabled);
   const openGalleryPage = useUIStore((state) => state.openGalleryPage);
   const openAdminPage = useUIStore((state) => state.openAdminPage);
 
@@ -67,13 +69,15 @@ export function WorkspaceMenubar() {
       : t.newUnsavedDocument;
 
   const syncTone =
-    autoSaveState === "saving"
-      ? "text-blue-700 bg-blue-50 ring-blue-100"
-      : autoSaveState === "dirty"
-        ? "text-amber-900 bg-amber-100 ring-amber-200"
-        : isSupabaseConfigured && isAuthenticated
-          ? "text-emerald-700 bg-emerald-50 ring-emerald-100"
-          : "text-slate-600 bg-slate-50 ring-slate-200";
+    !autoSaveEnabled
+      ? "text-slate-500 bg-slate-100 ring-slate-200"
+      : autoSaveState === "saving"
+        ? "text-blue-700 bg-blue-50 ring-blue-100"
+        : autoSaveState === "dirty"
+          ? "text-amber-900 bg-amber-100 ring-amber-200"
+          : isSupabaseConfigured && isAuthenticated
+            ? "text-emerald-700 bg-emerald-50 ring-emerald-100"
+            : "text-slate-600 bg-slate-50 ring-slate-200";
 
   useEffect(() => {
     if (!exportMenuOpen) return undefined;
@@ -138,8 +142,16 @@ export function WorkspaceMenubar() {
               {title}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
+              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
                 {syncLabel}
+                <button
+                  type="button"
+                  onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+                  title={autoSaveEnabled ? t.autoSaveOn || "Auto-save on" : t.autoSaveOff || "Auto-save off"}
+                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold transition ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300" : "bg-slate-200 text-slate-500 hover:bg-slate-300"}`}
+                >
+                  {autoSaveEnabled ? "ON" : "OFF"}
+                </button>
               </span>
             </div>
           </div>

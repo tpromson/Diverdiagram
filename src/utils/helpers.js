@@ -7,6 +7,7 @@ import {
   PREVIEW_ZOOM_STORAGE_KEY,
   PREVIEW_ZOOM_MIN,
   PREVIEW_ZOOM_MAX,
+  AUTO_SAVE_ENABLED_STORAGE_KEY,
   SHARE_LINK_DURATION_MS,
 } from "./constants.js";
 import { defaultLanguage, defaultDocumentTitle, translations } from "./translations.js";
@@ -139,6 +140,17 @@ export function readPreviewZoom() {
     return saved;
   }
   return 1;
+}
+
+export function readAutoSaveEnabled() {
+  if (typeof window === "undefined") return true;
+  const saved = window.localStorage.getItem(AUTO_SAVE_ENABLED_STORAGE_KEY);
+  return saved === null || saved === "true";
+}
+
+export function writeAutoSaveEnabled(value) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTO_SAVE_ENABLED_STORAGE_KEY, String(value));
 }
 
 export function buildGalleryDisplayName(name, email = "") {

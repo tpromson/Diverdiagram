@@ -11,6 +11,7 @@ export const GALLERY_DISPLAY_NAME_STORAGE_KEY = "driver-diagram-gallery-display-
 export const WORKSPACE_INTRO_COLLAPSED_STORAGE_KEY = "driver-diagram-workspace-intro-collapsed";
 export const PREVIEW_VIEW_STORAGE_KEY = "driver-diagram-preview-view";
 export const PREVIEW_ZOOM_STORAGE_KEY = "driver-diagram-preview-zoom";
+export const AUTO_SAVE_ENABLED_STORAGE_KEY = "driver-diagram-auto-save-enabled";
 
 export const defaultData = {
   purpose: {
