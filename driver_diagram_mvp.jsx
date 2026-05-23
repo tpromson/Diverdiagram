@@ -937,6 +937,7 @@ function App() {
                 <article key={item.share_token} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                   <DiagramThumbnail
                     title={item.title || item.purpose_title || t.untitledDiagram}
+                    purposeTitle={item.purpose_title}
                     thumbnailSvg={item.thumbnail_svg}
                     diagramData={item.diagram_data}
                     mermaidCode={item.mermaid_code}
