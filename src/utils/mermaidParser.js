@@ -1,4 +1,4 @@
-const uid = () => Math.random().toString(36).slice(2, 9);
+const uid = () => crypto.randomUUID();
 
 export function buildMermaidCode(data) {
   const lines = [

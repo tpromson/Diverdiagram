@@ -12,7 +12,7 @@ import {
 import { defaultLanguage, defaultDocumentTitle, translations } from "./translations.js";
 import { sanitizeMermaidCode, parseMermaidCode, buildTemplateSvg } from "./mermaidParser.js";
 
-export const uid = () => Math.random().toString(36).slice(2, 9);
+export const uid = () => crypto.randomUUID();
 
 export function getSavedDiagramSortOptions(t) {
   return [
