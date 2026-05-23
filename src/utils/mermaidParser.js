@@ -387,7 +387,7 @@ export function escapeSvgText(text = "") {
     .replace(/'/g, "&apos;");
 }
 
-export function wrapSvgText(text = "", maxChars = 28) {
+export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
   const segmentText = (input) => {
     if (typeof Intl !== "undefined" && Intl.Segmenter) {
       const segmenter = new Intl.Segmenter("th", { granularity: "word" });
@@ -399,13 +399,13 @@ export function wrapSvgText(text = "", maxChars = 28) {
     return Array.from(input);
   };
 
-  return String(text || "")
+  const lines = String(text || "")
     .split("\n")
     .flatMap((paragraph) => {
       const trimmed = paragraph.trim();
       if (!trimmed) return [""];
       const tokens = segmentText(trimmed);
-      const lines = [];
+      const result = [];
       let current = "";
 
       tokens.forEach((token) => {
@@ -413,7 +413,7 @@ export function wrapSvgText(text = "", maxChars = 28) {
         const normalizedCurrent = current.trim();
         const normalizedNext = next.trim();
         if (normalizedCurrent && normalizedNext.length > maxChars) {
-          lines.push(normalizedCurrent);
+          result.push(normalizedCurrent);
           current = token.trimStart();
         } else {
           current = next;
@@ -421,11 +421,13 @@ export function wrapSvgText(text = "", maxChars = 28) {
       });
 
       if (current.trim()) {
-        lines.push(current.trim());
+        result.push(current.trim());
       }
 
-      return lines.length ? lines : [trimmed];
+      return result.length ? result : [trimmed];
     });
+
+  return maxLines > 0 ? lines.slice(0, maxLines) : lines;
 }
 
 export function buildTemplateSvg(diagramData) {
@@ -487,8 +489,8 @@ export function buildTemplateSvg(diagramData) {
   };
 
   const makeCard = (kind, title, kpi, width, accentColor = null) => {
-    const titleLines = wrapSvgText(title, kind === "purpose" ? 26 : kind === "change" ? 27 : 25);
-    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", kind === "change" ? 31 : 28).filter(Boolean);
+    const titleLines = wrapSvgText(title, kind === "purpose" ? 30 : 32);
+    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", 34).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
     const titleLineHeight = kind === "purpose" ? 36 : 25;
