@@ -439,16 +439,25 @@ export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
   };
 
   const segmentText = (input) => {
-    // 1. Identify English parenthetical blocks and split so they stay together
-    const parts = input.split(/(\s*\(.+?\))/g).filter(Boolean);
+    // Regex matching parentheticals, math/Thai comparisons, and percentages to keep them whole
+    const keeperRegex = /(\s*\(.+?\)|^[<>]=?|=|\s+[<>]=?|=|\s*(?:[<>]=?|=|\u2264|\u2265|&lt;|&gt;)\s*\d+(?:\.\d+)?%?|\s*(?:มากกว่าหรือเท่ากับ|น้อยกว่าหรือเท่ากับ|มากกว่า|น้อยกว่า|เท่ากับ)\s*\d+(?:\.\d+)?%?|\s*\d+(?:\.\d+)?%)/gi;
+    
+    const parts = input.split(keeperRegex).filter(Boolean);
     const allTokens = [];
     
     parts.forEach((part) => {
-      // If it's a parenthetical expression, keep it whole as one token
-      if (part.trim().startsWith("(") && part.trim().endsWith(")")) {
+      const trimmed = part.trim();
+      
+      // If it matches any of our keeper patterns, treat it as a single unbreakable token!
+      if (
+        (trimmed.startsWith("(") && trimmed.endsWith(")")) ||
+        /^[<>]=?|=|\u2264|\u2265|&lt;|&gt;/i.test(trimmed) ||
+        /^(?:มากกว่าหรือเท่ากับ|น้อยกว่าหรือเท่ากับ|มากกว่า|น้อยกว่า|เท่ากับ)\s*\d+/i.test(trimmed) ||
+        /^\d+(?:\.\d+)?%$/i.test(trimmed)
+      ) {
         allTokens.push(part);
       } else {
-        // Otherwise, segment using Intl.Segmenter or fallbacks
+        // Otherwise, segment with standard Thai word segmentation
         if (typeof Intl !== "undefined" && Intl.Segmenter) {
           const segmenter = new Intl.Segmenter("th", { granularity: "word" });
           const segments = Array.from(segmenter.segment(part), (p) => p.segment);
@@ -578,13 +587,13 @@ export function buildTemplateSvg(diagramData) {
     // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
     const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
     
-    // Wrap text lines properly to prevent overflowing card width (calibrated for Thai/English)
-    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 28 : 32, 3);
-    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 34, 3).filter(Boolean);
-    const titleFontSize = kind === "purpose" ? 24 : 16;
-    const kpiFontSize = kind === "purpose" ? 14 : 13;
-    const titleLineHeight = kind === "purpose" ? 36 : 25;
-    const kpiLineHeight = kind === "purpose" ? 20 : 18;
+    // Wrap text lines properly to prevent overflowing card width (calibrated for Thai/English & larger fonts)
+    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 22 : 26, 3);
+    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 30, 3).filter(Boolean);
+    const titleFontSize = kind === "purpose" ? 28 : 18;
+    const kpiFontSize = kind === "purpose" ? 16 : 15;
+    const titleLineHeight = kind === "purpose" ? 40 : 28;
+    const kpiLineHeight = kind === "purpose" ? 24 : 22;
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
     const separatorGap = kpiLines.length ? 14 : 0;
