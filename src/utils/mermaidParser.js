@@ -489,8 +489,11 @@ export function buildTemplateSvg(diagramData) {
   };
 
   const makeCard = (kind, title, kpi, width, accentColor = null) => {
-    const titleLines = wrapSvgText(title, kind === "purpose" ? 50 : 55);
-    const kpiLines = wrapSvgText(kpi ? `KPI: ${kpi}` : "", 50).filter(Boolean);
+    // Join any embedded newlines into single space to prevent forced line breaks in card
+    const singleLineTitle = String(title || "").replace(/\n/g, " ").trim();
+    const singleLineKpi = String(kpi || "").replace(/\n/g, " ").trim();
+    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 50 : 55);
+    const kpiLines = wrapSvgText(singleLineKpi ? `KPI: ${singleLineKpi}` : "", 50).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
     const titleLineHeight = kind === "purpose" ? 36 : 25;
