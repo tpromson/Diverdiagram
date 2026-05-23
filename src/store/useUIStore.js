@@ -132,4 +132,12 @@ export const useUIStore = create((set) => ({
     set({ routeState: readAppLocation() });
     useDiagramStore.getState().clearSharedView();
   },
+
+  exitAllViews: () => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams();
+    replaceAppLocation(params);
+    set({ routeState: readAppLocation() });
+    useDiagramStore.getState().clearSharedView();
+  },
 }));

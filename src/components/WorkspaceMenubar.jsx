@@ -26,6 +26,7 @@ export function WorkspaceMenubar() {
   const language = useUIStore((state) => state.language);
   const setLanguage = useUIStore((state) => state.setLanguage);
   const setSavedDrawerOpen = useUIStore((state) => state.setSavedDrawerOpen);
+  const exitAllViews = useUIStore((state) => state.exitAllViews);
   const openGalleryPage = useUIStore((state) => state.openGalleryPage);
   const openAdminPage = useUIStore((state) => state.openAdminPage);
 
@@ -118,9 +119,14 @@ export function WorkspaceMenubar() {
     <nav className="sticky top-3 z-40 rounded-[24px] border border-sky-200 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 px-3 py-3 shadow-sm ring-1 ring-sky-100 backdrop-blur">
       <div className="flex flex-col gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex">
-            <GitBranch size={18} />
-          </div>
+          <button
+                type="button"
+                onClick={exitAllViews}
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex hover:bg-slate-800 transition cursor-pointer"
+                title={t.backToWorkspace}
+              >
+                <GitBranch size={18} />
+              </button>
           <div className="min-w-0 flex-1">
             <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700/70 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
               {t.appEyebrow}
