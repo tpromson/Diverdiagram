@@ -91,7 +91,6 @@ import {
   sortSavedDiagrams,
   normalizeStoredDiagramData,
   hasRenderableDiagramData,
-  computeFilteredSavedDiagrams,
   resolveDiagramDataForEditor,
   buildDiagramSnapshot,
   getThumbnailMarkup,
@@ -347,10 +346,7 @@ function App() {
     [documentTitle, data, codeInput]
   );
 
-  const filteredSavedDiagrams = useMemo(
-    () => computeFilteredSavedDiagrams({ savedDiagrams, savedScope, savedSearch, savedSort }),
-    [savedDiagrams, savedScope, savedSearch, savedSort]
-  );
+  const filteredSavedDiagrams = savedDiagrams;
 
   const filteredGalleryItems = useMemo(() => {
     const search = gallerySearch.trim().toLowerCase();

@@ -28,6 +28,8 @@ import { useUIStore } from "./useUIStore.js";
 const savedDiagramSelectFields =
   "id, title, purpose_title, diagram_data, mermaid_code, thumbnail_svg, created_at, updated_at, last_opened_at, is_favorite, archived_at, share_id, shared_at, share_expires_at, share_revoked_at";
 
+const SAVED_DIAGRAMS_PAGE_SIZE = 20;
+
 export const useDiagramStore = create((set, get) => ({
   data: normalizeStoredDiagramData(defaultData),
   documentTitle: defaultDocumentTitle,
@@ -40,6 +42,12 @@ export const useDiagramStore = create((set, get) => ({
   savedDiagrams: [],
   loadingSavedDiagrams: false,
   savingDiagram: false,
+  savedDiagramsOffset: 0,
+  savedDiagramsHasMore: false,
+  savedDiagramsTotal: 0,
+  savedDiagramsSearch: "",
+  savedDiagramsScope: "active",
+  savedDiagramsSort: "updated_desc",
   autoSaveState: "idle",
   openingDiagramId: "",
   deletingDiagramId: "",
@@ -737,25 +745,55 @@ export const useDiagramStore = create((set, get) => ({
     }
   },
 
-  loadSavedDiagrams: async () => {
+  loadSavedDiagrams: async (params = {}) => {
     const currentUser = useAuthStore.getState().currentUser;
+    const { search = "", scope = "active", sort = "updated_desc", offset = 0 } = params;
     if (!isSupabaseConfigured || !supabase || !currentUser?.id) {
-      set({ savedDiagrams: [], loadingSavedDiagrams: false });
+      set({ savedDiagrams: [], loadingSavedDiagrams: false, savedDiagramsHasMore: false, savedDiagramsTotal: 0 });
       return;
     }
 
     set({ loadingSavedDiagrams: true, storageError: "" });
     try {
-      const { data: rows, error } = await supabase
+      let query = supabase
         .from("driver_diagrams")
-        .select(savedDiagramSelectFields)
-        .order("updated_at", { ascending: false });
+        .select(savedDiagramSelectFields, { count: "exact" });
+
+      // Server-side search
+      if (search.trim()) {
+        query = query.or(`title.ilike.%${search}%,purpose_title.ilike.%${search}%`);
+      }
+
+      // Server-side scope filter
+      if (scope === "archived") {
+        query = query.not("archived_at", "is", null);
+      } else if (scope === "active") {
+        query = query.or("archived_at.is.null,archived_at.not.is.null").is("archived_at", null);
+      }
+      // "all" scope: no filter
+
+      // Server-side sort
+      const sortColumn = sort === "opened_desc" ? "last_opened_at" : sort === "title_asc" ? "title" : "updated_at";
+      query = query.order(sortColumn, { ascending: false });
+
+      // Pagination
+      query = query.range(offset, offset + SAVED_DIAGRAMS_PAGE_SIZE - 1);
+
+      const { data: rows, error, count } = await query;
 
       if (error) {
         set({ storageError: error.message || "Unable to load saved diagrams." });
       } else {
         const enriched = await get().enrichSavedDiagramsWithGalleryState(rows || []);
-        set({ savedDiagrams: enriched });
+        set({
+          savedDiagrams: offset === 0 ? enriched : [...get().savedDiagrams, ...enriched],
+          savedDiagramsOffset: offset,
+          savedDiagramsHasMore: (rows || []).length === SAVED_DIAGRAMS_PAGE_SIZE,
+          savedDiagramsTotal: count || 0,
+          savedDiagramsSearch: search,
+          savedDiagramsScope: scope,
+          savedDiagramsSort: sort,
+        });
       }
     } catch (err) {
       set({ storageError: err.message || "Unable to load saved diagrams." });
@@ -764,8 +802,20 @@ export const useDiagramStore = create((set, get) => ({
     }
   },
 
+  loadMoreSavedDiagrams: async () => {
+    const { savedDiagramsHasMore, savedDiagramsOffset, savedDiagramsSearch, savedDiagramsScope, savedDiagramsSort } = get();
+    if (!savedDiagramsHasMore) return;
+    await get().loadSavedDiagrams({
+      search: savedDiagramsSearch,
+      scope: savedDiagramsScope,
+      sort: savedDiagramsSort,
+      offset: savedDiagramsOffset + SAVED_DIAGRAMS_PAGE_SIZE,
+    });
+  },
+
   refreshSavedDiagrams: async () => {
-    await get().loadSavedDiagrams();
+    const { savedDiagramsSearch, savedDiagramsScope, savedDiagramsSort } = get();
+    await get().loadSavedDiagrams({ search: savedDiagramsSearch, scope: savedDiagramsScope, sort: savedDiagramsSort, offset: 0 });
   },
 
   upsertSavedDiagram: (row) => {
