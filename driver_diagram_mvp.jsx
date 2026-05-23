@@ -1652,67 +1652,71 @@ function App() {
             </div>
 
             <div className={`mt-4 ${workbenchMutedPanelClass}`}>
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0">
-                  <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
-                  <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
-                </div>
-                <div className="inline-flex w-fit max-w-full shrink-0 items-center rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
-                  {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
-                </div>
-              </div>
-              <div className="mt-3 space-y-2">
-                {!isAuthenticated ? (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    {t.signInForVersionHistory}
-                  </div>
-                ) : !currentDiagramId ? (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    {t.openSavedFirst}
-                  </div>
-                ) : loadingVersionHistory ? (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    {t.loadingVersionHistory}
-                  </div>
-                ) : versionHistory.length ? (
-                  versionHistory.map((version) => (
-                    <div key={version.id} className="flex flex-col gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <History size={14} className="text-slate-400" />
-                          <div className="truncate font-semibold text-slate-900">{version.title || documentTitle || defaultDocumentTitle}</div>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-600">
-                            {version.save_source}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {t.saved}: {formatSavedDateTime(version.created_at, language)}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => restoreVersion(version)}
-                          disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-                        >
-                          <History size={14} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
-                        </button>
-                        <button
-                          onClick={() => restoreVersion(version, { saveImmediately: true })}
-                          disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-                        >
-                          <RefreshCw size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
-                        </button>
-                      </div>
+              {!isReadOnlySharedView && (
+                <>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
+                      <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                    {t.noVersions}
+                    <div className="inline-flex w-fit max-w-full shrink-0 items-center rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                      {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="mt-3 space-y-2">
+                    {!isAuthenticated ? (
+                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                        {t.signInForVersionHistory}
+                      </div>
+                    ) : !currentDiagramId ? (
+                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                        {t.openSavedFirst}
+                      </div>
+                    ) : loadingVersionHistory ? (
+                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                        {t.loadingVersionHistory}
+                      </div>
+                    ) : versionHistory.length ? (
+                      versionHistory.map((version) => (
+                        <div key={version.id} className="flex flex-col gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <History size={14} className="text-slate-400" />
+                              <div className="truncate font-semibold text-slate-900">{version.title || documentTitle || defaultDocumentTitle}</div>
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-600">
+                                {version.save_source}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              {t.saved}: {formatSavedDateTime(version.created_at, language)}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => restoreVersion(version)}
+                              disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              <History size={14} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
+                            </button>
+                            <button
+                              onClick={() => restoreVersion(version, { saveImmediately: true })}
+                              disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                            >
+                              <RefreshCw size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                        {t.noVersions}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>

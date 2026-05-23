@@ -1,4 +1,4 @@
-const uid = () => Math.random().toString(36).slice(2, 9);
+const uid = () => crypto.randomUUID();
 
 export const SHARE_LINK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_VERSION_HISTORY = 50;
