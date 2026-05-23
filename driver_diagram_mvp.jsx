@@ -737,19 +737,17 @@ function App() {
             titleSuffix={<span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">{t.readOnlySharedLink}</span>}
             mobileOverflowLabel={t.more}
             desktopSecondary={<LanguageToggle language={language} onChange={setLanguage} t={t} />}
-            desktopPrimary={isAuthenticated ? (
+            desktopPrimary={
               <HeaderActionButton onClick={exitSharedView}>
                 <ExternalLink size={16} /> {t.backToWorkspace}
               </HeaderActionButton>
-            ) : null}
+            }
             mobileOverflow={
               <>
                 <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
-                {isAuthenticated ? (
-                  <HeaderActionButton onClick={exitSharedView} className="w-full justify-start">
-                    <ExternalLink size={16} /> {t.backToWorkspace}
-                  </HeaderActionButton>
-                ) : null}
+                <HeaderActionButton onClick={exitSharedView} className="w-full justify-start">
+                  <ExternalLink size={16} /> {t.backToWorkspace}
+                </HeaderActionButton>
               </>
             }
             supportingContent={
