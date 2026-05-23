@@ -18,7 +18,8 @@ import {
   normalizeStoredDiagramData,
   resolveDiagramDataForEditor,
   buildDiagramSnapshot,
-  buildStoredThumbnailSvg
+  buildStoredThumbnailSvg,
+  buildGalleryDisplayName
 } from "../utils/helpers.js";
 import { buildMermaidCode, sanitizeMermaidCode, buildTemplateSvg, parseMermaidCode } from "../utils/mermaidParser.js";
 import { useAuthStore } from "./useAuthStore.js";
