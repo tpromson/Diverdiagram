@@ -142,17 +142,20 @@ export function WorkspaceMenubar() {
               {title}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
+              <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
                 {syncLabel}
-                <button
-                  type="button"
-                  onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
-                  title={autoSaveEnabled ? t.autoSaveOn || "Auto-save on" : t.autoSaveOff || "Auto-save off"}
-                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold transition ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300" : "bg-slate-200 text-slate-500 hover:bg-slate-300"}`}
-                >
-                  {autoSaveEnabled ? "ON" : "OFF"}
-                </button>
               </span>
+              <button
+                type="button"
+                onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+                title={autoSaveEnabled ? (t.autoSaveOn || "Auto-save on") : (t.autoSaveOff || "Auto-save off")}
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 transition ${autoSaveEnabled ? "bg-emerald-100 text-emerald-700 ring-emerald-200 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200 hover:bg-slate-200"}`}
+              >
+                Auto
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800" : "bg-slate-200 text-slate-600"}`}>
+                  {autoSaveEnabled ? "ON" : "OFF"}
+                </span>
+              </button>
             </div>
           </div>
         </div>
