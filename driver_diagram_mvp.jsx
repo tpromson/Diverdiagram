@@ -1477,7 +1477,7 @@ function App() {
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="rounded-[24px] border border-pink-100 bg-pink-50 p-4 shadow-sm ring-1 ring-pink-100/70">
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
                   {t.topLevelGoal}
                 </div>
