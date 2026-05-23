@@ -589,7 +589,7 @@ export function buildTemplateSvg(diagramData) {
     
     // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
     const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 22 : 26);
-    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 30).filter(Boolean);
+    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 34).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 28 : 18;
     const kpiFontSize = kind === "purpose" ? 16 : 15;
     const titleLineHeight = kind === "purpose" ? 40 : 28;

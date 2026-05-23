@@ -403,6 +403,14 @@ describe("wrapSvgText", () => {
     const result = wrapSvgText("exactly28characterstext!!", 28);
     expect(result).toEqual(["exactly28characterstext!!"]);
   });
+
+  it("keeps Thai text 'ผ่านเกณฑ์' and '> 80%' on the same line when maxChars is 34", () => {
+    const text = "KPI: ร้อยละของผู้ป่วยที่มีความรู้เรื่องเบาหวานผ่านเกณฑ์ > 80%";
+    const result = wrapSvgText(text, 34);
+    const matchLine = result.find(line => line.includes("ผ่านเกณฑ์"));
+    expect(matchLine).toBeDefined();
+    expect(matchLine).toContain("> 80%");
+  });
 });
 
 // ─── normalizeNodeLabel ────────────────────────────────────────────────────
