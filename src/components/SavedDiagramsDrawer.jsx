@@ -28,6 +28,7 @@ import {
   getSavedDiagramScopeOptions,
   hasActiveShareLink,
   sortSavedDiagrams,
+  computeFilteredSavedDiagrams,
 } from "../utils/helpers.js";
 
 export function SavedDiagramsDrawer() {
@@ -83,21 +84,10 @@ export function SavedDiagramsDrawer() {
   const savedDiagramScopeOptions = useMemo(() => getSavedDiagramScopeOptions(t), [t]);
   const savedDiagramSortOptions = useMemo(() => getSavedDiagramSortOptions(t), [t]);
 
-  const filteredSavedDiagrams = useMemo(() => {
-    const search = savedSearch.trim().toLowerCase();
-    const scoped = savedDiagrams.filter((item) => {
-      if (savedScope === "archived") return Boolean(item.archived_at);
-      if (savedScope === "all") return true;
-      return !item.archived_at;
-    });
-    const filtered = search
-      ? scoped.filter((item) =>
-          `${item.title || ""}\n${item.purpose_title || ""}`.toLowerCase().includes(search)
-        )
-      : scoped;
-
-    return sortSavedDiagrams(filtered, savedSort);
-  }, [savedDiagrams, savedScope, savedSearch, savedSort]);
+  const filteredSavedDiagrams = useMemo(
+    () => computeFilteredSavedDiagrams({ savedDiagrams, savedScope, savedSearch, savedSort }),
+    [savedDiagrams, savedScope, savedSearch, savedSort]
+  );
 
   useEffect(() => {
     if (!open) return undefined;

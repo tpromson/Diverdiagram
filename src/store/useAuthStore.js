@@ -183,7 +183,8 @@ export const useAuthStore = create((set, get) => ({
     } else {
       set({
         authMessage: `Check ${email} for the sign-in link.`,
-        authSubmitting: false
+        authSubmitting: false,
+        authError: ""
       });
       return true;
     }
