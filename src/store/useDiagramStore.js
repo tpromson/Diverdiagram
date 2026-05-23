@@ -1111,6 +1111,9 @@ export const useDiagramStore = create((set, get) => ({
 
       get().upsertSavedDiagram(row);
       await get().refreshVersionHistory(row.id);
+
+      // Close drawer after opening
+      useUIStore.getState().setSavedDrawerOpen(false);
     } catch (err) {
       set({ storageError: err.message || "Unable to open this diagram.", openingDiagramId: "" });
     }
