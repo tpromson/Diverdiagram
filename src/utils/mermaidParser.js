@@ -587,9 +587,6 @@ export function buildTemplateSvg(diagramData) {
     // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
     const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
     
-    // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
-    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 22 : 26);
-    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 34).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 28 : 18;
     const kpiFontSize = kind === "purpose" ? 16 : 15;
     const titleLineHeight = kind === "purpose" ? 40 : 28;
@@ -597,6 +594,14 @@ export function buildTemplateSvg(diagramData) {
     
     const paddingX = kind === "purpose" ? 24 : 22;
     const paddingTop = kind === "purpose" ? 22 : 20;
+
+    const availableWidth = width - 2 * paddingX;
+    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.60 : 0.72)));
+    const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.66));
+    
+    // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
+    const titleLines = wrapSvgText(singleLineTitle, titleMaxChars);
+    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", kpiMaxChars).filter(Boolean);
     
     // Correct baseline vertical offset for premium typography rendering (prevent top-line touch & fill bottom empty space)
     const titleBaseline = paddingTop + titleFontSize * 0.8;
