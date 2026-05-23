@@ -799,13 +799,17 @@ export function buildTemplateSvg(diagramData) {
 
   const purposeConnector = primaryCenters.length
     ? `
-      <path d="M ${columns.goalX + goalCard.width} ${goalCenterY} H ${purposeTrunkX} V ${primaryCenters[0].y} H ${primaryJoinX}
-               M ${purposeTrunkX} ${primaryCenters[0].y} V ${primaryCenters[primaryCenters.length - 1].y}"
-            fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Main trunk pointing left to Goal/Aim -->
+      <path d="M ${purposeTrunkX} ${goalCenterY} H ${columns.goalX + goalCard.width + 8}"
+            fill="none" stroke="${theme.connector}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+      <!-- Vertical trunk line connecting all branches -->
+      <path d="M ${purposeTrunkX} ${primaryCenters[0].y} V ${primaryCenters[primaryCenters.length - 1].y}"
+            fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />
+      <!-- Branches from Primary Drivers to trunk -->
       ${primaryCenters
         .map(
           (center) =>
-            `<path d="M ${primaryJoinX} ${center.y} H ${columns.primaryX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
+            `<path d="M ${columns.primaryX} ${center.y} H ${purposeTrunkX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
         )
         .join("")}
     `
@@ -814,7 +818,7 @@ export function buildTemplateSvg(diagramData) {
   const secondaryConnectorMarkup = secondaryConnectors
     .map(
       ({ from, to }) =>
-        `<path d="M ${from.x} ${from.y} H ${from.x + 26} V ${to.y} H ${to.x}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`
+        `<path d="M ${to.x} ${to.y} H ${from.x + 36} V ${from.y} H ${from.x + 8}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />`
     )
     .join("");
 
@@ -822,16 +826,25 @@ export function buildTemplateSvg(diagramData) {
     .map(({ from, to }) => {
       if (!to.length) return "";
       const joinX = from.x + 46;
-      const vertical = to.length > 1 ? `M ${joinX} ${to[0].y} V ${to[to.length - 1].y}` : "";
+      
+      // Main horizontal arrow pointing left into the Secondary Driver
+      const mainArrow = `<path d="M ${joinX} ${from.y} H ${from.x + 8}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow)" />`;
+      
+      // Vertical trunk connecting all Change Ideas
+      const vertical = to.length > 1 ? `<path d="M ${joinX} ${to[0].y} V ${to[to.length - 1].y}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />` : "";
+      
+      // Branch lines from each Change Idea to the vertical trunk
+      const branches = to
+        .map(
+          (target) =>
+            `<path d="M ${target.x} ${target.y} H ${joinX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
+        )
+        .join("");
+        
       return `
-        <path d="M ${from.x} ${from.y} H ${joinX}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />
-        <path d="${vertical}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />
-        ${to
-          .map(
-            (target) =>
-              `<path d="M ${joinX} ${target.y} H ${target.x}" fill="none" stroke="${theme.connector}" stroke-width="2.5" stroke-linecap="round" />`
-          )
-          .join("")}
+        ${mainArrow}
+        ${vertical}
+        ${branches}
       `;
     })
     .join("");
@@ -851,6 +864,10 @@ export function buildTemplateSvg(diagramData) {
     <filter id="goalShadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#9d174d" flood-opacity="0.12"/>
     </filter>
+    <!-- Beautiful modern arrowhead pointing left (drawn right-facing for auto orient rotation) -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 2 2.5 L 8 5 L 2 7.5 z" fill="${theme.connector}" />
+    </marker>
   </defs>
   <rect width="100%" height="100%" fill="${theme.bg}" />
   ${headers}
