@@ -432,28 +432,45 @@ export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
 
 export function buildTemplateSvg(diagramData) {
   const theme = {
-    bg: "#ffffff",
-    headerBg: "#eef4ff",
-    headerPurposeBg: "#eaf0ff",
-    headerSecondaryBg: "#e8fbff",
-    headerChangeBg: "#e9faf0",
-    headerText: "#1d4ed8",
-    headerSecondaryText: "#0f7490",
-    headerChangeText: "#047857",
-    purposeFill: "#4f46e5",
-    purposeStroke: "#4338ca",
-    purposeText: "#ffffff",
-    purposeKpiText: "#e0e7ff",
+    bg: "#f8fafc", // slate-50 neutral base
+    headerBg: "#dbeafe", // blue-100
+    headerPurposeBg: "#fce4ec", // pink-100
+    headerSecondaryBg: "#fef3c7", // amber-100
+    headerChangeBg: "#ffedd5", // orange-100
+    headerText: "#1565c0",
+    headerSecondaryText: "#92400e",
+    headerChangeText: "#c2410c",
+    
+    // AIM/Goal (Purpose)
+    purposeFill: "#fce4ec", // pink-50
+    purposeStroke: "#f8bbd0", // pink-200
+    purposeText: "#9d174d", // pink-800
+    purposeKpiText: "#c2185b", // pink-700
+    
+    // Primary Driver
+    primaryFill: "#dbeafe", // blue-50
+    primaryStroke: "#93c5fd", // blue-200
+    primaryText: "#1565c0", // blue-800
+    primaryKpiText: "#1976d2", // blue-700
+    
+    // Secondary Driver
+    secondaryFill: "#fef3c7", // amber-50
+    secondaryStroke: "#fcd34d", // amber-200
+    secondaryText: "#92400e", // amber-800
+    secondaryKpiText: "#b7791f", // amber-700
+    
+    // Change Idea
+    changeFill: "#ffedd5", // orange-50
+    changeStroke: "#fed7aa", // orange-200
+    changeText: "#c2410c", // orange-800
+    changeKpiText: "#ea580c", // orange-700
+    
+    bodyText: "#1e293b", // slate-800
+    mutedText: "#475569", // slate-600
+    connector: "#94a3b8", // slate-400
+    border: "#e2e8f0", // slate-200
     cardFill: "#ffffff",
-    cardStroke: "#d9e2ef",
-    primaryAccent: "#3b82f6",
-    secondaryAccent: "#06b6d4",
-    changeFill: "#ecfdf5",
-    changeStroke: "#c7f0db",
-    changeText: "#064e3b",
-    bodyText: "#334155",
-    mutedText: "#94a3b8",
-    connector: "#cbd5e1",
+    cardStroke: "#e2e8f0",
   };
 
   const layout = {
@@ -531,11 +548,11 @@ export function buildTemplateSvg(diagramData) {
   };
 
   const primaryGroups = diagramData.primaryDrivers.map((primary) => {
-    const primaryCard = makeCard("primary", primary.title, primary.kpi, layout.primaryW, theme.primaryAccent);
+    const primaryCard = makeCard("primary", primary.title, primary.kpi, layout.primaryW, theme.primaryText);
     const secondaryBlocks = primary.secondaryDrivers.map((secondary) => {
-      const secondaryCard = makeCard("secondary", secondary.title, secondary.kpi, layout.secondaryW, theme.secondaryAccent);
+      const secondaryCard = makeCard("secondary", secondary.title, secondary.kpi, layout.secondaryW, theme.secondaryText);
       const changeCards = (secondary.changeIdeas.length ? secondary.changeIdeas : [{ title: "", kpi: "" }]).map((change) =>
-        makeCard("change", change.title, change.kpi, layout.changeW)
+        makeCard("change", change.title, change.kpi, layout.changeW, theme.changeText)
       );
       const changeStackHeight =
         changeCards.reduce((sum, card) => sum + card.height, 0) +
@@ -621,29 +638,59 @@ export function buildTemplateSvg(diagramData) {
       .join("");
 
   const renderCardMarkup = ({ x, y, card }) => {
-    const radius = card.kind === "purpose" ? 20 : 18;
-    const fill =
-      card.kind === "purpose" ? theme.purposeFill : card.kind === "change" ? theme.changeFill : theme.cardFill;
-    const stroke =
-      card.kind === "purpose" ? theme.purposeStroke : card.kind === "change" ? theme.changeStroke : theme.cardStroke;
-    const titleFill = card.kind === "purpose" ? theme.purposeText : card.kind === "change" ? theme.changeText : theme.bodyText;
-    const kpiFill = card.kind === "purpose" ? theme.purposeKpiText : theme.mutedText;
+    const radius = 24; // Matches rounded.lg (24px) in DESIGN.md
+    
+    let fill = theme.cardFill;
+    let stroke = theme.cardStroke;
+    let titleFill = theme.bodyText;
+    let kpiFill = theme.mutedText;
+    let separatorColor = theme.border;
+    
+    if (card.kind === "purpose") {
+      fill = theme.purposeFill;
+      stroke = theme.purposeStroke;
+      titleFill = theme.purposeText;
+      kpiFill = theme.purposeKpiText;
+      separatorColor = "rgba(157, 23, 77, 0.15)";
+    } else if (card.kind === "primary") {
+      fill = theme.primaryFill;
+      stroke = theme.primaryStroke;
+      titleFill = theme.primaryText;
+      kpiFill = theme.primaryKpiText;
+      separatorColor = "rgba(21, 101, 192, 0.15)";
+    } else if (card.kind === "secondary") {
+      fill = theme.secondaryFill;
+      stroke = theme.secondaryStroke;
+      titleFill = theme.secondaryText;
+      kpiFill = theme.secondaryKpiText;
+      separatorColor = "rgba(146, 64, 14, 0.15)";
+    } else if (card.kind === "change") {
+      fill = theme.changeFill;
+      stroke = theme.changeStroke;
+      titleFill = theme.changeText;
+      kpiFill = theme.changeKpiText;
+      separatorColor = "rgba(194, 65, 12, 0.15)";
+    }
+    
     const shadow = card.kind === "purpose" ? "url(#goalShadow)" : "url(#cardShadow)";
-    const separatorColor = card.kind === "purpose" ? "rgba(255,255,255,0.24)" : "#eef2f7";
-    const accent = card.accentColor
-      ? `<rect x="${x}" y="${y}" width="6" height="${card.height}" rx="${radius}" fill="${card.accentColor}" />`
-      : "";
+    const accentColor = card.kind === "purpose" ? theme.purposeText :
+                        card.kind === "primary" ? theme.primaryText :
+                        card.kind === "secondary" ? theme.secondaryText :
+                        theme.changeText;
+                        
+    const accent = `<rect x="${x}" y="${y}" width="6" height="${card.height}" rx="3" fill="${accentColor}" />`;
+    
     const separator = card.kpiLines.length
       ? `<line x1="${x + card.paddingX}" y1="${y + card.separatorY}" x2="${x + card.width - card.paddingX}" y2="${y + card.separatorY}" stroke="${separatorColor}" stroke-width="1.25"/>`
       : "";
 
     return `
       <g>
-        <rect x="${x}" y="${y}" width="${card.width}" height="${card.height}" rx="${radius}" fill="${fill}" stroke="${stroke}" filter="${shadow}"/>
+        <rect x="${x}" y="${y}" width="${card.width}" height="${card.height}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" filter="${shadow}"/>
         ${accent}
-        <text font-family="Inter, Arial, sans-serif">
-          ${renderTextLines(card.titleLines, x + card.paddingX + (card.accentColor ? 8 : 0), y + card.paddingTop, card.titleFontSize, card.titleLineHeight, titleFill, 600)}
-          ${renderTextLines(card.kpiLines, x + card.paddingX + (card.accentColor ? 8 : 0), y + card.kpiTop, card.kpiFontSize, card.kpiLineHeight, kpiFill, 600)}
+        <text font-family="'IBM Plex Sans Thai', 'Noto Sans Thai', 'Inter', sans-serif">
+          ${renderTextLines(card.titleLines, x + card.paddingX + 8, y + card.paddingTop, card.titleFontSize, card.titleLineHeight, titleFill, 600)}
+          ${renderTextLines(card.kpiLines, x + card.paddingX + 8, y + card.kpiTop, card.kpiFontSize, card.kpiLineHeight, kpiFill, 500)}
         </text>
         ${separator}
       </g>
@@ -652,16 +699,16 @@ export function buildTemplateSvg(diagramData) {
 
   const headerY = layout.topPad;
   const headers = [
-    { x: headerX.goal, label: "เป้าหมาย (AIM)", bg: theme.headerPurposeBg, color: "#3343c4" },
-    { x: headerX.primary, label: "PRIMARY DRIVERS", bg: theme.headerBg, color: theme.headerText },
-    { x: headerX.secondary, label: "SECONDARY DRIVERS", bg: theme.headerSecondaryBg, color: theme.headerSecondaryText },
-    { x: headerX.change, label: "CHANGE IDEAS", bg: theme.headerChangeBg, color: theme.headerChangeText },
+    { x: headerX.goal, label: "เป้าหมาย (AIM)", bg: theme.headerPurposeBg, color: theme.purposeText },
+    { x: headerX.primary, label: "PRIMARY DRIVERS", bg: theme.headerBg, color: theme.primaryText },
+    { x: headerX.secondary, label: "SECONDARY DRIVERS", bg: theme.headerSecondaryBg, color: theme.secondaryText },
+    { x: headerX.change, label: "CHANGE IDEAS", bg: theme.headerChangeBg, color: theme.changeText },
   ]
     .map(
       (header) => `
         <g>
-          <rect x="${header.x}" y="${headerY}" width="${headerWidth}" height="${layout.headerH}" rx="10" fill="${header.bg}" />
-          <text x="${header.x + headerWidth / 2}" y="${headerY + 30}" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="${header.color}" letter-spacing="0.3">${escapeSvgText(header.label)}</text>
+          <rect x="${header.x}" y="${headerY}" width="${headerWidth}" height="${layout.headerH}" rx="12" fill="${header.bg}" />
+          <text x="${header.x + headerWidth / 2}" y="${headerY + 29}" text-anchor="middle" font-family="'IBM Plex Sans Thai', 'Noto Sans Thai', 'Inter', sans-serif" font-size="16" font-weight="700" fill="${header.color}" letter-spacing="0.5">${escapeSvgText(header.label)}</text>
         </g>
       `
     )
@@ -709,11 +756,17 @@ export function buildTemplateSvg(diagramData) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${layout.canvasWidth}" height="${svgHeight}" viewBox="0 0 ${layout.canvasWidth} ${svgHeight}" role="img" aria-label="Driver Diagram">
   <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap');
+      text, tspan {
+        font-family: 'IBM Plex Sans Thai', 'Noto Sans Thai', 'Inter', sans-serif;
+      }
+    </style>
     <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="5" stdDeviation="9" flood-color="#94a3b8" flood-opacity="0.11"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08"/>
     </filter>
     <filter id="goalShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#312e81" flood-opacity="0.2"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#9d174d" flood-opacity="0.12"/>
     </filter>
   </defs>
   <rect width="100%" height="100%" fill="${theme.bg}" />

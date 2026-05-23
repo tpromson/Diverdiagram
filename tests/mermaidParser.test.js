@@ -396,7 +396,7 @@ describe("wrapSvgText", () => {
   });
 
   it("handles empty string", () => {
-    expect(wrapSvgText("", 28)).toEqual([""]);
+    expect(wrapSvgText("", 28, 3)).toEqual([""]);
   });
 
   it("returns trimmed paragraph as single line when exact max", () => {
