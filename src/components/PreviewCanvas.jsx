@@ -10,7 +10,7 @@ export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel 
     return (
       <div
         onWheel={onWheel}
-        className={`preview-surface flex min-h-[16rem] items-center justify-center overflow-auto rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 ${className}`}
+        className={`preview-surface flex min-h-[16rem] items-center justify-center overflow-hidden rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 ${className}`}
       >
         <div className="max-w-sm rounded-[28px] border border-dashed border-slate-300 bg-white/80 px-6 py-8 text-center shadow-sm">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
@@ -26,15 +26,18 @@ export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel 
   return (
     <div
       onWheel={onWheel}
-      className={`preview-surface overflow-auto rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
+      className={`preview-surface flex items-center justify-center overflow-hidden rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
     >
-      <div className="preview-paper shadow-sm">
-        <div
-          className="diagram-preview"
-          style={{ "--diagram-scale": zoom }}
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
-      </div>
+      <div
+        className="diagram-preview"
+        style={{ 
+          transform: `scale(${zoom})`,
+          transformOrigin: "center center",
+          width: "1980px",
+          maxWidth: "100%",
+        }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
     </div>
   );
 }
