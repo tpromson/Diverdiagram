@@ -387,6 +387,10 @@ export function escapeSvgText(text = "") {
     .replace(/'/g, "&apos;");
 }
 
+export function getVisualLength(str) {
+  return String(str || "").replace(/[\u0e31\u0e34-\u0e3a\u0e47-\u0e4e]/g, "").length;
+}
+
 export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
   // Merge common Thai compound words that segmenter splits incorrectly
   const mergeThaiTokens = (tokens) => {
@@ -486,7 +490,7 @@ export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
         const next = `${current}${token}`;
         const normalizedCurrent = current.trim();
         const normalizedNext = next.trim();
-        if (normalizedCurrent && normalizedNext.length > maxChars) {
+        if (normalizedCurrent && getVisualLength(normalizedNext) > maxChars) {
           result.push(normalizedCurrent);
           current = token.trimStart();
         } else {
@@ -596,8 +600,8 @@ export function buildTemplateSvg(diagramData) {
     const paddingTop = kind === "purpose" ? 22 : 20;
 
     const availableWidth = width - 2 * paddingX;
-    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.46 : 0.52)));
-    const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.66));
+    const titleMaxChars = Math.floor(availableWidth / (titleFontSize * (kind === "purpose" ? 0.44 : 0.48)));
+    const kpiMaxChars = Math.floor(availableWidth / (kpiFontSize * 0.48));
     
     // Wrap text lines properly (unlimited lines to prevent truncation of words like "เดือน")
     const titleLines = wrapSvgText(singleLineTitle, titleMaxChars);
