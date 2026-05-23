@@ -509,9 +509,13 @@ export function buildTemplateSvg(diagramData) {
     // Join any embedded newlines into single space to prevent forced line breaks in card
     const singleLineTitle = String(title || "").replace(/\n/g, " ").trim();
     const singleLineKpi = String(kpi || "").replace(/\n/g, " ").trim();
-    // Large maxChars so text stays on as few lines as possible; maxLines=3 caps height at 3 lines
-    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 60 : 80, 3);
-    const kpiLines = wrapSvgText(singleLineKpi ? `KPI: ${singleLineKpi}` : "", 80, 3).filter(Boolean);
+    
+    // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
+    const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
+    
+    // Wrap text lines properly to prevent overflowing card width
+    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 24 : 28, 3);
+    const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 34, 3).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
     const titleLineHeight = kind === "purpose" ? 36 : 25;
