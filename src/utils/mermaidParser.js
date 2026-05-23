@@ -388,15 +388,80 @@ export function escapeSvgText(text = "") {
 }
 
 export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
+  // Merge common Thai compound words that segmenter splits incorrectly
+  const mergeThaiTokens = (tokens) => {
+    const merged = [];
+    for (let i = 0; i < tokens.length; i++) {
+      let current = tokens[i];
+      let next = tokens[i + 1];
+      
+      if (next) {
+        // Rule 1: "ผู้" + next Thai word
+        if (current === "ผู้" && /[\u0e00-\u0e7f]/.test(next)) {
+          current = current + next;
+          i++;
+          // Check for service recipient: "ผู้รับบริการ"
+          const nextNext = tokens[i + 1];
+          if (nextNext && next === "รับ" && nextNext === "บริการ") {
+            current = current + nextNext;
+            i++;
+          }
+        }
+        // Rule 2: "โรง" + "พยาบาล"
+        else if (current === "โรง" && next === "พยาบาล") {
+          current = "โรงพยาบาล";
+          i++;
+        }
+        // Rule 3: "เบา" + "หวาน"
+        else if (current === "เบา" && next === "หวาน") {
+          current = "เบาหวาน";
+          i++;
+        }
+        // Rule 4: "น้ำ" + "ตาล"
+        else if (current === "น้ำ" && next === "ตาล") {
+          current = "น้ำตาล";
+          i++;
+        }
+        // Rule 5: "ติด" + "ตาม"
+        else if (current === "ติด" && next === "ตาม") {
+          current = "ติดตาม";
+          i++;
+        }
+        // Rule 6: "เยี่ยม" + "บ้าน"
+        else if (current === "เยี่ยม" && next === "บ้าน") {
+          current = "เยี่ยมบ้าน";
+          i++;
+        }
+      }
+      merged.push(current);
+    }
+    return merged;
+  };
+
   const segmentText = (input) => {
-    if (typeof Intl !== "undefined" && Intl.Segmenter) {
-      const segmenter = new Intl.Segmenter("th", { granularity: "word" });
-      return Array.from(segmenter.segment(input), (part) => part.segment);
-    }
-    if (input.includes(" ")) {
-      return input.split(/(\s+)/).filter(Boolean);
-    }
-    return Array.from(input);
+    // 1. Identify English parenthetical blocks and split so they stay together
+    const parts = input.split(/(\s*\(.+?\))/g).filter(Boolean);
+    const allTokens = [];
+    
+    parts.forEach((part) => {
+      // If it's a parenthetical expression, keep it whole as one token
+      if (part.trim().startsWith("(") && part.trim().endsWith(")")) {
+        allTokens.push(part);
+      } else {
+        // Otherwise, segment using Intl.Segmenter or fallbacks
+        if (typeof Intl !== "undefined" && Intl.Segmenter) {
+          const segmenter = new Intl.Segmenter("th", { granularity: "word" });
+          const segments = Array.from(segmenter.segment(part), (p) => p.segment);
+          allTokens.push(...mergeThaiTokens(segments));
+        } else if (part.includes(" ")) {
+          allTokens.push(...part.split(/(\s+)/).filter(Boolean));
+        } else {
+          allTokens.push(...Array.from(part));
+        }
+      }
+    });
+    
+    return allTokens;
   };
 
   const lines = String(text || "")
@@ -513,8 +578,8 @@ export function buildTemplateSvg(diagramData) {
     // Clean pre-existing "KPI:" prefixes to avoid "KPI: KPI:" duplication
     const cleanKpi = singleLineKpi.replace(/^kpi:\s*/i, "").trim();
     
-    // Wrap text lines properly to prevent overflowing card width
-    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 24 : 28, 3);
+    // Wrap text lines properly to prevent overflowing card width (calibrated for Thai/English)
+    const titleLines = wrapSvgText(singleLineTitle, kind === "purpose" ? 28 : 32, 3);
     const kpiLines = wrapSvgText(cleanKpi ? `KPI: ${cleanKpi}` : "", 34, 3).filter(Boolean);
     const titleFontSize = kind === "purpose" ? 24 : 16;
     const kpiFontSize = kind === "purpose" ? 14 : 13;
