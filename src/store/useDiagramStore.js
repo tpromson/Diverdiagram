@@ -102,6 +102,13 @@ export const useDiagramStore = create((set, get) => ({
   setExportingDocx: (exportingDocx) => set({ exportingDocx }),
   setExportError: (exportError) => set({ exportError }),
 
+  clearSharedView: () => set({
+    sharedView: null,
+    sharedViewLoading: false,
+    sharedViewError: "",
+    sharedOpenedAt: "",
+  }),
+
   copyMermaid: () => {
     const codeInput = get().codeInput;
     navigator.clipboard.writeText(sanitizeMermaidCode(codeInput));

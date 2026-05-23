@@ -7,6 +7,7 @@ import {
   replaceAppLocation,
 } from "../utils/helpers.js";
 import { defaultLanguage } from "../utils/translations.js";
+import { useDiagramStore } from "./useDiagramStore.js";
 import {
   PREVIEW_ZOOM_MIN,
   PREVIEW_ZOOM_MAX,
@@ -129,5 +130,6 @@ export const useUIStore = create((set) => ({
     params.delete("share");
     replaceAppLocation(params);
     set({ routeState: readAppLocation() });
-  }
+    useDiagramStore.getState().clearSharedView();
+  },
 }));
