@@ -471,7 +471,7 @@ function App() {
 
     const timeoutId = window.setTimeout(() => {
       saveDiagram({ isAuto: true });
-    }, 1500);
+    }, 3000);
 
     return () => {
       window.clearTimeout(timeoutId);
