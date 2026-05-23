@@ -39,6 +39,8 @@ export function WorkspaceMenubar() {
   const autoSaveState = useDiagramStore((state) => state.autoSaveState);
   const copied = useDiagramStore((state) => state.copied);
   const exportingDocx = useDiagramStore((state) => state.exportingDocx);
+  const exportingPdf = useDiagramStore((state) => state.exportingPdf);
+  const downloadPdf = useDiagramStore((state) => state.downloadPdf);
   const startNewDiagram = useDiagramStore((state) => state.startNewDiagram);
   const copyMermaid = useDiagramStore((state) => state.copyMermaid);
   const downloadMermaid = useDiagramStore((state) => state.downloadMermaid);
@@ -189,6 +191,13 @@ export function WorkspaceMenubar() {
                 </HeaderActionButton>
                 <HeaderActionButton
                   variant="violet"
+                  onClick={() => runExportAction(downloadPdf)}
+                  disabled={exportingPdf}
+                >
+                  <Download size={16} /> {exportingPdf ? t.exporting : t.exportPdf}
+                </HeaderActionButton>
+                <HeaderActionButton
+                  variant="violet"
                   onClick={() => runExportAction(downloadDocx)}
                   disabled={exportingDocx}
                 >
@@ -229,6 +238,14 @@ export function WorkspaceMenubar() {
             </HeaderActionButton>
             <HeaderActionButton variant="orange" className="w-full justify-start" onClick={downloadPng}>
               <Download size={16} /> {t.exportPng}
+            </HeaderActionButton>
+            <HeaderActionButton
+              variant="violet"
+              className="w-full justify-start"
+              onClick={downloadPdf}
+              disabled={exportingPdf}
+            >
+              <Download size={16} /> {exportingPdf ? t.exporting : t.exportPdf}
             </HeaderActionButton>
             <HeaderActionButton
               variant="violet"

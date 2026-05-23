@@ -53,6 +53,7 @@ export const useDiagramStore = create((set, get) => ({
   storageError: "",
   copied: false,
   exportingDocx: false,
+  exportingPdf: false,
   exportError: "",
 
   sharedView: null,
@@ -100,6 +101,7 @@ export const useDiagramStore = create((set, get) => ({
   setCodeSource: (codeSource) => set({ codeSource }),
   setCopied: (copied) => set({ copied }),
   setExportingDocx: (exportingDocx) => set({ exportingDocx }),
+  setExportingPdf: (exportingPdf) => set({ exportingPdf }),
   setExportError: (exportError) => set({ exportError }),
 
   clearSharedView: () => set({
@@ -211,6 +213,55 @@ export const useDiagramStore = create((set, get) => ({
     } catch (error) {
       console.error("PNG export error:", error);
       alert("Failed to export PNG. Please try again.");
+    }
+  },
+
+  downloadPdf: async () => {
+    try {
+      set({ exportError: "", exportingPdf: true });
+      const { data, codeInput, documentTitle } = get();
+      let exportData = data;
+      try {
+        exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
+      } catch (_error) {
+        exportData = data;
+      }
+      const svgString = buildTemplateSvg(exportData);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = async () => {
+        const svgWidth = parseInt(svgString.match(/width="(\d+)"/)?.[1] || "1200", 10);
+        const svgHeight = parseInt(svgString.match(/height="(\d+)"/)?.[1] || "600", 10);
+
+        const canvas = document.createElement("canvas");
+        const scale = 2;
+        canvas.width = svgWidth * scale;
+        canvas.height = svgHeight * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const { jsPDF } = await import("jspdf");
+        const orientation = svgWidth > svgHeight ? "landscape" : "portrait";
+        const pdf = new jsPDF({ orientation, unit: "px", format: [svgWidth, svgHeight] });
+        const imgData = canvas.toDataURL("image/png");
+        pdf.addImage(imgData, "PNG", 0, 0, svgWidth, svgHeight);
+        const pdfBlob = pdf.output("blob");
+        URL.revokeObjectURL(url);
+        get().triggerBlobDownload(pdfBlob, buildExportFilename(documentTitle, "pdf"));
+        set({ exportingPdf: false });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        set({ exportError: "Failed to export PDF. Please try again.", exportingPdf: false });
+      };
+      img.src = url;
+    } catch (error) {
+      console.error("PDF export error:", error);
+      set({ exportError: "Failed to export PDF. Please try again.", exportingPdf: false });
     }
   },
 
