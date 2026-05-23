@@ -1994,9 +1994,9 @@ export const useDiagramStore = create((set, get) => ({
     const normalizedData = normalizeStoredDiagramData(data);
     const title = documentTitle.trim() || normalizedData.purpose.title || defaultDocumentTitle;
     const snapshot = buildDiagramSnapshot(title, normalizedData, normalizedCode);
-    const thumbnailSvg = buildStoredThumbnailSvg(normalizedData, normalizedCode);
 
-    if (isAuto && (snapshot === lastSavedSnapshot || !currentDiagramId)) {
+    // Skip if snapshot unchanged (deduplicate rapid saves)
+    if (isAuto && snapshot === lastSavedSnapshot) {
       return;
     }
 
@@ -2007,7 +2007,7 @@ export const useDiagramStore = create((set, get) => ({
       purpose_kpi: normalizedData.purpose.kpi,
       diagram_data: normalizedData,
       mermaid_code: normalizedCode,
-      thumbnail_svg: thumbnailSvg,
+      thumbnail_svg: buildStoredThumbnailSvg(normalizedData, normalizedCode),
     };
 
     set({ savingDiagram: true, storageError: "" });
@@ -2036,7 +2036,7 @@ export const useDiagramStore = create((set, get) => ({
       if (error) {
         set({
           storageError: error.message || "Unable to save this diagram.",
-          autoSaveState: "dirty",
+          autoSaveState: isAuto ? "dirty" : "idle",
           savingDiagram: false
         });
         return;
@@ -2053,7 +2053,12 @@ export const useDiagramStore = create((set, get) => ({
             saveSource: isAuto ? "autosave" : currentDiagramId ? "manual" : "create",
           });
           if (versionError) {
-            set({ storageError: "Saved the diagram, but could not record version history." });
+            set({ 
+              storageError: "Saved the diagram, but could not record version history.",
+              autoSaveState: "dirty",
+              savingDiagram: false
+            });
+            return;
           } else {
             set({ lastVersionSnapshot: snapshot });
             await get().refreshVersionHistory(row.id);
