@@ -1,11 +1,6 @@
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 export function buildMermaidCode(data) {
-  console.log('=== buildMermaidCode called ===');
-  console.log('purpose.title:', data.purpose.title);
-  console.log('purpose.title length:', data.purpose.title?.length);
-  console.log('purpose.kpi:', data.purpose.kpi);
-  
   const lines = [
     "flowchart RL",
     "",
@@ -74,12 +69,7 @@ export function buildMermaidCode(data) {
     });
   });
 
-  const result = lines.join("\n");
-  console.log('=== buildMermaidCode result ===');
-  console.log('result length:', result.length);
-  console.log('result preview:', result.substring(0, 200));
-  
-  return result;
+  return lines.join("\n");
 }
 
 export function decodeMermaidText(text = "") {
@@ -374,7 +364,7 @@ export function parseMermaidCode(code) {
 }
 
 export function safeText(text = "") {
-  const result = String(text)
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -382,17 +372,10 @@ export function safeText(text = "") {
     .replace(/"/g, "'")
     .replace(/[\[\]{}]/g, "")
     .replace(/\\/g, "\\\\");
-  if (text && text.includes('6 เดือน')) {
-    console.log('safeText input:', text, 'length:', text.length);
-    console.log('safeText result:', result, 'length:', result.length);
-  }
-  return result;
 }
 
 export function formatNodeLabel(heading, value) {
-  const result = `"\`${heading}\n${safeText(value)}\`"`;
-  console.log('formatNodeLabel:', { heading, value, result: result.substring(0, 100) });
-  return result;
+  return `"\`${heading}\n${safeText(value)}\`"`;
 }
 
 export function escapeSvgText(text = "") {
