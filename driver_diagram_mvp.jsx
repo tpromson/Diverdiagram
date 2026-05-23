@@ -1483,6 +1483,16 @@ function App() {
                   <p className="mt-1 text-sm text-pink-800/75">{t.purposeDescription}</p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => useUIStore.getState().setAutoSaveEnabled(!autoSaveEnabled)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${autoSaveEnabled ? "bg-emerald-100 text-emerald-700 ring-emerald-200 hover:bg-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200 hover:bg-slate-200"}`}
+                  >
+                    Auto
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800" : "bg-slate-200 text-slate-600"}`}>
+                      {autoSaveEnabled ? "ON" : "OFF"}
+                    </span>
+                  </button>
                   <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
                     {t.topLevelGoal}
                   </div>
