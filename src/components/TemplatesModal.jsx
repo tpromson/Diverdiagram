@@ -69,15 +69,7 @@ export function TemplatesModal() {
     const preparedData = getTemplateWithIds(selectedTemplate.data, uid);
     const docTitle = language === "th" ? selectedTemplate.titleTh : selectedTemplate.titleEn;
     
-    useDiagramStore.setState({
-      data: preparedData,
-      codeInput: buildMermaidCode(preparedData),
-      documentTitle: docTitle,
-      codeSource: "form",
-      storageMessage: t.importSuccess,
-      storageError: "",
-      autoSaveState: "dirty"
-    });
+    useDiagramStore.getState().importTemplateDiagram(preparedData, docTitle, t.importSuccess);
 
     onClose(false);
   };
@@ -141,15 +133,7 @@ export function TemplatesModal() {
         ? `${preparedData.purpose.title.substring(0, 30)}${preparedData.purpose.title.length > 30 ? "..." : ""}`
         : (language === "th" ? "แผนภูมิที่แกะด้วย AI" : "AI Scanned Diagram");
 
-      useDiagramStore.setState({
-        data: preparedData,
-        codeInput: buildMermaidCode(preparedData),
-        documentTitle: suggestedTitle,
-        codeSource: "form",
-        storageMessage: t.aiImportSuccess,
-        storageError: "",
-        autoSaveState: "dirty"
-      });
+      useDiagramStore.getState().importTemplateDiagram(preparedData, suggestedTitle, t.aiImportSuccess);
 
       onClose(false);
     } catch (error) {

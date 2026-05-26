@@ -674,6 +674,27 @@ export const createStorageSlice = (set, get) => ({
     }
   },
 
+  importTemplateDiagram: (preparedData, docTitle, importSuccessMessage) => {
+    const nextCode = buildMermaidCode(preparedData);
+    const snap = buildDiagramSnapshot(docTitle, preparedData, nextCode);
+    set({
+      currentDiagramId: "",
+      data: preparedData,
+      codeInput: nextCode,
+      documentTitle: docTitle,
+      codeSource: "form",
+      storageMessage: importSuccessMessage,
+      storageError: "",
+      autoSaveState: "dirty",
+      lastSavedSnapshot: snap,
+      lastVersionSnapshot: snap,
+      versionHistory: [],
+      lastSharedUrl: "",
+      sharedView: null,
+      userRole: "owner"
+    });
+  },
+
   saveDiagram: async ({ isAuto = false } = {}) => {
     const userRole = get().userRole;
     if (userRole === "viewer") {
