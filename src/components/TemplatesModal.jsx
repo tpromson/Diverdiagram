@@ -7,6 +7,7 @@ import {
   Check, 
   AlertTriangle, 
   ChevronRight, 
+  ChevronDown,
   FileText,
   Image as ImageIcon
 } from "lucide-react";
@@ -338,36 +339,39 @@ export function TemplatesModal() {
             <div className="flex-1 flex flex-col p-6 overflow-y-auto">
               <div className="max-w-2xl mx-auto w-full space-y-5">
                 
-                {/* AI Setup Info Tip */}
-                <div className="flex gap-3 bg-blue-50/50 border border-blue-200/60 rounded-2xl p-4 text-slate-800 text-sm ring-1 ring-blue-50">
-                  <Sparkles className="shrink-0 text-blue-600 mt-0.5" size={20} />
-                  <div className="space-y-1">
-                    <h4 className="font-bold text-slate-900">
-                      {language === "th" ? "การตั้งค่าระบบสแกนด้วย AI" : "AI Scanner Setup Guide"}
-                    </h4>
-                    <p className="text-slate-600 leading-relaxed text-xs">
-                      {language === "th" ? (
-                        <>
-                          ระบบสแกนนี้ประมวลผลผ่าน <strong>Supabase Edge Function</strong> เพื่อความปลอดภัยสูงสุด (ไม่เปิดเผยคีย์ API แก่เบราว์เซอร์)<br/>
-                          สำหรับผู้ดูแลระบบ โปรดติดตั้งฟังก์ชันและคีย์ด้วยคำสั่ง:<br/>
-                          <code className="block bg-slate-800 text-slate-100 p-2 rounded-lg font-mono my-1 text-[11px] select-all">
-                            supabase functions deploy parse-driver-diagram<br/>
-                            supabase secrets set GEMINI_API_KEY=your_gemini_api_key
-                          </code>
-                        </>
-                      ) : (
-                        <>
-                          This scanning feature runs via a secure <strong>Supabase Edge Function</strong> (protecting your API key from public exposure).<br/>
-                          Admins can deploy the function and set secrets using:<br/>
-                          <code className="block bg-slate-800 text-slate-100 p-2 rounded-lg font-mono my-1 text-[11px] select-all">
-                            supabase functions deploy parse-driver-diagram<br/>
-                            supabase secrets set GEMINI_API_KEY=your_gemini_api_key
-                          </code>
-                        </>
-                      )}
-                    </p>
+                {/* AI Setup Info Tip (Collapsible details element) */}
+                <details className="group border border-slate-200 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-slate-100/50 transition-all [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex items-center justify-between cursor-pointer focus:outline-none select-none">
+                    <span className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <Sparkles className="text-blue-500" size={14} />
+                      {language === "th" ? "คู่มือตั้งค่าระบบสำหรับผู้ดูแลระบบ (Admin Guide)" : "System Configuration Guide for Administrators"}
+                    </span>
+                    <span className="text-slate-400 group-open:rotate-180 transition-transform duration-200">
+                      <ChevronDown size={14} />
+                    </span>
+                  </summary>
+                  <div className="mt-3 border-t border-slate-100 pt-3 text-slate-600 leading-relaxed text-xs">
+                    {language === "th" ? (
+                      <>
+                        ระบบสแกนนี้ประมวลผลผ่าน <strong>Supabase Edge Function</strong> เพื่อความปลอดภัยสูงสุด (ไม่เปิดเผยคีย์ API แก่เบราว์เซอร์)<br/>
+                        สำหรับผู้ดูแลระบบ โปรดติดตั้งฟังก์ชันและคีย์ด้วยคำสั่ง:<br/>
+                        <code className="block bg-slate-800 text-slate-100 p-2.5 rounded-xl font-mono my-2 text-[11px] select-all">
+                          supabase functions deploy parse-driver-diagram<br/>
+                          supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+                        </code>
+                      </>
+                    ) : (
+                      <>
+                        This scanning feature runs via a secure <strong>Supabase Edge Function</strong> (protecting your API key from public exposure).<br/>
+                        Admins can deploy the function and set secrets using:<br/>
+                        <code className="block bg-slate-800 text-slate-100 p-2.5 rounded-xl font-mono my-2 text-[11px] select-all">
+                          supabase functions deploy parse-driver-diagram<br/>
+                          supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+                        </code>
+                      </>
+                    )}
                   </div>
-                </div>
+                </details>
 
                 {/* Upload drag drop zone */}
                 <div
