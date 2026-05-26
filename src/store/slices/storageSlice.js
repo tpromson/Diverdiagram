@@ -276,7 +276,11 @@ export const createStorageSlice = (set, get) => ({
         .single();
 
       if (error || !row) {
-        set({ duplicatingDiagramId: "", storageError: error?.message || "Unable to duplicate this diagram." });
+        let displayError = error?.message || "Unable to duplicate this diagram.";
+        if (displayError.includes("row-level security policy")) {
+          displayError = "เซสชันการเข้าสู่ระบบหมดอายุหรือสิทธิ์ไม่ถูกต้อง โปรดลงชื่อออกแล้วเข้าใช้งานใหม่อีกครั้งเพื่อทำสำเนา";
+        }
+        set({ duplicatingDiagramId: "", storageError: displayError });
         return;
       }
 
@@ -292,7 +296,11 @@ export const createStorageSlice = (set, get) => ({
 
       set({ duplicatingDiagramId: "", storageMessage: "Created a duplicate." });
     } catch (err) {
-      set({ duplicatingDiagramId: "", storageError: err.message || "Unable to duplicate this diagram." });
+      let displayError = err.message || "Unable to duplicate this diagram.";
+      if (displayError.includes("row-level security policy")) {
+        displayError = "เซสชันการเข้าสู่ระบบหมดอายุหรือสิทธิ์ไม่ถูกต้อง โปรดลงชื่อออกแล้วเข้าใช้งานใหม่อีกครั้งเพื่อทำสำเนา";
+      }
+      set({ duplicatingDiagramId: "", storageError: displayError });
     }
   },
 
@@ -797,8 +805,12 @@ export const createStorageSlice = (set, get) => ({
 
       if (error) {
         backupToOfflineCache();
+        let displayError = error.message || "Unable to save this diagram.";
+        if (displayError.includes("row-level security policy")) {
+          displayError = "เซสชันการเข้าสู่ระบบของคุณหมดอายุ หรือสิทธิ์เข้าถึงไม่ถูกต้อง โปรดลองลงชื่อออก (Sign Out) แล้วลงชื่อเข้าใช้งานใหม่อีกครั้ง";
+        }
         set({
-          storageError: (error.message || "Unable to save this diagram.") + " (สำรองข้อมูลแบบร่างลงเครื่องแล้ว)",
+          storageError: displayError + " (สำรองข้อมูลแบบร่างลงเครื่องแล้ว)",
           autoSaveState: isAuto ? "dirty" : "idle",
           savingDiagram: false
         });
@@ -859,8 +871,12 @@ export const createStorageSlice = (set, get) => ({
       });
     } catch (err) {
       backupToOfflineCache();
+      let displayError = err.message || "Unable to save this diagram.";
+      if (displayError.includes("row-level security policy")) {
+        displayError = "เซสชันการเข้าสู่ระบบของคุณหมดอายุ หรือสิทธิ์เข้าถึงไม่ถูกต้อง โปรดลองลงชื่อออก (Sign Out) แล้วลงชื่อเข้าใช้งานใหม่อีกครั้ง";
+      }
       set({
-        storageError: (err.message || "Unable to save this diagram.") + " (สำรองข้อมูลแบบร่างลงเครื่องแล้ว)",
+        storageError: displayError + " (สำรองข้อมูลแบบร่างลงเครื่องแล้ว)",
         autoSaveState: "dirty"
       });
     } finally {
