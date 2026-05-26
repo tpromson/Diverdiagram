@@ -1,7 +1,7 @@
 /**
  * Service to interface with the Supabase Edge Function for securely parsing driver diagrams.
  */
-import { supabaseUrl } from "../supabaseClient.js";
+import { supabaseUrl, supabasePublishableKey } from "../supabaseClient.js";
 
 /**
  * Sends a PDF or image file to the Supabase Edge Function to extract a structured Driver Diagram.
@@ -26,7 +26,9 @@ export const parseDiagramWithAI = async (file) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": mimeType
+      "Content-Type": mimeType,
+      "apikey": supabasePublishableKey,
+      "Authorization": `Bearer ${supabasePublishableKey}`
     },
     body: file // Send binary data directly in the request body
   });
