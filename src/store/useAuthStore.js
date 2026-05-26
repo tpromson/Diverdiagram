@@ -196,8 +196,13 @@ export const useAuthStore = create((set, get) => ({
     });
 
     if (error) {
+      let displayError = error.message || "Unable to send the sign-in link.";
+      const errLower = displayError.toLowerCase();
+      if (errLower.includes("rate limit") || errLower.includes("limit exceeded")) {
+        displayError = "คุณส่งคำขอเข้าสู่ระบบบ่อยเกินไป (ติดระบบจำกัดความถี่ของอีเมล) โปรดรอ 1-2 นาที หรือเช็คกล่องข้อความอีเมลที่คุณเพิ่งกดขอไปล่าสุด";
+      }
       set({
-        authError: error.message || "Unable to send the sign-in link.",
+        authError: displayError,
         authSubmitting: false
       });
       return false;
