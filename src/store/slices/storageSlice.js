@@ -803,7 +803,7 @@ export const createStorageSlice = (set, get) => ({
 
       let { data: row, error } = await query;
 
-      if (currentDiagramId && error && error.message.includes("row-level security policy")) {
+      if (currentDiagramId && error && String(error.message || "").includes("row-level security policy")) {
         console.warn("Update failed due to RLS. Retrying as a new INSERT...", error);
         
         const insertPayload = {
