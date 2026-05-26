@@ -811,6 +811,8 @@ export const createStorageSlice = (set, get) => ({
           user_id: currentUser.id
         };
 
+        console.log("Self-healing INSERT payload:", insertPayload);
+
         const insertQuery = supabase
           .from("driver_diagrams")
           .insert(insertPayload)
@@ -820,6 +822,10 @@ export const createStorageSlice = (set, get) => ({
         const insertResult = await insertQuery;
         row = insertResult.data;
         error = insertResult.error;
+
+        if (error) {
+          console.error("Self-healing INSERT failed:", error);
+        }
 
         if (!error && row) {
           set({ 
@@ -832,6 +838,20 @@ export const createStorageSlice = (set, get) => ({
       }
 
       if (error) {
+        console.error("Supabase Save Error Details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          currentUser: {
+            id: currentUser?.id,
+            email: currentUser?.email,
+            role: currentUser?.role
+          },
+          currentDiagramId,
+          payload
+        });
+
         backupToOfflineCache();
         let displayError = error.message || "Unable to save this diagram.";
         if (displayError.includes("row-level security policy")) {
