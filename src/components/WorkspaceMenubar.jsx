@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Copy,
   FolderOpen,
+  Sparkles,
 } from "lucide-react";
 import { HeaderActionButton } from "./actions.jsx";
 import { LanguageToggle } from "./LanguageToggle.jsx";
@@ -26,6 +27,7 @@ export function WorkspaceMenubar() {
   const language = useUIStore((state) => state.language);
   const setLanguage = useUIStore((state) => state.setLanguage);
   const setSavedDrawerOpen = useUIStore((state) => state.setSavedDrawerOpen);
+  const setTemplatesModalOpen = useUIStore((state) => state.setTemplatesModalOpen);
   const exitAllViews = useUIStore((state) => state.exitAllViews);
   const setAutoSaveEnabled = useUIStore((state) => state.setAutoSaveEnabled);
   const autoSaveEnabled = useUIStore((state) => state.autoSaveEnabled);
@@ -120,34 +122,97 @@ export function WorkspaceMenubar() {
   return (
     <nav className="sticky top-3 z-40 rounded-[24px] border border-sky-200 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 px-3 py-3 shadow-sm ring-1 ring-sky-100 backdrop-blur">
       <div className="flex flex-col gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-                type="button"
-                onClick={exitAllViews}
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex hover:bg-slate-800 transition cursor-pointer"
-                title={t.backToWorkspace}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+                  type="button"
+                  onClick={exitAllViews}
+                  className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white sm:inline-flex hover:bg-slate-800 transition cursor-pointer"
+                  title={t.backToWorkspace}
+                >
+                  <GitBranch size={18} />
+                </button>
+            <div className="min-w-0 flex-1">
+              <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700/70 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
+                {t.appEyebrow}
+              </div>
+              <div
+                title={title}
+                className="mt-1 max-w-[18rem] truncate text-lg font-bold leading-tight text-slate-950 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]"
               >
-                <GitBranch size={18} />
-              </button>
-          <div className="min-w-0 flex-1">
-            <div className="max-w-[18rem] truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700/70 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]">
-              {t.appEyebrow}
+                {title}
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
+                  {syncLabel}
+                </span>
+              </div>
             </div>
-            <div
-              title={title}
-              className="mt-1 max-w-[18rem] truncate text-lg font-bold leading-tight text-slate-950 sm:max-w-[22rem] lg:max-w-[26rem] xl:max-w-[32rem]"
-            >
-              {title}
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${syncTone}`}>
-                {syncLabel}
-              </span>
-            </div>
+          </div>
+
+          <div className="md:hidden shrink-0">
+            <MobileOverflowMenu label={t.more}>
+              <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
+              <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
+              {isGalleryAdmin ? (
+                <HeaderActionButton onClick={openAdminPage} className="w-full justify-start">
+                  <Shield size={16} /> {t.openModeration}
+                </HeaderActionButton>
+              ) : null}
+              <HeaderActionButton onClick={() => setSavedDrawerOpen(true)} className="w-full justify-start">
+                <FolderOpen size={16} /> {t.savedDiagrams}
+              </HeaderActionButton>
+              <HeaderActionButton onClick={openGalleryPage} className="w-full justify-start">
+                <LayoutGrid size={16} /> {t.openGallery}
+              </HeaderActionButton>
+              <HeaderActionButton onClick={startNewDiagram} className="w-full justify-start !text-pink-600">
+                <FilePlus2 size={16} /> {t.newDiagram}
+              </HeaderActionButton>
+              <HeaderActionButton onClick={() => setTemplatesModalOpen(true)} className="w-full justify-start !text-blue-600">
+                <Sparkles size={16} /> {t.templates}
+              </HeaderActionButton>
+              <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
+              <HeaderActionButton variant="accent" onClick={copyMermaid} className="w-full justify-start">
+                <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
+              </HeaderActionButton>
+              <HeaderActionButton onClick={downloadMermaid} className="w-full justify-start">
+                <Download size={16} /> {t.exportMmd}
+              </HeaderActionButton>
+              <HeaderActionButton variant="success" className="w-full justify-start" onClick={downloadSvg}>
+                <Download size={16} /> {t.exportSvg}
+              </HeaderActionButton>
+              <HeaderActionButton variant="orange" className="w-full justify-start" onClick={downloadPng}>
+                <Download size={16} /> {t.exportPng}
+              </HeaderActionButton>
+              <HeaderActionButton
+                variant="violet"
+                className="w-full justify-start"
+                onClick={downloadPdf}
+                disabled={exportingPdf}
+              >
+                <Download size={16} /> {exportingPdf ? t.exporting : t.exportPdf}
+              </HeaderActionButton>
+              <HeaderActionButton
+                variant="violet"
+                className="w-full justify-start"
+                onClick={downloadDocx}
+                disabled={exportingDocx}
+              >
+                <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
+              </HeaderActionButton>
+              {authUiActive ? (
+                <>
+                  <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
+                  <HeaderActionButton onClick={signOut} disabled={authSubmitting || !isAuthenticated} className="w-full justify-start">
+                    <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
+                  </HeaderActionButton>
+                </>
+              ) : null}
+            </MobileOverflowMenu>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+        <div className="hidden md:flex flex-wrap items-center gap-2 xl:justify-end">
           <div className="hidden items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-2 py-2 md:inline-flex">
             {isGalleryAdmin ? (
               <HeaderActionButton onClick={openAdminPage}>
@@ -159,6 +224,9 @@ export function WorkspaceMenubar() {
             </HeaderActionButton>
             <HeaderActionButton onClick={startNewDiagram} className="!text-pink-600">
               <FilePlus2 size={16} /> {t.newDiagram}
+            </HeaderActionButton>
+            <HeaderActionButton onClick={() => setTemplatesModalOpen(true)} className="!text-blue-600">
+              <Sparkles size={16} /> {t.templates}
             </HeaderActionButton>
             {authUiActive ? (
               <HeaderActionButton onClick={signOut} disabled={authSubmitting || !isAuthenticated}>
@@ -217,61 +285,6 @@ export function WorkspaceMenubar() {
               <FolderOpen size={16} /> {t.savedDiagrams}
             </HeaderActionButton>
           </div>
-          <MobileOverflowMenu label={t.more}>
-            <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspace}</div>
-            <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
-            {isGalleryAdmin ? (
-              <HeaderActionButton onClick={openAdminPage} className="w-full justify-start">
-                <Shield size={16} /> {t.openModeration}
-              </HeaderActionButton>
-            ) : null}
-            <HeaderActionButton onClick={() => setSavedDrawerOpen(true)} className="w-full justify-start">
-              <FolderOpen size={16} /> {t.savedDiagrams}
-            </HeaderActionButton>
-            <HeaderActionButton onClick={openGalleryPage} className="w-full justify-start">
-              <LayoutGrid size={16} /> {t.openGallery}
-            </HeaderActionButton>
-            <HeaderActionButton onClick={startNewDiagram} className="w-full justify-start !text-pink-600">
-              <FilePlus2 size={16} /> {t.newDiagram}
-            </HeaderActionButton>
-            <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
-            <HeaderActionButton variant="accent" onClick={copyMermaid} className="w-full justify-start">
-              <Copy size={16} /> {copied ? t.copiedMermaid : t.copyMermaid}
-            </HeaderActionButton>
-            <HeaderActionButton onClick={downloadMermaid} className="w-full justify-start">
-              <Download size={16} /> {t.exportMmd}
-            </HeaderActionButton>
-            <HeaderActionButton variant="success" className="w-full justify-start" onClick={downloadSvg}>
-              <Download size={16} /> {t.exportSvg}
-            </HeaderActionButton>
-            <HeaderActionButton variant="orange" className="w-full justify-start" onClick={downloadPng}>
-              <Download size={16} /> {t.exportPng}
-            </HeaderActionButton>
-            <HeaderActionButton
-              variant="violet"
-              className="w-full justify-start"
-              onClick={downloadPdf}
-              disabled={exportingPdf}
-            >
-              <Download size={16} /> {exportingPdf ? t.exporting : t.exportPdf}
-            </HeaderActionButton>
-            <HeaderActionButton
-              variant="violet"
-              className="w-full justify-start"
-              onClick={downloadDocx}
-              disabled={exportingDocx}
-            >
-              <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
-            </HeaderActionButton>
-            {authUiActive ? (
-              <>
-                <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
-                <HeaderActionButton onClick={signOut} disabled={authSubmitting || !isAuthenticated} className="w-full justify-start">
-                  <LogOut size={16} /> {authSubmitting ? t.signingOut : t.signOut}
-                </HeaderActionButton>
-              </>
-            ) : null}
-          </MobileOverflowMenu>
         </div>
       </div>
     </nav>

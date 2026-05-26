@@ -5,19 +5,33 @@ import { PreviewCanvas } from "./PreviewCanvas.jsx";
 import { useUIStore } from "../store/useUIStore.js";
 import { useDiagramStore } from "../store/useDiagramStore.js";
 import { translations, defaultLanguage } from "../utils/translations.js";
+import {
+  buildTemplateSvg,
+  parseMermaidCode,
+  sanitizeMermaidCode,
+} from "../utils/mermaidParser.js";
+import {
+  PREVIEW_ZOOM_MIN,
+  PREVIEW_ZOOM_MAX,
+} from "../utils/constants.js";
 
 export function PreviewModal() {
   const open = useUIStore((state) => state.previewModalOpen);
   const zoom = useUIStore((state) => state.previewZoom);
+  const setPreviewZoom = useUIStore((state) => state.setPreviewZoom);
   const onClose = useUIStore((state) => state.setPreviewModalOpen);
   const onZoomOut = useUIStore((state) => state.zoomOut);
   const onZoomIn = useUIStore((state) => state.zoomIn);
   const onReset = useUIStore((state) => state.resetZoom);
   const language = useUIStore((state) => state.language);
+  const previewStyle = useUIStore((state) => state.previewStyle);
 
   const title = useDiagramStore((state) => state.documentTitle);
   const svg = useDiagramStore((state) => state.svg);
   const renderError = useDiagramStore((state) => state.renderError);
+  const svgLayoutMode = useDiagramStore((state) => state.svgLayoutMode);
+  const data = useDiagramStore((state) => state.data);
+  const codeInput = useDiagramStore((state) => state.codeInput);
 
   const t = translations[language] || translations[defaultLanguage];
   const [shouldRender, setShouldRender] = useState(open);
@@ -35,6 +49,16 @@ export function PreviewModal() {
     const timeoutId = window.setTimeout(() => setShouldRender(false), 220);
     return () => window.clearTimeout(timeoutId);
   }, [open]);
+
+  const handleModalWheel = (event) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+
+    event.preventDefault();
+    const delta = -event.deltaY * 0.0015;
+    setPreviewZoom(
+      Math.min(PREVIEW_ZOOM_MAX, Math.max(PREVIEW_ZOOM_MIN, Number((zoom * Math.exp(delta)).toFixed(2))))
+    );
+  };
 
   if (!shouldRender) return null;
 
@@ -71,7 +95,23 @@ export function PreviewModal() {
           </div>
         </div>
         <div className="min-h-0 flex-1 bg-slate-100 p-4">
-          <PreviewCanvas svg={svg} renderError={renderError} zoom={zoom} className="h-full" labels={t} />
+          {(() => {
+            let activeSvg = svg;
+            let activeError = renderError;
+            if (previewStyle === "export") {
+              try {
+                const exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
+                activeSvg = buildTemplateSvg(exportData, { aspect: svgLayoutMode });
+                activeError = "";
+              } catch (_err) {
+                activeSvg = buildTemplateSvg(data, { aspect: svgLayoutMode });
+                activeError = "";
+              }
+            }
+            return (
+              <PreviewCanvas svg={activeSvg} renderError={activeError} zoom={zoom} onWheel={handleModalWheel} className="h-full" labels={t} />
+            );
+          })()}
         </div>
       </div>
     </div>

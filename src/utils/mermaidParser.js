@@ -508,7 +508,7 @@ export function wrapSvgText(text = "", maxChars = 28, maxLines = 0) {
   return maxLines > 0 ? lines.slice(0, maxLines) : lines;
 }
 
-export function buildTemplateSvg(diagramData) {
+export function buildTemplateSvg(diagramData, options = {}) {
   const theme = {
     bg: "#f8fafc", // slate-50 neutral base
     headerBg: "#dbeafe", // blue-100
@@ -721,6 +721,25 @@ export function buildTemplateSvg(diagramData) {
 
   const svgHeight = Math.max(cursorY + layout.bottomPad, goalY + goalCard.height + layout.bottomPad);
 
+  let targetWidth = layout.canvasWidth;
+  let targetHeight = svgHeight;
+  let translateX = 0;
+  let translateY = 0;
+  let scale = 1;
+
+  if (options && options.aspect && options.aspect !== "auto") {
+    targetWidth = 1980;
+    if (options.aspect === "landscape_a4") {
+      targetHeight = 1400;
+    } else if (options.aspect === "widescreen") {
+      targetHeight = 1113; // 1980 / 1.778
+    }
+
+    scale = Math.min(1.0, targetHeight / svgHeight);
+    translateX = (targetWidth - targetWidth * scale) / 2;
+    translateY = scale === 1.0 ? (targetHeight - svgHeight) / 2 : 0;
+  }
+
   const renderTextLines = (lines, x, y, fontSize, lineHeight, fill, fontWeight = 500) =>
     lines
       .map(
@@ -859,7 +878,7 @@ export function buildTemplateSvg(diagramData) {
     .join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${layout.canvasWidth}" height="${svgHeight}" viewBox="0 0 ${layout.canvasWidth} ${svgHeight}" role="img" aria-label="Driver Diagram">
+<svg xmlns="http://www.w3.org/2000/svg" width="${targetWidth}" height="${targetHeight}" viewBox="0 0 ${targetWidth} ${targetHeight}" role="img" aria-label="Driver Diagram">
   <defs>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap');
@@ -879,10 +898,12 @@ export function buildTemplateSvg(diagramData) {
     </marker>
   </defs>
   <rect width="100%" height="100%" fill="${theme.bg}" />
-  ${headers}
-  ${purposeConnector}
-  ${secondaryConnectorMarkup}
-  ${changeConnectorMarkup}
-  ${renderCards.map(renderCardMarkup).join("")}
+  <g transform="translate(${translateX}, ${translateY}) scale(${scale})">
+    ${headers}
+    ${purposeConnector}
+    ${secondaryConnectorMarkup}
+    ${changeConnectorMarkup}
+    ${renderCards.map(renderCardMarkup).join("")}
+  </g>
 </svg>`;
 }

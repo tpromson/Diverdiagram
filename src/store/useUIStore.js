@@ -26,14 +26,17 @@ export const useUIStore = create((set) => ({
   previewZoom: readPreviewZoom(),
   previewModalOpen: false,
   savedDrawerOpen: false,
+  templatesModalOpen: false,
   savedSearch: "",
   savedSort: "updated_desc",
   savedScope: "active",
   workspaceIntroCollapsed: readWorkspaceIntroCollapsed(),
   autoSaveEnabled: readAutoSaveEnabled(),
+  previewStyle: "mermaid",
 
   setLanguage: (language) => set({ language }),
   setRouteState: (routeState) => set({ routeState }),
+  setPreviewStyle: (previewStyle) => set({ previewStyle }),
   
   setView: (view) => {
     if (typeof window !== "undefined") {
@@ -76,6 +79,7 @@ export const useUIStore = create((set) => ({
 
   setPreviewModalOpen: (previewModalOpen) => set({ previewModalOpen }),
   setSavedDrawerOpen: (savedDrawerOpen) => set({ savedDrawerOpen }),
+  setTemplatesModalOpen: (templatesModalOpen) => set({ templatesModalOpen }),
   setSavedSearch: (savedSearch) => set({ savedSearch }),
   setSavedSort: (savedSort) => set({ savedSort }),
   setSavedScope: (savedScope) => set({ savedScope }),

@@ -1,7 +1,7 @@
 import React from "react";
 import { Eye } from "lucide-react";
 
-export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undefined, labels }) {
+export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel = undefined, labels, onClick = undefined }) {
   if (renderError) {
     return <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{renderError}</div>;
   }
@@ -23,18 +23,25 @@ export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel 
     );
   }
 
+  const isZoomed = zoom > 1;
+
   return (
     <div
       onWheel={onWheel}
-      className={`preview-surface flex items-center justify-center overflow-hidden rounded-[24px] bg-slate-100 p-3 ring-1 ring-slate-200 ${className}`}
+      onClick={onClick}
+      className={`preview-surface flex ${isZoomed ? "items-start justify-start" : "items-center justify-center"} overflow-auto rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 transition-colors ${
+        onClick ? "cursor-zoom-in hover:bg-slate-200/50" : ""
+      } ${className}`}
     >
       <div
         className="diagram-preview"
         style={{ 
           transform: `scale(${zoom})`,
-          transformOrigin: "center center",
-          width: "1980px",
-          maxWidth: "100%",
+          transformOrigin: isZoomed ? "0 0" : "center center",
+          width: "max-content",
+          height: "max-content",
+          padding: isZoomed ? "24px" : "0",
+          transition: "transform 0.15s ease-out, padding 0.15s ease-out",
         }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />

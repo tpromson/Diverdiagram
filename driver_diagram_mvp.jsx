@@ -16,6 +16,7 @@ import {
   FolderOpen,
   RefreshCw,
   Database,
+  User,
   FilePlus2,
   Mail,
   LogOut,
@@ -40,6 +41,8 @@ import {
   MoreHorizontal,
   ChevronDown,
   ChevronUp,
+  Users,
+  UserPlus,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 import { Tooltip, IconActionButton } from "./src/components/tooltip.jsx";
@@ -131,6 +134,7 @@ import { AdminModerationCard } from "./src/components/AdminModerationCard.jsx";
 import { PreviewModal } from "./src/components/PreviewModal.jsx";
 import { WorkspaceMenubar } from "./src/components/WorkspaceMenubar.jsx";
 import { SavedDiagramsDrawer } from "./src/components/SavedDiagramsDrawer.jsx";
+import { TemplatesModal } from "./src/components/TemplatesModal.jsx";
 import { useUIStore } from "./src/store/useUIStore.js";
 import { useAuthStore } from "./src/store/useAuthStore.js";
 import { useDiagramStore } from "./src/store/useDiagramStore.js";
@@ -139,6 +143,81 @@ const workbenchPanelClass = "rounded-[24px] border border-slate-200 bg-white p-5
 const workbenchMutedPanelClass = "rounded-[24px] border border-slate-200 bg-slate-50 p-4 ring-1 ring-slate-200/70";
 const sectionHeadingClass = "text-[20px] font-bold leading-[1.3] text-slate-950";
 const sectionBodyClass = "text-sm leading-6 text-slate-600";
+
+function mergeDiagramData(base, local, external) {
+  if (!base) return JSON.parse(JSON.stringify(external));
+  
+  const merged = JSON.parse(JSON.stringify(external)); // start with external structure
+
+  // 1. Merge purpose
+  if (local.purpose && base.purpose) {
+    if (local.purpose.title !== base.purpose.title) {
+      merged.purpose.title = local.purpose.title;
+    }
+    if (local.purpose.kpi !== base.purpose.kpi) {
+      merged.purpose.kpi = local.purpose.kpi;
+    }
+  }
+
+  // 2. Merge primary drivers
+  if (local.primaryDrivers && base.primaryDrivers) {
+    local.primaryDrivers.forEach((localPd) => {
+      const extPd = merged.primaryDrivers.find(p => p.id === localPd.id);
+      const basePd = base.primaryDrivers.find(p => p.id === localPd.id);
+      const baseTitle = basePd ? basePd.title : "";
+      const baseKpi = basePd ? basePd.kpi : "";
+
+      if (extPd) {
+        if (localPd.title !== baseTitle) {
+          extPd.title = localPd.title;
+        }
+        if (localPd.kpi !== baseKpi) {
+          extPd.kpi = localPd.kpi;
+        }
+
+        // Merge secondary drivers
+        if (localPd.secondaryDrivers && basePd && basePd.secondaryDrivers) {
+          localPd.secondaryDrivers.forEach((localSd) => {
+            const extSd = extPd.secondaryDrivers.find(s => s.id === localSd.id);
+            const baseSd = basePd.secondaryDrivers.find(s => s.id === localSd.id);
+            const baseSdTitle = baseSd ? baseSd.title : "";
+            const baseSdKpi = baseSd ? baseSd.kpi : "";
+
+            if (extSd) {
+              if (localSd.title !== baseSdTitle) {
+                extSd.title = localSd.title;
+              }
+              if (localSd.kpi !== baseSdKpi) {
+                extSd.kpi = localSd.kpi;
+              }
+
+              // Merge change ideas
+              if (localSd.changeIdeas && baseSd && baseSd.changeIdeas) {
+                localSd.changeIdeas.forEach((localCi) => {
+                  const extCi = extSd.changeIdeas.find(c => c.id === localCi.id);
+                  const baseCi = baseSd.changeIdeas.find(c => c.id === localCi.id);
+                  const baseCiTitle = baseCi ? baseCi.title : "";
+                  const baseCiKpi = baseCi ? baseCi.kpi : "";
+
+                  if (extCi) {
+                    if (localCi.title !== baseCiTitle) {
+                      extCi.title = localCi.title;
+                    }
+                    if (localCi.kpi !== baseCiKpi) {
+                      extCi.kpi = localCi.kpi;
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+
+  return merged;
+}
 
 function App() {
   // --- UI Store Hooks ---
@@ -166,6 +245,8 @@ function App() {
   const workspaceIntroCollapsed = useUIStore((state) => state.workspaceIntroCollapsed);
   const setWorkspaceIntroCollapsed = useUIStore((state) => state.setWorkspaceIntroCollapsed);
   const autoSaveEnabled = useUIStore((state) => state.autoSaveEnabled);
+  const previewStyle = useUIStore((state) => state.previewStyle);
+  const setPreviewStyle = useUIStore((state) => state.setPreviewStyle);
   
   const openGalleryPage = useUIStore((state) => state.openGalleryPage);
   const openAdminPage = useUIStore((state) => state.openAdminPage);
@@ -231,12 +312,25 @@ function App() {
   const copied = useDiagramStore((state) => state.copied);
   const exportingDocx = useDiagramStore((state) => state.exportingDocx);
   const exportError = useDiagramStore((state) => state.exportError);
+  const svgLayoutMode = useDiagramStore((state) => state.svgLayoutMode);
+  const setSvgLayoutMode = useDiagramStore((state) => state.setSvgLayoutMode);
 
   const sharedView = useDiagramStore((state) => state.sharedView);
   const sharedViewLoading = useDiagramStore((state) => state.sharedViewLoading);
   const sharedViewError = useDiagramStore((state) => state.sharedViewError);
   const sharedOpenedAt = useDiagramStore((state) => state.sharedOpenedAt);
   const lastSharedUrl = useDiagramStore((state) => state.lastSharedUrl);
+
+  const userRole = useDiagramStore((state) => state.userRole);
+  const collaboratorInvites = useDiagramStore((state) => state.collaboratorInvites);
+  const collaboratorsLoading = useDiagramStore((state) => state.collaboratorsLoading);
+  const collaboratorsError = useDiagramStore((state) => state.collaboratorsError);
+  const invitingCollaborator = useDiagramStore((state) => state.invitingCollaborator);
+  const inviteError = useDiagramStore((state) => state.inviteError);
+  const inviteMessage = useDiagramStore((state) => state.inviteMessage);
+  const fetchCollaborators = useDiagramStore((state) => state.fetchCollaborators);
+  const inviteCollaborator = useDiagramStore((state) => state.inviteCollaborator);
+  const revokeCollaboratorAccess = useDiagramStore((state) => state.revokeCollaboratorAccess);
 
   const galleryItems = useDiagramStore((state) => state.galleryItems);
   const galleryLoading = useDiagramStore((state) => state.galleryLoading);
@@ -264,6 +358,7 @@ function App() {
   const downloadMermaid = useDiagramStore((state) => state.downloadMermaid);
   const downloadSvg = useDiagramStore((state) => state.downloadSvg);
   const downloadPng = useDiagramStore((state) => state.downloadPng);
+  const downloadPdf = useDiagramStore((state) => state.downloadPdf);
   const downloadDocx = useDiagramStore((state) => state.downloadDocx);
   const applyCodeToForm = useDiagramStore((state) => state.applyCodeToForm);
   const handleCodeInputChange = useDiagramStore((state) => state.handleCodeInputChange);
@@ -314,9 +409,14 @@ function App() {
   const mermaidRef = useRef(null);
   const mermaidInitialized = useRef(false);
   const purposeTitleInputRef = useRef(null);
+  const autoOpenAttempted = useRef(false);
 
   // --- Local UI States ---
   const [gallerySearch, setGallerySearch] = useState("");
+  const [collaborators, setCollaborators] = useState([]);
+  const [collaboratorLocks, setCollaboratorLocks] = useState({});
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("editor");
 
   // --- Derived Memos & Translations ---
   const t = translations[language] || translations[defaultLanguage];
@@ -458,6 +558,35 @@ function App() {
     }
   }, [isAuthenticated, loadSavedDiagrams]);
 
+  // 5.5 Auto-open Most Recently Updated Diagram on Startup
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !autoOpenAttempted.current &&
+      savedDiagrams.length > 0 &&
+      !currentDiagramId &&
+      !routeState.shareId &&
+      !routeState.gallery &&
+      !routeState.admin
+    ) {
+      const hasOfflineDraft = typeof window !== "undefined" && window.localStorage && window.localStorage.getItem("diverdiagram_offline_draft");
+      if (!hasOfflineDraft) {
+        autoOpenAttempted.current = true;
+        const latest = savedDiagrams[0];
+        if (latest && latest.id) {
+          openDiagram(latest.id);
+        }
+      }
+    }
+  }, [isAuthenticated, savedDiagrams, currentDiagramId, routeState, openDiagram]);
+
+  // Reset auto-open flag on logout
+  useEffect(() => {
+    if (!currentUser?.id) {
+      autoOpenAttempted.current = false;
+    }
+  }, [currentUser?.id]);
+
   // 6. Auto-save Trigger Loop
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
@@ -547,12 +676,13 @@ function App() {
     fetchAdminQueue();
   }, [isAuthenticated, routeState.admin, routeState.shareId, fetchAdminQueue]);
 
-  // 11. Version History Loader
+  // 11. Version History & Collaborators Loader
   useEffect(() => {
     if (currentDiagramId && isAuthenticated) {
       refreshVersionHistory();
+      fetchCollaborators(currentDiagramId);
     }
-  }, [currentDiagramId, isAuthenticated, refreshVersionHistory]);
+  }, [currentDiagramId, isAuthenticated, refreshVersionHistory, fetchCollaborators]);
 
   // 12. Dynamic Page Title Updates
   useEffect(() => {
@@ -633,6 +763,265 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [saveDiagram]);
 
+  // 14. Restore Unsaved Offline Draft on Mount
+  useEffect(() => {
+    useDiagramStore.getState().checkAndRestoreOfflineDraft();
+  }, []);
+
+  // 15. Reconnect Sync Listener
+  useEffect(() => {
+    const handleOnline = () => {
+      if (typeof window !== "undefined" && window.localStorage) {
+        const hasOfflineDraft = window.localStorage.getItem("diverdiagram_offline_draft");
+        if (hasOfflineDraft && isAuthenticated) {
+          saveDiagram({ isAuto: true });
+        }
+      }
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [isAuthenticated, saveDiagram]);
+
+  // 16. Real-time Multiplayer Collaboration & Active Card Locking
+  const broadcastLock = (cardId, isLocked) => {
+    if (!isSupabaseConfigured || !supabase || !currentDiagramId || !isAuthenticated) return;
+    const channelName = `diagram_collab_${currentDiagramId}`;
+    const channel = supabase.channel(channelName);
+    channel.send({
+      type: "broadcast",
+      event: isLocked ? "card-lock" : "card-unlock",
+      payload: {
+        cardId,
+        userName: currentUser.email?.split("@")[0] || "Doctor/Collaborator",
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !isAuthenticated || !currentDiagramId) {
+      setCollaborators([]);
+      setCollaboratorLocks({});
+      return undefined;
+    }
+
+    const channelName = `diagram_collab_${currentDiagramId}`;
+    const channel = supabase.channel(channelName, {
+      config: {
+        presence: {
+          key: currentUser.id,
+        },
+      },
+    });
+
+    // Listen to Presence (active collaborators)
+    channel.on("presence", { event: "sync" }, () => {
+      const presenceState = channel.presenceState();
+      const activeUsers = [];
+      Object.keys(presenceState).forEach((key) => {
+        const presences = presenceState[key];
+        presences.forEach((p) => {
+          // Skip ourselves
+          if (p.userId !== currentUser.id) {
+            activeUsers.push(p);
+          }
+        });
+      });
+      setCollaborators(activeUsers);
+    });
+
+    // Listen to Broadcast lock/unlock events
+    channel.on("broadcast", { event: "card-lock" }, ({ payload }) => {
+      setCollaboratorLocks((prev) => ({
+        ...prev,
+        [payload.cardId]: payload.userName,
+      }));
+    });
+
+    channel.on("broadcast", { event: "card-unlock" }, ({ payload }) => {
+      setCollaboratorLocks((prev) => {
+        const next = { ...prev };
+        delete next[payload.cardId];
+        return next;
+      });
+    });
+
+    // Listen to PostgreSQL DbChanges on driver_diagrams row updates
+    const dbChannel = supabase.channel(`db-changes-${currentDiagramId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "driver_diagrams",
+          filter: `id=eq.${currentDiagramId}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            const store = useDiagramStore.getState();
+            const localSnapshot = buildDiagramSnapshot(store.documentTitle, store.data, store.codeInput);
+            const externalSnapshot = buildDiagramSnapshot(
+              payload.new.title,
+              payload.new.diagram_data,
+              payload.new.mermaid_code
+            );
+            
+            const lastSavedSnapshot = store.lastSavedSnapshot;
+
+            // Only trigger sync if the database state is different from our last saved baseline,
+            // and our current local snapshot doesn't match the new database state.
+            if (externalSnapshot !== lastSavedSnapshot && localSnapshot !== externalSnapshot) {
+              // --- Multiplayer 3-Way Semantic Merge ---
+              let baseTitle = "";
+              let baseData = null;
+              try {
+                const baseObj = JSON.parse(lastSavedSnapshot);
+                baseTitle = baseObj.title;
+                baseData = baseObj.diagramData;
+              } catch (e) {
+                console.error("Failed to parse lastSavedSnapshot:", e);
+              }
+
+              let mergedTitle = payload.new.title;
+              if (baseTitle && store.documentTitle !== baseTitle) {
+                mergedTitle = store.documentTitle;
+              }
+
+              const mergedData = mergeDiagramData(baseData, store.data, payload.new.diagram_data);
+              const mergedCode = buildMermaidCode(mergedData);
+
+              const { normalizedData, nextTitle, nextCode } = store.applyDiagramToEditor({
+                title: mergedTitle,
+                diagramData: mergedData,
+                mermaidCode: mergedCode,
+              });
+
+              // --- Multiplayer Typing Conflict Resolution (Focused Card Preservation) ---
+              // Capture active keyboard focused element to prevent overwriting active typing
+              const activeEl = typeof document !== "undefined" ? document.activeElement : null;
+              const testId = activeEl?.getAttribute("data-testid");
+              const preservedValue = activeEl ? (activeEl.value ?? null) : null;
+
+              if (testId && preservedValue !== null) {
+                let didMerge = false;
+                if (testId === "document-title-input") {
+                  useDiagramStore.setState({ documentTitle: preservedValue });
+                  didMerge = true;
+                } else if (testId === "mermaid-code-input") {
+                  useDiagramStore.setState({ codeInput: preservedValue });
+                  didMerge = true;
+                } else if (testId === "purpose-title-input") {
+                  normalizedData.purpose.title = preservedValue;
+                  didMerge = true;
+                } else if (testId === "purpose-kpi-input") {
+                  normalizedData.purpose.kpi = preservedValue;
+                  didMerge = true;
+                } else if (testId.startsWith("primary-title-input-")) {
+                  const suffix = testId.replace("primary-title-input-", "");
+                  const pd = normalizedData.primaryDrivers.find((p, index) => String(p.id) === suffix || (index === 0 && suffix === "0"));
+                  if (pd) {
+                    pd.title = preservedValue;
+                    didMerge = true;
+                  }
+                } else if (testId.startsWith("primary-kpi-input-")) {
+                  const suffix = testId.replace("primary-kpi-input-", "");
+                  const pd = normalizedData.primaryDrivers.find((p, index) => String(p.id) === suffix || (index === 0 && suffix === "0"));
+                  if (pd) {
+                    pd.kpi = preservedValue;
+                    didMerge = true;
+                  }
+                } else if (testId.startsWith("secondary-title-input-")) {
+                  const suffix = testId.replace("secondary-title-input-", "");
+                  for (const pd of normalizedData.primaryDrivers) {
+                    const sd = pd.secondaryDrivers.find((s) => String(s.id) === suffix);
+                    if (sd) {
+                      sd.title = preservedValue;
+                      didMerge = true;
+                      break;
+                    }
+                  }
+                } else if (testId.startsWith("secondary-kpi-input-")) {
+                  const suffix = testId.replace("secondary-kpi-input-", "");
+                  for (const pd of normalizedData.primaryDrivers) {
+                    const sd = pd.secondaryDrivers.find((s) => String(s.id) === suffix);
+                    if (sd) {
+                      sd.kpi = preservedValue;
+                      didMerge = true;
+                      break;
+                    }
+                  }
+                } else if (testId.startsWith("change-title-input-")) {
+                  const suffix = testId.replace("change-title-input-", "");
+                  let found = false;
+                  for (const pd of normalizedData.primaryDrivers) {
+                    for (const sd of pd.secondaryDrivers) {
+                      const ci = sd.changeIdeas.find((c) => String(c.id) === suffix);
+                      if (ci) {
+                        ci.title = preservedValue;
+                        didMerge = true;
+                        found = true;
+                        break;
+                      }
+                    }
+                    if (found) break;
+                  }
+                } else if (testId.startsWith("change-kpi-input-")) {
+                  const suffix = testId.replace("change-kpi-input-", "");
+                  let found = false;
+                  for (const pd of normalizedData.primaryDrivers) {
+                    for (const sd of pd.secondaryDrivers) {
+                      const ci = sd.changeIdeas.find((c) => String(c.id) === suffix);
+                      if (ci) {
+                        ci.kpi = preservedValue;
+                        didMerge = true;
+                        found = true;
+                        break;
+                      }
+                    }
+                    if (found) break;
+                  }
+                }
+
+                if (didMerge) {
+                  // Re-build mermaid code and sync the state
+                  const nextCodeMerged = buildMermaidCode(normalizedData);
+                  useDiagramStore.setState({
+                    data: { ...normalizedData },
+                    codeInput: nextCodeMerged,
+                  });
+                }
+              }
+
+              const currentStore = useDiagramStore.getState();
+              const snap = buildDiagramSnapshot(currentStore.documentTitle, currentStore.data, currentStore.codeInput);
+              useDiagramStore.setState({
+                lastSavedSnapshot: snap,
+                lastVersionSnapshot: snap,
+                autoSaveState: "saved",
+                storageMessage: "ซิงก์ข้อมูลแก้ไขจากเพื่อนร่วมงานแบบเรียลไทม์ (Synced collaborator changes)",
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe & Track ourselves in Presence
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({
+          userId: currentUser.id,
+          userName: currentUser.email || "Doctor/Collaborator",
+          onlineAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    return () => {
+      channel.unsubscribe();
+      dbChannel.unsubscribe();
+    };
+  }, [currentDiagramId, isAuthenticated, currentUser, setCollaborators, setCollaboratorLocks]);
+
   // --- Local Event Handlers ---
   const updatePurpose = (field, value) => {
     useDiagramStore.setState((state) => ({
@@ -686,6 +1075,21 @@ function App() {
     event.preventDefault();
     await requestMagicLink();
   };
+
+  // --- Active SVG Selection (Mermaid vs Custom Export WYSIWYG) ---
+  let activeSvg = svg;
+  let activeError = renderError;
+
+  if (previewStyle === "export") {
+    try {
+      const exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
+      activeSvg = buildTemplateSvg(exportData, { aspect: svgLayoutMode });
+      activeError = "";
+    } catch (_err) {
+      activeSvg = buildTemplateSvg(data, { aspect: svgLayoutMode });
+      activeError = "";
+    }
+  }
 
   // --- Render Layouts ---
 
@@ -778,6 +1182,21 @@ function App() {
                     </button>
                   </Tooltip>
                 </div>
+                <div className="space-y-2 mb-4" data-testid="svg-layout-mode-picker">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.svgLayoutMode}</div>
+                  <div className="relative">
+                    <select
+                      value={svgLayoutMode}
+                      onChange={(e) => setSvgLayoutMode(e.target.value)}
+                      className="w-full sm:w-72 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="auto">{t.layoutAuto}</option>
+                      <option value="landscape_a4">{t.layoutLandscapeA4}</option>
+                      <option value="widescreen">{t.layoutWidescreen}</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportDiagram || 'Download'}</div>
                   <div className="flex flex-wrap gap-2">
@@ -794,6 +1213,11 @@ function App() {
                     <Tooltip label={t.exportPng}>
                       <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
                         <Download size={16} /> .png
+                      </button>
+                    </Tooltip>
+                    <Tooltip label={t.exportPdf}>
+                      <button onClick={downloadPdf} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rose-700">
+                        <Download size={16} /> .pdf
                       </button>
                     </Tooltip>
                     <Tooltip label={t.exportDocx}>
@@ -827,6 +1251,22 @@ function App() {
                   />
                 ) : null}
                 {view === "preview" ? (
+                  <div className="inline-flex rounded-2xl bg-slate-100 p-1" data-testid="preview-style-toggle">
+                    <button
+                      onClick={() => setPreviewStyle("mermaid")}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "mermaid" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    >
+                      {t.previewMermaid}
+                    </button>
+                    <button
+                      onClick={() => setPreviewStyle("export")}
+                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "export" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    >
+                      {t.previewExport}
+                    </button>
+                  </div>
+                ) : null}
+                {view === "preview" ? (
                   <Tooltip label={t.expand}>
                     <button
                       onClick={openPreviewModal}
@@ -858,7 +1298,7 @@ function App() {
                   view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
                 }`}
               >
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} />
+                <PreviewCanvas svg={activeSvg} renderError={activeError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} onClick={openPreviewModal} />
               </div>
               <div
                 className={`absolute inset-4 transition-all duration-200 ease-out ${
@@ -1199,6 +1639,11 @@ function App() {
                   <StatusPill tone={isSupabaseConfigured ? "success" : "warning"} icon={<Database size={15} />}>
                     {isSupabaseConfigured ? t.supabaseConnected : t.supabaseEnvMissing}
                   </StatusPill>
+                  {collaborators.map((c) => (
+                    <StatusPill key={c.userId} tone="violet" icon={<User size={14} className="animate-pulse" />}>
+                      {c.userName.split("@")[0]} (ออนไลน์อยู่)
+                    </StatusPill>
+                  ))}
                   <StatusPill tone={authUiActive ? "info" : "neutral"}>
                     {authUiActive
                       ? t.privateWorkspaceActive
@@ -1449,6 +1894,115 @@ function App() {
                   </label>
                   <p className="mt-2 text-xs leading-5 text-slate-500">{t.documentTitleHint}</p>
                 </div>
+
+                {isSupabaseConfigured && currentDiagramId && isAuthenticated ? (
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      <Users size={14} className="text-slate-400" />
+                      <span>{t.inviteCollaborators}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{t.inviteCollaboratorsDescription}</p>
+
+                    {/* Invite Form */}
+                    {userRole === "owner" ? (
+                      <div className="mt-3 space-y-3">
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_110px]">
+                          <input
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            placeholder={t.emailPlaceholder}
+                            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                          />
+                          <select
+                            value={inviteRole}
+                            onChange={(e) => setInviteRole(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+                          >
+                            <option value="editor">Editor</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!inviteEmail.trim()) return;
+                            await inviteCollaborator(currentDiagramId, inviteEmail, inviteRole);
+                            setInviteEmail("");
+                          }}
+                          disabled={invitingCollaborator || !inviteEmail.trim()}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition"
+                        >
+                          {invitingCollaborator ? t.inviting : (
+                            <>
+                              <UserPlus size={14} /> {t.inviteButton}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+                        {t.collaboratorOnlyOwnerCanInvite}
+                      </div>
+                    )}
+
+                    {/* Feedback Messages */}
+                    {inviteError ? (
+                      <div className="mt-2 rounded-xl bg-red-50 p-2 text-[11px] font-medium text-red-700">
+                        {inviteError}
+                      </div>
+                    ) : null}
+                    {inviteMessage ? (
+                      <div className="mt-2 rounded-xl bg-emerald-50 p-2 text-[11px] font-medium text-emerald-700">
+                        {inviteMessage}
+                      </div>
+                    ) : null}
+
+                    {/* Active Collaborators List */}
+                    <div className="mt-4 border-t border-slate-100 pt-3">
+                      <div className="text-[11px] font-bold text-slate-700">{t.invitedCollaborators}</div>
+                      <div className="mt-2 space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                        {collaboratorsLoading ? (
+                          <div className="text-[11px] text-slate-400 animate-pulse">Loading list...</div>
+                        ) : (
+                          <>
+                            {/* Owner */}
+                            <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2 text-[11px]">
+                              <span className="font-semibold text-slate-800 truncate">Diagram Owner</span>
+                              <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 font-bold text-slate-600 text-[10px] uppercase">
+                                {t.owner}
+                              </span>
+                            </div>
+
+                            {/* Invited Collaborators */}
+                            {collaboratorInvites.map((collab) => (
+                              <div key={collab.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-2 text-[11px]">
+                                <span className="text-slate-700 truncate">{collab.email}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`shrink-0 rounded-full px-2 py-0.5 font-bold text-[9px] uppercase ${
+                                    collab.role === "editor" ? "bg-purple-50 text-purple-700" : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {collab.role}
+                                  </span>
+                                  {userRole === "owner" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => revokeCollaboratorAccess(collab.id)}
+                                      className="text-red-500 hover:text-red-700 transition"
+                                      title={t.revokeAccess}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1493,7 +2047,7 @@ function App() {
                   <HeaderActionButton
                     variant="primary"
                     onClick={saveDiagram}
-                    disabled={savingDiagram || !isAuthenticated}
+                    disabled={savingDiagram || !isAuthenticated || userRole === "viewer"}
                     data-testid="save-diagram-button"
                     tabIndex={100}
                   >
@@ -1501,9 +2055,9 @@ function App() {
                   </HeaderActionButton>
                 </div>
               </div>
-              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} />
+              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} onFocus={() => broadcastLock("purpose-title", true)} onBlur={() => broadcastLock("purpose-title", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-title"])} lockOwner={collaboratorLocks["purpose-title"]} theme="pink" />
               <div className="mt-3">
-                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} />
+                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} onFocus={() => broadcastLock("purpose-kpi", true)} onBlur={() => broadcastLock("purpose-kpi", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-kpi"])} lockOwner={collaboratorLocks["purpose-kpi"]} theme="pink" />
               </div>
             </div>
 
@@ -1512,9 +2066,11 @@ function App() {
                 <h2 className={sectionHeadingClass}>{t.primaryDrivers}</h2>
                 <p className={sectionBodyClass}>{t.primaryDriversDescription}</p>
               </div>
-              <HeaderActionButton variant="success" onClick={addPrimary} data-testid="add-primary-button">
-                <Plus size={16} /> {t.addPrimary}
-              </HeaderActionButton>
+              {userRole !== "viewer" && (
+                <HeaderActionButton variant="success" onClick={addPrimary} data-testid="add-primary-button">
+                  <Plus size={16} /> {t.addPrimary}
+                </HeaderActionButton>
+              )}
             </div>
 
             {data.primaryDrivers.map((pd, pi) => (
@@ -1524,16 +2080,20 @@ function App() {
                     <div className="font-bold text-blue-900">{t.primaryDriver} {pi + 1}</div>
                     <div className="text-xs text-blue-800/70">{t.primaryDriverHelp}</div>
                   </div>
-                  <IconActionButton label={t.deletePermanently} onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                    <Trash2 size={16} />
-                  </IconActionButton>
+                  {userRole !== "viewer" && (
+                    <IconActionButton label={t.deletePermanently} onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                      <Trash2 size={16} />
+                    </IconActionButton>
+                  )}
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} />
-                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={5 + pi * 6} />
+                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} onFocus={() => broadcastLock(`primary-title-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-title-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-title-${pd.id}`])} lockOwner={collaboratorLocks[`primary-title-${pd.id}`]} theme="blue" />
+                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} testId={pi === 0 ? "primary-kpi-input-0" : `primary-kpi-input-${pd.id}`} tabIndex={5 + pi * 6} onFocus={() => broadcastLock(`primary-kpi-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-kpi-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-kpi-${pd.id}`])} lockOwner={collaboratorLocks[`primary-kpi-${pd.id}`]} theme="blue" />
 
-                <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
-                  <Plus size={16} /> {t.addSecondary}
-                </HeaderActionButton>
+                {userRole !== "viewer" && (
+                  <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
+                    <Plus size={16} /> {t.addSecondary}
+                  </HeaderActionButton>
+                )}
 
                 {pd.secondaryDrivers.map((sd, si) => (
                   <div key={sd.id} className="ml-0 space-y-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
@@ -1542,32 +2102,43 @@ function App() {
                         <div className="font-bold text-amber-900">{t.secondaryDriver} {si + 1}</div>
                         <div className="text-xs text-amber-800/70">{t.secondaryDriverHelp}</div>
                       </div>
-                      <IconActionButton label={t.deletePermanently} onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                        <Trash2 size={16} />
-                      </IconActionButton>
+                      {userRole !== "viewer" && (
+                        <IconActionButton label={t.deletePermanently} onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                          <Trash2 size={16} />
+                        </IconActionButton>
+                      )}
                     </div>
-                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} />
-                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={7 + pi * 6 + si * 4} />
-
-                    <button onClick={() => addChange(pi, si)} className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
-                      <Plus size={16} /> {t.addChangeIdea}
-                    </button>
+                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-title-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-title-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-title-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-title-${sd.id}`]} theme="amber" />
+                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} testId={`secondary-kpi-input-${sd.id}`} tabIndex={7 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-kpi-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-kpi-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-kpi-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-kpi-${sd.id}`]} theme="amber" />
 
                     {sd.changeIdeas.map((ci, cii) => (
-                      <div key={ci.id} className="ml-0 space-y-3 rounded-[24px] border border-orange-100 bg-orange-50/40 p-4 shadow-sm ring-1 ring-orange-100/80 md:ml-5">
+                      <div key={ci.id} className="ml-0 space-y-3 rounded-[24px] border border-orange-200 bg-orange-100/50 p-4 shadow-sm ring-1 ring-orange-200/50 md:ml-5">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-bold text-orange-900">{t.changeIdea} {cii + 1}</div>
                             <div className="text-xs text-orange-800/70">{t.changeIdeaHelp}</div>
                           </div>
-                          <IconActionButton label={t.deletePermanently} onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                            <Trash2 size={16} />
-                          </IconActionButton>
+                          {userRole !== "viewer" && (
+                            <IconActionButton label={t.deletePermanently} onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                              <Trash2 size={16} />
+                            </IconActionButton>
+                          )}
                         </div>
-                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} />
-                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} tabIndex={99} />
+                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} onFocus={() => broadcastLock(`change-title-${ci.id}`, true)} onBlur={() => broadcastLock(`change-title-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-title-${ci.id}`])} lockOwner={collaboratorLocks[`change-title-${ci.id}`]} theme="orange" />
+                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} testId={`change-kpi-input-${ci.id}`} tabIndex={99} onFocus={() => broadcastLock(`change-kpi-${ci.id}`, true)} onBlur={() => broadcastLock(`change-kpi-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-kpi-${ci.id}`])} lockOwner={collaboratorLocks[`change-kpi-${ci.id}`]} theme="orange" />
                       </div>
                     ))}
+
+                    {userRole !== "viewer" && (
+                      <div className="flex justify-start ml-0 md:ml-5">
+                        <button
+                          onClick={() => addChange(pi, si)}
+                          className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition cursor-pointer"
+                        >
+                          <Plus size={16} /> {t.addChangeIdea}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1625,7 +2196,7 @@ function App() {
                   view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
                 }`}
               >
-                <PreviewCanvas svg={svg} renderError={renderError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} />
+                <PreviewCanvas svg={activeSvg} renderError={activeError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} onClick={openPreviewModal} />
               </div>
               <div
                 className={`absolute inset-0 flex flex-col gap-3 transition-all duration-200 ease-out ${
@@ -1724,6 +2295,7 @@ function App() {
         </div>
         <SavedDiagramsDrawer />
         <PreviewModal />
+        <TemplatesModal />
         <footer className="border-t border-slate-200 px-2 pt-2 pb-6 text-xs text-slate-500">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>© 2026 tpromson@gmail.com</div>
