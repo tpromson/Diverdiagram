@@ -86,13 +86,20 @@ drop policy if exists "Users can delete their own driver diagrams" on public.dri
 drop policy if exists "Users can read their own or collaborated diagrams" on public.driver_diagrams;
 drop policy if exists "Users can update their own or collaborated diagrams with editor role" on public.driver_diagrams;
 
--- 4. Create updated policies for public.driver_diagrams using helper functions
+-- 4. Create updated policies for public.driver_diagrams using inline checks
+-- This avoids same-table recursive queries inside helper functions, fixing the Postgres RLS snapshot visibility bug on INSERT.
 create policy "Users can read their own or collaborated diagrams"
 on public.driver_diagrams
 for select
 to authenticated
 using (
-  public.can_read_diagram(id, auth.uid(), (select auth.jwt() ->> 'email'))
+  (select auth.uid()) = user_id
+  or
+  exists (
+    select 1 from public.diagram_collaborators
+    where diagram_id = id
+    and email = (select auth.jwt() ->> 'email')
+  )
 );
 
 create policy "Users can insert their own driver diagrams"
@@ -106,10 +113,24 @@ on public.driver_diagrams
 for update
 to authenticated
 using (
-  public.can_write_diagram(id, auth.uid(), (select auth.jwt() ->> 'email'))
+  (select auth.uid()) = user_id
+  or
+  exists (
+    select 1 from public.diagram_collaborators
+    where diagram_id = id
+    and email = (select auth.jwt() ->> 'email')
+    and role = 'editor'
+  )
 )
 with check (
-  public.can_write_diagram(id, auth.uid(), (select auth.jwt() ->> 'email'))
+  (select auth.uid()) = user_id
+  or
+  exists (
+    select 1 from public.diagram_collaborators
+    where diagram_id = id
+    and email = (select auth.jwt() ->> 'email')
+    and role = 'editor'
+  )
 );
 
 create policy "Users can delete their own driver diagrams"
@@ -117,7 +138,7 @@ on public.driver_diagrams
 for delete
 to authenticated
 using (
-  public.is_diagram_owner(id, auth.uid())
+  (select auth.uid()) = user_id
 );
 
 -- 5. Drop existing policies on public.driver_diagram_versions

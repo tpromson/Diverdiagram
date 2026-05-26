@@ -3,6 +3,8 @@
  */
 import { supabaseUrl, supabasePublishableKey } from "../supabaseClient.js";
 
+import { useAuthStore } from "../store/useAuthStore.js";
+
 /**
  * Sends a PDF or image file to the Supabase Edge Function to extract a structured Driver Diagram.
  * 
@@ -22,14 +24,22 @@ export const parseDiagramWithAI = async (file) => {
 
   // Call the Supabase Edge Function proxy
   const url = `${supabaseUrl}/functions/v1/parse-driver-diagram`;
+  const session = useAuthStore.getState().session;
+
+  const headers = {
+    "Content-Type": mimeType,
+    "apikey": supabasePublishableKey,
+  };
+
+  // If user is logged in, send their access token.
+  // Do NOT send the publishable key as Bearer token if logged out, as it is not a valid JWT and will cause Kong to fail with 401.
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": mimeType,
-      "apikey": supabasePublishableKey,
-      "Authorization": `Bearer ${supabasePublishableKey}`
-    },
+    headers,
     body: file // Send binary data directly in the request body
   });
 
