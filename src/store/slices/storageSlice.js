@@ -801,7 +801,35 @@ export const createStorageSlice = (set, get) => ({
             .select(savedDiagramSelectFields)
             .single();
 
-      const { data: row, error } = await query;
+      let { data: row, error } = await query;
+
+      if (currentDiagramId && error && error.message.includes("row-level security policy")) {
+        console.warn("Update failed due to RLS. Retrying as a new INSERT...", error);
+        
+        const insertPayload = {
+          ...payload,
+          user_id: currentUser.id
+        };
+
+        const insertQuery = supabase
+          .from("driver_diagrams")
+          .insert(insertPayload)
+          .select(savedDiagramSelectFields)
+          .single();
+
+        const insertResult = await insertQuery;
+        row = insertResult.data;
+        error = insertResult.error;
+
+        if (!error && row) {
+          set({ 
+            currentDiagramId: row.id,
+            userRole: "owner",
+            versionHistory: [],
+            lastSharedUrl: ""
+          });
+        }
+      }
 
       if (error) {
         backupToOfflineCache();
