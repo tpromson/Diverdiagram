@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Minus,
@@ -422,6 +422,19 @@ function App() {
   // --- Form Outline & ScrollSpy States ---
   const [isHovered, setIsHovered] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState("");
+
+  // Scroll window directly to the TOP of a form section, then focus its first textarea
+  const scrollToSection = useCallback((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const targetScrollY = window.scrollY + rect.top - 80; // 80px offset from top of viewport
+    window.scrollTo({ top: targetScrollY, behavior: "smooth" });
+    setTimeout(() => {
+      const textarea = el.querySelector("textarea");
+      if (textarea) textarea.focus({ preventScroll: true });
+    }, 400);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1724,17 +1737,7 @@ function App() {
               return (
                 <button
                   key={`dash-${item.id}`}
-                  onClick={() => {
-                    const el = document.getElementById(item.id);
-                    if (el) {
-                      el.scrollIntoView({ behavior: "smooth", block: "center" });
-                      // Delay focus so it doesn't override the smooth scroll animation
-                      setTimeout(() => {
-                        const textarea = el.querySelector("textarea");
-                        if (textarea) textarea.focus({ preventScroll: true });
-                      }, 350);
-                    }
-                  }}
+                  onClick={() => scrollToSection(item.id)}
                   title={item.label}
                   className={`h-[3px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${dashColorClass}`}
                 />
@@ -1768,17 +1771,7 @@ function App() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      const el = document.getElementById(item.id);
-                      if (el) {
-                        el.scrollIntoView({ behavior: "smooth", block: "center" });
-                        // Delay focus so it doesn't override the smooth scroll animation
-                        setTimeout(() => {
-                          const textarea = el.querySelector("textarea");
-                          if (textarea) textarea.focus({ preventScroll: true });
-                        }, 350);
-                      }
-                    }}
+                    onClick={() => scrollToSection(item.id)}
                     className={`flex items-center gap-1.5 text-left rounded-xl py-1.5 px-2 transition-all text-xs cursor-pointer ${levelClass} ${activeClass}`}
                   >
                     {item.color === "pink" && <Target size={12} className={`shrink-0 ${isActive ? "text-pink-600" : "text-slate-400"}`} />}
