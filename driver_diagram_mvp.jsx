@@ -1728,10 +1728,11 @@ function App() {
                     const el = document.getElementById(item.id);
                     if (el) {
                       el.scrollIntoView({ behavior: "smooth", block: "center" });
-                      const textarea = el.querySelector("textarea");
-                      if (textarea) {
-                        textarea.focus({ preventScroll: true });
-                      }
+                      // Delay focus so it doesn't override the smooth scroll animation
+                      setTimeout(() => {
+                        const textarea = el.querySelector("textarea");
+                        if (textarea) textarea.focus({ preventScroll: true });
+                      }, 350);
                     }
                   }}
                   title={item.label}
@@ -1771,10 +1772,11 @@ function App() {
                       const el = document.getElementById(item.id);
                       if (el) {
                         el.scrollIntoView({ behavior: "smooth", block: "center" });
-                        const textarea = el.querySelector("textarea");
-                        if (textarea) {
-                          textarea.focus({ preventScroll: true });
-                        }
+                        // Delay focus so it doesn't override the smooth scroll animation
+                        setTimeout(() => {
+                          const textarea = el.querySelector("textarea");
+                          if (textarea) textarea.focus({ preventScroll: true });
+                        }, 350);
                       }
                     }}
                     className={`flex items-center gap-1.5 text-left rounded-xl py-1.5 px-2 transition-all text-xs cursor-pointer ${levelClass} ${activeClass}`}
