@@ -43,6 +43,7 @@ import {
   ChevronUp,
   Users,
   UserPlus,
+  ListCollapse,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 import { Tooltip, IconActionButton } from "./src/components/tooltip.jsx";
@@ -418,6 +419,34 @@ function App() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("editor");
 
+  // --- Form Outline & ScrollSpy States ---
+  const [isHovered, setIsHovered] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState("");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const intersecting = entries.filter((e) => e.isIntersecting);
+        if (intersecting.length > 0) {
+          intersecting.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          setActiveSectionId(intersecting[0].target.id);
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: "-15% 0px -55% 0px", // active in middle of viewport
+        threshold: 0,
+      }
+    );
+
+    const targets = document.querySelectorAll("[id^='form-section-']");
+    targets.forEach((el) => observer.observe(el));
+
+    return () => {
+      targets.forEach((el) => observer.unobserve(el));
+    };
+  }, [data]);
+
   // --- Derived Memos & Translations ---
   const t = translations[language] || translations[defaultLanguage];
   const isAuthenticated = Boolean(currentUser?.id);
@@ -500,6 +529,51 @@ function App() {
   }, [data]);
 
   const mermaidCode = useMemo(() => buildMermaidCode(data), [data]);
+
+  const outlineItems = useMemo(() => {
+    const items = [];
+    
+    // 1. Goal / Purpose
+    items.push({
+      id: "form-section-purpose",
+      level: 0,
+      label: t.purpose ? t.purpose.charAt(0).toUpperCase() + t.purpose.slice(1) : "Purpose",
+      color: "pink",
+    });
+
+    // 2. Drivers
+    data.primaryDrivers.forEach((pd, pi) => {
+      const pdId = `form-section-pd-${pd.id}`;
+      items.push({
+        id: pdId,
+        level: 0,
+        label: `${t.primaryDriver ? t.primaryDriver.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Primary Driver"} ${pi + 1}`,
+        color: "blue",
+      });
+
+      pd.secondaryDrivers.forEach((sd, si) => {
+        const sdId = `form-section-sd-${sd.id}`;
+        items.push({
+          id: sdId,
+          level: 1,
+          label: `${t.secondaryDriver ? t.secondaryDriver.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Secondary Driver"} ${pi + 1}.${si + 1}`,
+          color: "amber",
+        });
+
+        sd.changeIdeas.forEach((ci, cii) => {
+          const ciId = `form-section-ci-${ci.id}`;
+          items.push({
+            id: ciId,
+            level: 2,
+            label: `${t.changeIdea ? t.changeIdea.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : "Change Idea"} ${pi + 1}.${si + 1}.${cii + 1}`,
+            color: "orange",
+          });
+        });
+      });
+    });
+
+    return items;
+  }, [data, t]);
 
   // --- Effects & Synchronizations ---
 
@@ -1613,6 +1687,111 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+      {/* Notion-style Hover-Expand Floating Outline Navigator */}
+      <div 
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 transition-all duration-300 ease-in-out flex flex-col hidden lg:flex ${
+          isHovered 
+            ? "w-60 max-h-[75vh] p-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/70 shadow-2xl" 
+            : "w-12 py-3 bg-transparent border-transparent shadow-none items-start"
+        }`}
+      >
+        {!isHovered ? (
+          <div className="flex flex-col items-start gap-1.5 w-full pl-1.5 select-none">
+            {outlineItems.map((item) => {
+              const isActive = activeSectionId === item.id;
+              
+              // Width of the dash and indentation based on level (H1 = wider, H2 = medium, H3 = narrow)
+              let widthClass = "w-6 ml-0";
+              if (item.level === 1) widthClass = "w-4 ml-2";
+              if (item.level === 2) widthClass = "w-2 ml-4";
+
+              // Style of the dash (active glows with section color, inactive is gray)
+              let dashColorClass = "bg-slate-300 hover:bg-slate-400";
+              if (isActive) {
+                if (item.color === "pink") dashColorClass = "bg-pink-500 scale-y-125 shadow-sm shadow-pink-500/50";
+                if (item.color === "blue") dashColorClass = "bg-blue-500 scale-y-125 shadow-sm shadow-blue-500/50";
+                if (item.color === "amber") dashColorClass = "bg-amber-500 scale-y-125 shadow-sm shadow-amber-500/50";
+                if (item.color === "orange") dashColorClass = "bg-orange-500 scale-y-125 shadow-sm shadow-orange-500/50";
+                
+                // Slightly wider when active
+                if (item.level === 0) widthClass = "w-7 ml-0";
+                if (item.level === 1) widthClass = "w-5 ml-2";
+                if (item.level === 2) widthClass = "w-3 ml-4";
+              }
+
+              return (
+                <button
+                  key={`dash-${item.id}`}
+                  onClick={() => {
+                    const el = document.getElementById(item.id);
+                    if (el) {
+                      el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      const textarea = el.querySelector("textarea");
+                      if (textarea) {
+                        textarea.focus({ preventScroll: true });
+                      }
+                    }
+                  }}
+                  title={item.label}
+                  className={`h-[3px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${dashColorClass}`}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2 shrink-0 select-none">
+              <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wider pl-1">
+                {t.formOutline}
+              </span>
+            </div>
+            <div className="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 pb-1 scroll-smooth">
+              {outlineItems.map((item) => {
+                const isActive = activeSectionId === item.id;
+                
+                // Determine style based on level and active state
+                let levelClass = "";
+                if (item.level === 1) levelClass = "ml-3 pl-2.5 border-l border-slate-100";
+                if (item.level === 2) levelClass = "ml-6 pl-2.5 border-l border-slate-100";
+
+                let activeClass = "text-slate-500 hover:bg-slate-50 hover:text-slate-900";
+                if (isActive) {
+                  if (item.color === "pink") activeClass = "bg-pink-50 text-pink-800 border-l-2 border-pink-500 pl-2 rounded-l-none";
+                  if (item.color === "blue") activeClass = "bg-blue-50 text-blue-800 border-l-2 border-blue-500 pl-2 rounded-l-none";
+                  if (item.color === "amber") activeClass = "bg-amber-50 text-amber-800 border-l-2 border-amber-500 pl-2 rounded-l-none";
+                  if (item.color === "orange") activeClass = "bg-orange-50 text-orange-800 border-l-2 border-orange-500 pl-2 rounded-l-none";
+                }
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      const el = document.getElementById(item.id);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        const textarea = el.querySelector("textarea");
+                        if (textarea) {
+                          textarea.focus({ preventScroll: true });
+                        }
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 text-left rounded-xl py-1.5 px-2 transition-all text-xs cursor-pointer ${levelClass} ${activeClass}`}
+                  >
+                    {item.color === "pink" && <Target size={12} className={`shrink-0 ${isActive ? "text-pink-600" : "text-slate-400"}`} />}
+                    {item.color === "blue" && <Layers size={12} className={`shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`} />}
+                    {item.color === "amber" && <GitBranch size={12} className={`shrink-0 ${isActive ? "text-amber-600" : "text-slate-400"}`} />}
+                    {item.color === "orange" && <Lightbulb size={12} className={`shrink-0 ${isActive ? "text-orange-600" : "text-slate-400"}`} />}
+                    <span className="truncate w-full">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="mx-auto max-w-7xl space-y-4">
         <WorkspaceMenubar />
         <header className="rounded-[28px] bg-gradient-to-br from-blue-50 via-sky-50 to-white p-4 shadow-sm ring-1 ring-blue-100 backdrop-blur">
@@ -2030,122 +2209,174 @@ function App() {
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="rounded-[24px] border border-pink-100 bg-pink-50 p-4 shadow-sm ring-1 ring-pink-100/70">
-              <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-                <div className="rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-pink-700 ring-1 ring-pink-100">
-                  {t.topLevelGoal}
-                </div>
+            {/* Editor Top Bar Toolbar */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
+                  <Target size={18} className="text-pink-600" />
+                  <span>{t.editDiagramForm}</span>
+                </h2>
                 <button
                   type="button"
                   onClick={() => useUIStore.getState().setAutoSaveEnabled(!autoSaveEnabled)}
                   title={autoSaveEnabled ? "Auto-save ON" : "Auto-save OFF"}
-                  className={`rounded-full px-2 py-1 text-[10px] font-bold transition ${autoSaveEnabled ? "bg-emerald-200 text-emerald-800 hover:bg-emerald-300" : "bg-slate-200 text-slate-500 hover:bg-slate-300"}`}
+                  className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold tracking-wider transition cursor-pointer ${
+                    autoSaveEnabled 
+                      ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-200" 
+                      : "bg-slate-100 text-slate-500 ring-1 ring-slate-200 hover:bg-slate-200"
+                  }`}
                 >
                   {autoSaveEnabled ? "AUTO ON" : "AUTO OFF"}
                 </button>
-                <div className="ml-auto">
-                  <HeaderActionButton
-                    variant="primary"
-                    onClick={saveDiagram}
-                    disabled={savingDiagram || !isAuthenticated || userRole === "viewer"}
-                    data-testid="save-diagram-button"
-                    tabIndex={100}
-                  >
-                    <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
-                  </HeaderActionButton>
-                </div>
               </div>
-              <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} onFocus={() => broadcastLock("purpose-title", true)} onBlur={() => broadcastLock("purpose-title", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-title"])} lockOwner={collaboratorLocks["purpose-title"]} theme="pink" />
-              <div className="mt-3">
-                <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} onFocus={() => broadcastLock("purpose-kpi", true)} onBlur={() => broadcastLock("purpose-kpi", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-kpi"])} lockOwner={collaboratorLocks["purpose-kpi"]} theme="pink" />
-              </div>
+              <HeaderActionButton
+                variant="primary"
+                onClick={saveDiagram}
+                disabled={savingDiagram || !isAuthenticated || userRole === "viewer"}
+                data-testid="save-diagram-button"
+                tabIndex={100}
+              >
+                <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
+              </HeaderActionButton>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className={sectionHeadingClass}>{t.primaryDrivers}</h2>
-                <p className={sectionBodyClass}>{t.primaryDriversDescription}</p>
-              </div>
-              {userRole !== "viewer" && (
-                <HeaderActionButton variant="success" onClick={addPrimary} data-testid="add-primary-button">
-                  <Plus size={16} /> {t.addPrimary}
-                </HeaderActionButton>
-              )}
-            </div>
-
-            {data.primaryDrivers.map((pd, pi) => (
-              <div key={pd.id} className="space-y-3 rounded-[24px] border border-blue-100 bg-blue-50 p-4 shadow-sm ring-1 ring-blue-100/70">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="font-bold text-blue-900">{t.primaryDriver} {pi + 1}</div>
-                    <div className="text-xs text-blue-800/70">{t.primaryDriverHelp}</div>
-                  </div>
-                  {userRole !== "viewer" && (
-                    <IconActionButton label={t.deletePermanently} onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                      <Trash2 size={16} />
-                    </IconActionButton>
-                  )}
+            {/* Form Container (No inner scrollbar) */}
+            <div className="space-y-4 scroll-smooth pb-8">
+              {/* 1. Goal / Purpose Card */}
+              <div 
+                id="form-section-purpose" 
+                className={`scroll-mt-4 rounded-[24px] border p-4 shadow-sm transition-all duration-300 ${
+                  activeSectionId === "form-section-purpose"
+                    ? "border-pink-300 bg-pink-50/90 ring-2 ring-pink-500 shadow-md"
+                    : "border-pink-100 bg-pink-50 ring-1 ring-pink-100/70"
+                }`}
+              >
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-pink-100 text-pink-700">
+                    <Target size={14} />
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-pink-800">
+                    {t.topLevelGoal}
+                  </span>
                 </div>
-                <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} onFocus={() => broadcastLock(`primary-title-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-title-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-title-${pd.id}`])} lockOwner={collaboratorLocks[`primary-title-${pd.id}`]} theme="blue" />
-                <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} testId={pi === 0 ? "primary-kpi-input-0" : `primary-kpi-input-${pd.id}`} tabIndex={5 + pi * 6} onFocus={() => broadcastLock(`primary-kpi-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-kpi-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-kpi-${pd.id}`])} lockOwner={collaboratorLocks[`primary-kpi-${pd.id}`]} theme="blue" />
+                <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} onFocus={() => broadcastLock("purpose-title", true)} onBlur={() => broadcastLock("purpose-title", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-title"])} lockOwner={collaboratorLocks["purpose-title"]} theme="pink" />
+                <div className="mt-3">
+                  <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} onFocus={() => broadcastLock("purpose-kpi", true)} onBlur={() => broadcastLock("purpose-kpi", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-kpi"])} lockOwner={collaboratorLocks["purpose-kpi"]} theme="pink" />
+                </div>
+              </div>
 
+              {/* 2. Drivers Header */}
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <div>
+                  <h2 className={sectionHeadingClass}>{t.primaryDrivers}</h2>
+                  <p className={sectionBodyClass}>{t.primaryDriversDescription}</p>
+                </div>
                 {userRole !== "viewer" && (
-                  <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
-                    <Plus size={16} /> {t.addSecondary}
+                  <HeaderActionButton variant="success" onClick={addPrimary} data-testid="add-primary-button">
+                    <Plus size={16} /> {t.addPrimary}
                   </HeaderActionButton>
                 )}
+              </div>
 
-                {pd.secondaryDrivers.map((sd, si) => (
-                  <div key={sd.id} className="ml-0 space-y-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100/70 md:ml-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-amber-900">{t.secondaryDriver} {si + 1}</div>
-                        <div className="text-xs text-amber-800/70">{t.secondaryDriverHelp}</div>
-                      </div>
-                      {userRole !== "viewer" && (
-                        <IconActionButton label={t.deletePermanently} onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                          <Trash2 size={16} />
-                        </IconActionButton>
-                      )}
+              {/* 3. Primary Drivers List */}
+              {data.primaryDrivers.map((pd, pi) => (
+                <div 
+                  id={`form-section-pd-${pd.id}`} 
+                  key={pd.id} 
+                  className={`scroll-mt-4 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 ${
+                    activeSectionId === `form-section-pd-${pd.id}`
+                      ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-500 shadow-md"
+                      : "border-blue-100 bg-blue-50 ring-1 ring-blue-100/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-blue-900">{t.primaryDriver} {pi + 1}</div>
+                      <div className="text-xs text-blue-800/70">{t.primaryDriverHelp}</div>
                     </div>
-                    <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-title-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-title-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-title-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-title-${sd.id}`]} theme="amber" />
-                    <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} testId={`secondary-kpi-input-${sd.id}`} tabIndex={7 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-kpi-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-kpi-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-kpi-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-kpi-${sd.id}`]} theme="amber" />
-
-                    {sd.changeIdeas.map((ci, cii) => (
-                      <div key={ci.id} className="ml-0 space-y-3 rounded-[24px] border border-orange-200 bg-orange-100/50 p-4 shadow-sm ring-1 ring-orange-200/50 md:ml-5">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-bold text-orange-900">{t.changeIdea} {cii + 1}</div>
-                            <div className="text-xs text-orange-800/70">{t.changeIdeaHelp}</div>
-                          </div>
-                          {userRole !== "viewer" && (
-                            <IconActionButton label={t.deletePermanently} onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
-                              <Trash2 size={16} />
-                            </IconActionButton>
-                          )}
-                        </div>
-                        <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} onFocus={() => broadcastLock(`change-title-${ci.id}`, true)} onBlur={() => broadcastLock(`change-title-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-title-${ci.id}`])} lockOwner={collaboratorLocks[`change-title-${ci.id}`]} theme="orange" />
-                        <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} testId={`change-kpi-input-${ci.id}`} tabIndex={99} onFocus={() => broadcastLock(`change-kpi-${ci.id}`, true)} onBlur={() => broadcastLock(`change-kpi-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-kpi-${ci.id}`])} lockOwner={collaboratorLocks[`change-kpi-${ci.id}`]} theme="orange" />
-                      </div>
-                    ))}
-
                     {userRole !== "viewer" && (
-                      <div className="flex justify-start ml-0 md:ml-5">
-                        <button
-                          onClick={() => addChange(pi, si)}
-                          className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition cursor-pointer"
-                        >
-                          <Plus size={16} /> {t.addChangeIdea}
-                        </button>
-                      </div>
+                      <IconActionButton label={t.deletePermanently} onClick={() => removePrimary(pi)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                        <Trash2 size={16} />
+                      </IconActionButton>
                     )}
                   </div>
-                ))}
-              </div>
-            ))}
+                  <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} onFocus={() => broadcastLock(`primary-title-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-title-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-title-${pd.id}`])} lockOwner={collaboratorLocks[`primary-title-${pd.id}`]} theme="blue" />
+                  <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} testId={pi === 0 ? "primary-kpi-input-0" : `primary-kpi-input-${pd.id}`} tabIndex={5 + pi * 6} onFocus={() => broadcastLock(`primary-kpi-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-kpi-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-kpi-${pd.id}`])} lockOwner={collaboratorLocks[`primary-kpi-${pd.id}`]} theme="blue" />
+
+                  {userRole !== "viewer" && (
+                    <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
+                      <Plus size={16} /> {t.addSecondary}
+                    </HeaderActionButton>
+                  )}
+
+                  {pd.secondaryDrivers.map((sd, si) => (
+                    <div 
+                      id={`form-section-sd-${sd.id}`} 
+                      key={sd.id} 
+                      className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 ${
+                        activeSectionId === `form-section-sd-${sd.id}`
+                          ? "border-amber-300 bg-amber-50/90 ring-2 ring-amber-500 shadow-md"
+                          : "border-amber-100 bg-amber-50 ring-1 ring-amber-100/70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-amber-900">{t.secondaryDriver} {si + 1}</div>
+                          <div className="text-xs text-amber-800/70">{t.secondaryDriverHelp}</div>
+                        </div>
+                        {userRole !== "viewer" && (
+                          <IconActionButton label={t.deletePermanently} onClick={() => removeSecondary(pi, si)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                            <Trash2 size={16} />
+                          </IconActionButton>
+                        )}
+                      </div>
+                      <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-title-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-title-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-title-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-title-${sd.id}`]} theme="amber" />
+                      <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} testId={`secondary-kpi-input-${sd.id}`} tabIndex={7 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-kpi-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-kpi-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-kpi-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-kpi-${sd.id}`]} theme="amber" />
+
+                      {sd.changeIdeas.map((ci, cii) => (
+                        <div 
+                          id={`form-section-ci-${ci.id}`} 
+                          key={ci.id} 
+                          className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 ${
+                            activeSectionId === `form-section-ci-${ci.id}`
+                              ? "border-orange-300 bg-orange-100/75 ring-2 ring-orange-500 shadow-md"
+                              : "border-orange-200 bg-orange-100/50 ring-1 ring-orange-200/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-bold text-orange-900">{t.changeIdea} {cii + 1}</div>
+                              <div className="text-xs text-orange-800/70">{t.changeIdeaHelp}</div>
+                            </div>
+                            {userRole !== "viewer" && (
+                              <IconActionButton label={t.deletePermanently} onClick={() => removeChange(pi, si, cii)} className="rounded-xl p-2 text-red-600 hover:bg-red-50">
+                                <Trash2 size={16} />
+                              </IconActionButton>
+                            )}
+                          </div>
+                          <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} onFocus={() => broadcastLock(`change-title-${ci.id}`, true)} onBlur={() => broadcastLock(`change-title-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-title-${ci.id}`])} lockOwner={collaboratorLocks[`change-title-${ci.id}`]} theme="orange" />
+                          <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} testId={`change-kpi-input-${ci.id}`} tabIndex={99} onFocus={() => broadcastLock(`change-kpi-${ci.id}`, true)} onBlur={() => broadcastLock(`change-kpi-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-kpi-${ci.id}`])} lockOwner={collaboratorLocks[`change-kpi-${ci.id}`]} theme="orange" />
+                        </div>
+                      ))}
+
+                      {userRole !== "viewer" && (
+                        <div className="flex justify-start ml-0 md:ml-5">
+                          <button
+                            onClick={() => addChange(pi, si)}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-orange-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 transition cursor-pointer"
+                          >
+                            <Plus size={16} /> {t.addChangeIdea}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </section>
 
-          <section className={`min-w-0 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
+          <section className={`min-w-0 lg:sticky lg:top-4 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className={sectionHeadingClass}>{t.output}</h2>

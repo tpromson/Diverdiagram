@@ -270,6 +270,10 @@ export const translations = {
     aiImportFailed: "ไม่สามารถสแกนแผนภูมิได้: ",
     aiApiKeyMissing: "กรุณากำหนด VITE_GEMINI_API_KEY ในไฟล์ .env.local เพื่อใช้งานระบบสแกนด้วย AI",
     previewTemplate: "ตัวอย่างโครงสร้างที่จะนำเข้า",
+    editDiagramForm: "แก้ไขแผนภูมิและสารบัญนำทาง",
+    navigatorCollapse: "ซ่อนสารบัญ",
+    navigatorExpand: "แสดงสารบัญ",
+    formOutline: "โครงสร้างแผนภูมิ",
   },
   en: {
     languageLabel: "Language",
@@ -539,5 +543,9 @@ export const translations = {
     aiImportFailed: "AI scanning failed: ",
     aiApiKeyMissing: "Please configure VITE_GEMINI_API_KEY in .env.local to enable AI scanning.",
     previewTemplate: "Structure Preview",
+    editDiagramForm: "Edit Diagram & Outline",
+    navigatorCollapse: "Hide outline",
+    navigatorExpand: "Show outline",
+    formOutline: "Diagram Outline",
   },
 };

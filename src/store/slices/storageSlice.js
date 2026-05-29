@@ -838,19 +838,15 @@ export const createStorageSlice = (set, get) => ({
       }
 
       if (error) {
-        console.error("Supabase Save Error Details:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          currentUser: {
-            id: currentUser?.id,
-            email: currentUser?.email,
-            role: currentUser?.role
-          },
-          currentDiagramId,
-          payload
-        });
+        console.error("Supabase Save Error Details (Plain Text):\n" +
+          `Message: ${error.message}\n` +
+          `Code: ${error.code}\n` +
+          `Details: ${error.details}\n` +
+          `Hint: ${error.hint}\n` +
+          `Current User: ${JSON.stringify(currentUser)}\n` +
+          `Current Diagram ID: ${currentDiagramId}\n` +
+          `Payload: ${JSON.stringify(payload)}`
+        );
 
         backupToOfflineCache();
         let displayError = error.message || "Unable to save this diagram.";
