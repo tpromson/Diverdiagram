@@ -1704,34 +1704,30 @@ function App() {
       <div 
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        data-tour="outline-navigator"
         className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 transition-all duration-300 ease-in-out flex flex-col hidden lg:flex ${
           isHovered 
-            ? "w-60 max-h-[75vh] p-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/70 shadow-2xl" 
-            : "w-12 py-3 bg-transparent border-transparent shadow-none items-start"
+            ? "w-64 max-h-[75vh] p-4 rounded-[24px] bg-white/75 backdrop-blur-lg border border-white/40 shadow-xl ring-1 ring-slate-200/30" 
+            : "w-10 py-3 bg-white/30 backdrop-blur-md border border-white/20 shadow-sm ring-1 ring-slate-200/20 items-center rounded-2xl"
         }`}
       >
         {!isHovered ? (
-          <div className="flex flex-col items-start gap-1.5 w-full pl-1.5 select-none">
+          <div className="flex flex-col items-center gap-2.5 w-full select-none">
             {outlineItems.map((item) => {
               const isActive = activeSectionId === item.id;
               
-              // Width of the dash and indentation based on level (H1 = wider, H2 = medium, H3 = narrow)
-              let widthClass = "w-6 ml-0";
-              if (item.level === 1) widthClass = "w-4 ml-2";
-              if (item.level === 2) widthClass = "w-2 ml-4";
+              let sizeClass = "w-4 h-1";
+              if (item.level === 1) sizeClass = "w-2.5 h-1";
+              if (item.level === 2) sizeClass = "w-1.5 h-1";
 
-              // Style of the dash (active glows with section color, inactive is gray)
-              let dashColorClass = "bg-slate-300 hover:bg-slate-400";
+              let dashColorClass = "bg-slate-350 hover:bg-slate-500";
               if (isActive) {
-                if (item.color === "pink") dashColorClass = "bg-pink-500 scale-y-125 shadow-sm shadow-pink-500/50";
-                if (item.color === "blue") dashColorClass = "bg-blue-500 scale-y-125 shadow-sm shadow-blue-500/50";
-                if (item.color === "amber") dashColorClass = "bg-amber-500 scale-y-125 shadow-sm shadow-amber-500/50";
-                if (item.color === "orange") dashColorClass = "bg-orange-500 scale-y-125 shadow-sm shadow-orange-500/50";
+                if (item.color === "pink") dashColorClass = "bg-pink-500 shadow-sm shadow-pink-500/50";
+                if (item.color === "blue") dashColorClass = "bg-blue-500 shadow-sm shadow-blue-500/50";
+                if (item.color === "amber") dashColorClass = "bg-amber-500 shadow-sm shadow-amber-500/50";
+                if (item.color === "orange") dashColorClass = "bg-orange-500 shadow-sm shadow-orange-500/50";
                 
-                // Slightly wider when active
-                if (item.level === 0) widthClass = "w-7 ml-0";
-                if (item.level === 1) widthClass = "w-5 ml-2";
-                if (item.level === 2) widthClass = "w-3 ml-4";
+                sizeClass = item.level === 0 ? "w-5 h-1.5 scale-x-110" : item.level === 1 ? "w-3.5 h-1.5 scale-x-110" : "w-2.5 h-1.5 scale-x-110";
               }
 
               return (
@@ -1739,7 +1735,7 @@ function App() {
                   key={`dash-${item.id}`}
                   onClick={() => scrollToSection(item.id)}
                   title={item.label}
-                  className={`h-[3px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${dashColorClass}`}
+                  className={`rounded-full transition-all duration-300 cursor-pointer ${sizeClass} ${dashColorClass}`}
                 />
               );
             })}
@@ -1789,7 +1785,7 @@ function App() {
 
       <div className="mx-auto max-w-7xl space-y-4">
         <WorkspaceMenubar />
-        <header className="rounded-[28px] bg-gradient-to-br from-blue-50 via-sky-50 to-white p-4 shadow-sm ring-1 ring-blue-100 backdrop-blur">
+        <header data-tour="document-header" className="rounded-[28px] bg-gradient-to-br from-blue-50 via-sky-50 to-white p-4 shadow-sm ring-1 ring-blue-100 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.workspaceOverview}</div>
@@ -2203,7 +2199,7 @@ function App() {
         </header>
 
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <section className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section data-tour="editor-form" className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             {/* Editor Top Bar Toolbar */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -2240,10 +2236,10 @@ function App() {
               {/* 1. Goal / Purpose Card */}
               <div 
                 id="form-section-purpose" 
-                className={`scroll-mt-4 rounded-[24px] border p-4 shadow-sm transition-all duration-300 ${
+                className={`scroll-mt-4 rounded-[24px] border p-4 shadow-sm transition-all duration-300 hover:-translate-y-[1px] hover:shadow-md ${
                   activeSectionId === "form-section-purpose"
-                    ? "border-pink-300 bg-pink-50/90 ring-2 ring-pink-500 shadow-md"
-                    : "border-pink-100 bg-pink-50 ring-1 ring-pink-100/70"
+                    ? "border-pink-300 bg-pink-50 ring-2 ring-pink-500 shadow-md"
+                    : "border-pink-100 bg-pink-50/50 ring-1 ring-pink-100/70"
                 }`}
               >
                 <div className="mb-3 flex items-center gap-2">
@@ -2254,9 +2250,9 @@ function App() {
                     {t.topLevelGoal}
                   </span>
                 </div>
-                <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} onFocus={() => broadcastLock("purpose-title", true)} onBlur={() => broadcastLock("purpose-title", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-title"])} lockOwner={collaboratorLocks["purpose-title"]} theme="pink" />
+                <TextAreaField label={t.purpose} value={data.purpose.title} onChange={(v) => updatePurpose("title", v)} icon={<Target size={16} />} testId="purpose-title-input" inputRef={purposeTitleInputRef} tabIndex={2} onFocus={() => { broadcastLock("purpose-title", true); setActiveSectionId("form-section-purpose"); }} onBlur={() => broadcastLock("purpose-title", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-title"])} lockOwner={collaboratorLocks["purpose-title"]} theme="pink" />
                 <div className="mt-3">
-                  <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} onFocus={() => broadcastLock("purpose-kpi", true)} onBlur={() => broadcastLock("purpose-kpi", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-kpi"])} lockOwner={collaboratorLocks["purpose-kpi"]} theme="pink" />
+                  <TextAreaField label={t.purposeKpi} value={data.purpose.kpi} onChange={(v) => updatePurpose("kpi", v)} icon={<BarChart3 size={16} />} testId="purpose-kpi-input" tabIndex={3} onFocus={() => { broadcastLock("purpose-kpi", true); setActiveSectionId("form-section-purpose"); }} onBlur={() => broadcastLock("purpose-kpi", false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks["purpose-kpi"])} lockOwner={collaboratorLocks["purpose-kpi"]} theme="pink" />
                 </div>
               </div>
 
@@ -2278,10 +2274,10 @@ function App() {
                 <div 
                   id={`form-section-pd-${pd.id}`} 
                   key={pd.id} 
-                  className={`scroll-mt-4 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 ${
+                  className={`scroll-mt-4 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 hover:-translate-y-[1px] hover:shadow-md ${
                     activeSectionId === `form-section-pd-${pd.id}`
-                      ? "border-blue-300 bg-blue-50/90 ring-2 ring-blue-500 shadow-md"
-                      : "border-blue-100 bg-blue-50 ring-1 ring-blue-100/70"
+                      ? "border-blue-300 bg-blue-50 ring-2 ring-blue-500 shadow-md"
+                      : "border-blue-100 bg-blue-50/50 ring-1 ring-blue-100/70"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -2295,8 +2291,8 @@ function App() {
                       </IconActionButton>
                     )}
                   </div>
-                  <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} onFocus={() => broadcastLock(`primary-title-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-title-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-title-${pd.id}`])} lockOwner={collaboratorLocks[`primary-title-${pd.id}`]} theme="blue" />
-                  <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} testId={pi === 0 ? "primary-kpi-input-0" : `primary-kpi-input-${pd.id}`} tabIndex={5 + pi * 6} onFocus={() => broadcastLock(`primary-kpi-${pd.id}`, true)} onBlur={() => broadcastLock(`primary-kpi-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-kpi-${pd.id}`])} lockOwner={collaboratorLocks[`primary-kpi-${pd.id}`]} theme="blue" />
+                  <TextAreaField label={t.primaryDriverName} value={pd.title} onChange={(v) => updatePrimary(pi, "title", v)} icon={<Layers size={16} />} testId={pi === 0 ? "primary-title-input-0" : `primary-title-input-${pd.id}`} tabIndex={4 + pi * 6} onFocus={() => { broadcastLock(`primary-title-${pd.id}`, true); setActiveSectionId(`form-section-pd-${pd.id}`); }} onBlur={() => broadcastLock(`primary-title-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-title-${pd.id}`])} lockOwner={collaboratorLocks[`primary-title-${pd.id}`]} theme="blue" />
+                  <TextAreaField label={t.primaryKpi} value={pd.kpi} onChange={(v) => updatePrimary(pi, "kpi", v)} icon={<BarChart3 size={16} />} testId={pi === 0 ? "primary-kpi-input-0" : `primary-kpi-input-${pd.id}`} tabIndex={5 + pi * 6} onFocus={() => { broadcastLock(`primary-kpi-${pd.id}`, true); setActiveSectionId(`form-section-pd-${pd.id}`); }} onBlur={() => broadcastLock(`primary-kpi-${pd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`primary-kpi-${pd.id}`])} lockOwner={collaboratorLocks[`primary-kpi-${pd.id}`]} theme="blue" />
 
                   {userRole !== "viewer" && (
                     <HeaderActionButton variant="accent" onClick={() => addSecondary(pi)}>
@@ -2308,10 +2304,10 @@ function App() {
                     <div 
                       id={`form-section-sd-${sd.id}`} 
                       key={sd.id} 
-                      className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 ${
+                      className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 hover:-translate-y-[1px] hover:shadow-md ${
                         activeSectionId === `form-section-sd-${sd.id}`
-                          ? "border-amber-300 bg-amber-50/90 ring-2 ring-amber-500 shadow-md"
-                          : "border-amber-100 bg-amber-50 ring-1 ring-amber-100/70"
+                          ? "border-amber-300 bg-amber-50 ring-2 ring-amber-500 shadow-md"
+                          : "border-amber-100 bg-amber-50/50 ring-1 ring-amber-100/70"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -2325,17 +2321,17 @@ function App() {
                           </IconActionButton>
                         )}
                       </div>
-                      <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-title-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-title-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-title-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-title-${sd.id}`]} theme="amber" />
-                      <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} testId={`secondary-kpi-input-${sd.id}`} tabIndex={7 + pi * 6 + si * 4} onFocus={() => broadcastLock(`secondary-kpi-${sd.id}`, true)} onBlur={() => broadcastLock(`secondary-kpi-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-kpi-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-kpi-${sd.id}`]} theme="amber" />
+                      <TextAreaField label={t.secondaryDriverName} value={sd.title} onChange={(v) => updateSecondary(pi, si, "title", v)} icon={<GitBranch size={16} />} testId={`secondary-title-input-${sd.id}`} tabIndex={6 + pi * 6 + si * 4} onFocus={() => { broadcastLock(`secondary-title-${sd.id}`, true); setActiveSectionId(`form-section-sd-${sd.id}`); }} onBlur={() => broadcastLock(`secondary-title-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-title-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-title-${sd.id}`]} theme="amber" />
+                      <TextAreaField label={t.secondaryKpi} value={sd.kpi} onChange={(v) => updateSecondary(pi, si, "kpi", v)} icon={<BarChart3 size={16} />} testId={`secondary-kpi-input-${sd.id}`} tabIndex={7 + pi * 6 + si * 4} onFocus={() => { broadcastLock(`secondary-kpi-${sd.id}`, true); setActiveSectionId(`form-section-sd-${sd.id}`); }} onBlur={() => broadcastLock(`secondary-kpi-${sd.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`secondary-kpi-${sd.id}`])} lockOwner={collaboratorLocks[`secondary-kpi-${sd.id}`]} theme="amber" />
 
                       {sd.changeIdeas.map((ci, cii) => (
                         <div 
                           id={`form-section-ci-${ci.id}`} 
                           key={ci.id} 
-                          className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 ${
+                          className={`scroll-mt-4 ml-0 space-y-3 rounded-[24px] border p-4 shadow-sm transition-all duration-300 md:ml-5 hover:-translate-y-[1px] hover:shadow-md ${
                             activeSectionId === `form-section-ci-${ci.id}`
-                              ? "border-orange-300 bg-orange-100/75 ring-2 ring-orange-500 shadow-md"
-                              : "border-orange-200 bg-orange-100/50 ring-1 ring-orange-200/50"
+                              ? "border-orange-300 bg-orange-100/80 ring-2 ring-orange-500 shadow-md"
+                              : "border-orange-200 bg-orange-100/30 ring-1 ring-orange-200/40"
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -2349,8 +2345,8 @@ function App() {
                               </IconActionButton>
                             )}
                           </div>
-                          <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} onFocus={() => broadcastLock(`change-title-${ci.id}`, true)} onBlur={() => broadcastLock(`change-title-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-title-${ci.id}`])} lockOwner={collaboratorLocks[`change-title-${ci.id}`]} theme="orange" />
-                          <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} testId={`change-kpi-input-${ci.id}`} tabIndex={99} onFocus={() => broadcastLock(`change-kpi-${ci.id}`, true)} onBlur={() => broadcastLock(`change-kpi-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-kpi-${ci.id}`])} lockOwner={collaboratorLocks[`change-kpi-${ci.id}`]} theme="orange" />
+                          <TextAreaField label={t.changeIdeaName} value={ci.title} onChange={(v) => updateChange(pi, si, cii, "title", v)} icon={<Lightbulb size={16} />} testId={`change-title-input-${ci.id}`} tabIndex={8 + pi * 6 + si * 4 + cii * 2} onFocus={() => { broadcastLock(`change-title-${ci.id}`, true); setActiveSectionId(`form-section-ci-${ci.id}`); }} onBlur={() => broadcastLock(`change-title-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-title-${ci.id}`])} lockOwner={collaboratorLocks[`change-title-${ci.id}`]} theme="orange" />
+                          <TextAreaField label={t.changeKpi} value={ci.kpi} onChange={(v) => updateChange(pi, si, cii, "kpi", v)} icon={<BarChart3 size={16} />} testId={`change-kpi-input-${ci.id}`} tabIndex={99} onFocus={() => { broadcastLock(`change-kpi-${ci.id}`, true); setActiveSectionId(`form-section-ci-${ci.id}`); }} onBlur={() => broadcastLock(`change-kpi-${ci.id}`, false)} disabled={userRole === "viewer" || Boolean(collaboratorLocks[`change-kpi-${ci.id}`])} lockOwner={collaboratorLocks[`change-kpi-${ci.id}`]} theme="orange" />
                         </div>
                       ))}
 
@@ -2371,7 +2367,7 @@ function App() {
             </div>
           </section>
 
-          <section className={`min-w-0 lg:sticky lg:top-4 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
+          <section data-tour="output-panel" className={`min-w-0 lg:sticky lg:top-4 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <h2 className={sectionHeadingClass}>{t.output}</h2>

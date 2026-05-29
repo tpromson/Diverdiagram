@@ -42,6 +42,28 @@ export function TextAreaField({
   lockOwner = "",
   theme = "default",
 }) {
+  const localRef = React.useRef(null);
+
+  // Automatically grow/shrink textarea as content changes
+  React.useEffect(() => {
+    const textarea = localRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  // Safely merge parent ref and local ref
+  const setRef = React.useCallback((element) => {
+    localRef.current = element;
+    if (inputRef) {
+      if (typeof inputRef === "function") {
+        inputRef(element);
+      } else {
+        inputRef.current = element;
+      }
+    }
+  }, [inputRef]);
+
   const handleFocus = (e) => {
     e.target.select();
     if (onFocus) onFocus(e);
@@ -58,16 +80,16 @@ export function TextAreaField({
         <span>{label}</span>
       </div>
       <textarea
-        ref={inputRef}
+        ref={setRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={handleFocus}
         onBlur={onBlur}
         disabled={disabled}
-        rows={2}
+        rows={1}
         data-testid={testId || undefined}
         tabIndex={tabIndex}
-        className={`w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 ${tStyles.focusRing} ${
+        className={`w-full resize-none overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 ${tStyles.focusRing} ${
           disabled ? "bg-slate-100 cursor-not-allowed opacity-75 border-slate-300" : ""
         }`}
       />

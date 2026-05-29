@@ -137,8 +137,10 @@ export function WorkspaceMenubar() {
 
   return (
     <nav
-      className={`sticky top-3 z-40 rounded-[24px] border border-sky-200 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 shadow-sm ring-1 ring-sky-100 backdrop-blur overflow-hidden transition-all duration-300 ease-in-out ${
-        isScrolled ? "px-3 py-1.5" : "px-3 py-3"
+      className={`sticky top-3 z-40 rounded-[24px] border transition-all duration-300 ease-in-out backdrop-blur-md overflow-hidden ${
+        isScrolled 
+          ? "px-3 py-1.5 border-white/60 bg-white/70 shadow-md ring-1 ring-slate-200/20" 
+          : "px-3 py-3 border-sky-200/60 bg-gradient-to-r from-sky-50/90 via-blue-50/90 to-indigo-50/90 shadow-sm ring-1 ring-sky-100/50"
       }`}
     >
       {/* ── Row 1: Always visible ── */}

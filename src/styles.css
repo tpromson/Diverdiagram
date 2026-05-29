@@ -7,11 +7,18 @@
     radial-gradient(circle at top left, rgba(186, 230, 253, 0.32), transparent 35%),
     radial-gradient(circle at top right, rgba(199, 210, 254, 0.24), transparent 32%),
     linear-gradient(180deg, #f8fafc 0%, #f1f5f9 52%, #eef2ff 100%);
+  background-attachment: fixed;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  background-image: 
+    linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-attachment: fixed;
+  line-height: 1.5;
 }
 
 button,
@@ -23,25 +30,28 @@ textarea {
   box-sizing: border-box;
 }
 
-body {
-  line-height: 1.5;
-}
-
 ::selection {
   background: rgba(37, 99, 235, 0.16);
 }
 
 textarea::-webkit-scrollbar,
 div::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 textarea::-webkit-scrollbar-thumb,
 div::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 9999px;
-  background: rgba(148, 163, 184, 0.65);
+  background: rgba(148, 163, 184, 0.35);
+  background-clip: padding-box;
+  transition: background 0.15s ease;
+}
+
+textarea::-webkit-scrollbar-thumb:hover,
+div::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
   background-clip: padding-box;
 }
 
@@ -125,3 +135,7 @@ div::-webkit-scrollbar-track {
     min-height: 148px;
   }
 }
+
+
+
+
