@@ -1233,7 +1233,7 @@ function App() {
 
   if (sharedViewLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4 flex justify-end">
             <LanguageToggle language={language} onChange={setLanguage} t={t} />
@@ -1247,7 +1247,7 @@ function App() {
 
   if (sharedViewError) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4 flex justify-end">
             <LanguageToggle language={language} onChange={setLanguage} t={t} />
@@ -1271,205 +1271,207 @@ function App() {
 
   if (isReadOnlySharedView) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
-        <div className="mx-auto max-w-6xl space-y-4">
-          <CompactPageBar
-            eyebrow={t.sharedViewTitle}
-            title={documentTitle}
-            titleSuffix={<span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">{t.readOnlySharedLink}</span>}
-            mobileOverflowLabel={t.more}
-            desktopSecondary={<LanguageToggle language={language} onChange={setLanguage} t={t} />}
-            desktopPrimary={
-              <HeaderActionButton onClick={exitSharedView}>
-                <ExternalLink size={16} /> {t.backToWorkspace}
-              </HeaderActionButton>
-            }
-            mobileOverflow={
-              <>
-                <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
-                <HeaderActionButton onClick={exitSharedView} className="w-full justify-start">
+      <>
+        <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
+          <div className="mx-auto max-w-6xl space-y-4">
+            <CompactPageBar
+              eyebrow={t.sharedViewTitle}
+              title={documentTitle}
+              titleSuffix={<span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">{t.readOnlySharedLink}</span>}
+              mobileOverflowLabel={t.more}
+              desktopSecondary={<LanguageToggle language={language} onChange={setLanguage} t={t} />}
+              desktopPrimary={
+                <HeaderActionButton onClick={exitSharedView}>
                   <ExternalLink size={16} /> {t.backToWorkspace}
                 </HeaderActionButton>
-              </>
-            }
-            supportingContent={
-              <>
-                <p className="text-sm text-slate-500">{t.sharedReadOnlyDescription}</p>
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.shared}: {formatSavedDateTime(sharedView.shared_at, language)}</div> : null}
-                  {sharedView?.share_expires_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.expires}: {formatSavedDateTime(sharedView.share_expires_at, language)}</div> : null}
-                  {sharedOpenedAt ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.opened}: {formatSavedDateTime(sharedOpenedAt, language)}</div> : null}
-                </div>
-                {renderError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
-                {exportError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
-              </>
-            }
-          />
-
-          <section data-tour="shared-export-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
-                <p className="mt-1 text-sm text-slate-500">{t.exportHint}</p>
-              </div>
-              <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.copyMermaid}</div>
-                  <Tooltip label={t.copyMermaid}>
-                    <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 w-full sm:w-auto">
-                      <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
-                    </button>
-                  </Tooltip>
-                </div>
-                <div className="space-y-2 mb-4" data-testid="svg-layout-mode-picker">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.svgLayoutMode}</div>
-                  <div className="relative">
-                    <select
-                      value={svgLayoutMode}
-                      onChange={(e) => setSvgLayoutMode(e.target.value)}
-                      className="w-full sm:w-72 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none"
-                    >
-                      <option value="auto">{t.layoutAuto}</option>
-                      <option value="landscape_a4">{t.layoutLandscapeA4}</option>
-                      <option value="widescreen">{t.layoutWidescreen}</option>
-                    </select>
+              }
+              mobileOverflow={
+                <>
+                  <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds={false} />
+                  <HeaderActionButton onClick={exitSharedView} className="w-full justify-start">
+                    <ExternalLink size={16} /> {t.backToWorkspace}
+                  </HeaderActionButton>
+                </>
+              }
+              supportingContent={
+                <>
+                  <p className="text-sm text-slate-500">{t.sharedReadOnlyDescription}</p>
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    {sharedView?.shared_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.shared}: {formatSavedDateTime(sharedView.shared_at, language)}</div> : null}
+                    {sharedView?.share_expires_at ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.expires}: {formatSavedDateTime(sharedView.share_expires_at, language)}</div> : null}
+                    {sharedOpenedAt ? <div className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">{t.opened}: {formatSavedDateTime(sharedOpenedAt, language)}</div> : null}
                   </div>
-                </div>
+                  {renderError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{renderError}</div> : null}
+                  {exportError ? <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
+                </>
+              }
+            />
 
+            <section data-tour="shared-export-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
+                  <p className="mt-1 text-sm text-slate-500">{t.exportHint}</p>
+                </div>
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportDiagram || 'Download'}</div>
-                  <div className="flex flex-wrap gap-2">
-                    <Tooltip label={t.exportMmd}>
-                      <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
-                        <Download size={16} /> .mmd
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={t.exportSvg}>
-                      <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-                        <Download size={16} /> .svg
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={t.exportPng}>
-                      <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
-                        <Download size={16} /> .png
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={t.exportPdf}>
-                      <button onClick={downloadPdf} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rose-700">
-                        <Download size={16} /> .pdf
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={t.exportDocx}>
-                      <button
-                        onClick={downloadDocx}
-                        disabled={exportingDocx}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
-                      >
-                        <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
-                      </button>
-                    </Tooltip>
-                    <Tooltip label={t.printDiagram}>
-                      <button
-                        onClick={() => window.print()}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-                      >
-                        <Printer size={16} /> {t.printDiagramShort}
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.copyMermaid}</div>
+                    <Tooltip label={t.copyMermaid}>
+                      <button onClick={copyMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 w-full sm:w-auto">
+                        <Copy size={16} /> {copied ? t.copied : t.copyMermaid}
                       </button>
                     </Tooltip>
                   </div>
-                </div>
-            </div>
-          </section>
+                  <div className="space-y-2 mb-4" data-testid="svg-layout-mode-picker">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.svgLayoutMode}</div>
+                    <div className="relative">
+                      <select
+                        value={svgLayoutMode}
+                        onChange={(e) => setSvgLayoutMode(e.target.value)}
+                        className="w-full sm:w-72 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="auto">{t.layoutAuto}</option>
+                        <option value="landscape_a4">{t.layoutLandscapeA4}</option>
+                        <option value="widescreen">{t.layoutWidescreen}</option>
+                      </select>
+                    </div>
+                  </div>
 
-          <section data-tour="shared-output-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-lg font-bold">{t.output}</h2>
-                <p className="mt-1 text-sm text-slate-500">{t.sharedOutputDescription}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {view === "preview" ? (
-                  <PreviewZoomControls
-                    zoom={previewZoom}
-                    onZoomOut={zoomPreviewOut}
-                    onZoomIn={zoomPreviewIn}
-                    onReset={resetPreviewZoom}
-                    onZoomFit={handleZoomFit}
-                    labels={t}
-                  />
-                ) : null}
-                {view === "preview" ? (
-                  <div className="inline-flex rounded-2xl bg-slate-100 p-1" data-testid="preview-style-toggle">
-                    <button
-                      onClick={() => setPreviewStyle("mermaid")}
-                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "mermaid" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                    >
-                      {t.previewMermaid}
-                    </button>
-                    <button
-                      onClick={() => setPreviewStyle("export")}
-                      className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "export" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                    >
-                      {t.previewExport}
-                    </button>
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportDiagram || 'Download'}</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Tooltip label={t.exportMmd}>
+                        <button onClick={downloadMermaid} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                          <Download size={16} /> .mmd
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.exportSvg}>
+                        <button onClick={downloadSvg} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+                          <Download size={16} /> .svg
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.exportPng}>
+                        <button onClick={downloadPng} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700">
+                          <Download size={16} /> .png
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.exportPdf}>
+                        <button onClick={downloadPdf} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-rose-700">
+                          <Download size={16} /> .pdf
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.exportDocx}>
+                        <button
+                          onClick={downloadDocx}
+                          disabled={exportingDocx}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-70"
+                        >
+                          <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
+                        </button>
+                      </Tooltip>
+                      <Tooltip label={t.printDiagram}>
+                        <button
+                          onClick={() => window.print()}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                        >
+                          <Printer size={16} /> {t.printDiagramShort}
+                        </button>
+                      </Tooltip>
+                    </div>
                   </div>
-                ) : null}
-                {view === "preview" ? (
-                  <Tooltip label={t.expand}>
-                    <button
-                      onClick={openPreviewModal}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                    >
-                      <Maximize2 size={16} /> {t.expand}
-                    </button>
-                  </Tooltip>
-                ) : null}
-                <div className="inline-flex rounded-2xl bg-slate-100 p-1">
-                <button
-                  onClick={() => setView("preview")}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
-                >
-                  <Eye size={16} /> {t.preview}
-                </button>
-                <button
-                  onClick={() => setView("code")}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
-                >
-                  <Code2 size={16} /> {t.code}
-                </button>
+              </div>
+            </section>
+
+            <section data-tour="shared-output-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">{t.output}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{t.sharedOutputDescription}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {view === "preview" ? (
+                    <PreviewZoomControls
+                      zoom={previewZoom}
+                      onZoomOut={zoomPreviewOut}
+                      onZoomIn={zoomPreviewIn}
+                      onReset={resetPreviewZoom}
+                      onZoomFit={handleZoomFit}
+                      labels={t}
+                    />
+                  ) : null}
+                  {view === "preview" ? (
+                    <div className="inline-flex rounded-2xl bg-slate-100 p-1" data-testid="preview-style-toggle">
+                      <button
+                        onClick={() => setPreviewStyle("mermaid")}
+                        className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "mermaid" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        {t.previewMermaid}
+                      </button>
+                      <button
+                        onClick={() => setPreviewStyle("export")}
+                        className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${previewStyle === "export" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        {t.previewExport}
+                      </button>
+                    </div>
+                  ) : null}
+                  {view === "preview" ? (
+                    <Tooltip label={t.expand}>
+                      <button
+                        onClick={openPreviewModal}
+                        className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                      >
+                        <Maximize2 size={16} /> {t.expand}
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                  <div className="inline-flex rounded-2xl bg-slate-100 p-1">
+                  <button
+                    onClick={() => setView("preview")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "preview" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  >
+                    <Eye size={16} /> {t.preview}
+                  </button>
+                  <button
+                    onClick={() => setView("code")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold ${view === "code" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                  >
+                    <Code2 size={16} /> {t.code}
+                  </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="relative mt-4 min-h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4">
-              <div
-                className={`absolute inset-4 transition-all duration-200 ease-out ${
-                  view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
-                }`}
-              >
-                <PreviewCanvas svg={activeSvg} renderError={activeError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} onClick={openPreviewModal} />
+              <div className="relative mt-4 min-h-[420px] rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <div
+                  className={`absolute inset-4 transition-all duration-200 ease-out ${
+                    view === "preview" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                  }`}
+                >
+                  <PreviewCanvas svg={activeSvg} renderError={activeError} zoom={previewZoom} onWheel={handlePreviewWheel} className="h-full" labels={t} onClick={openPreviewModal} />
+                </div>
+                <div
+                  className={`absolute inset-4 transition-all duration-200 ease-out ${
+                    view === "code" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
+                  }`}
+                >
+                  <textarea
+                    value={codeInput}
+                    readOnly
+                    className="h-full min-h-[388px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 font-mono text-sm text-slate-800 outline-none"
+                  />
+                </div>
               </div>
-              <div
-                className={`absolute inset-4 transition-all duration-200 ease-out ${
-                  view === "code" ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-[0.985] opacity-0"
-                }`}
-              >
-                <textarea
-                  value={codeInput}
-                  readOnly
-                  className="h-full min-h-[388px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 font-mono text-sm text-slate-800 outline-none"
-                />
-              </div>
-            </div>
-          </section>
-          <PreviewModal />
-          <PrintReport />
+            </section>
+            <PreviewModal />
+          </div>
         </div>
-      </div>
+        <PrintReport />
+      </>
     );
   }
 
   if (isGalleryView) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
         <div className="mx-auto max-w-6xl space-y-4">
           <CompactPageBar
             eyebrow={t.openGallery}
@@ -1595,7 +1597,7 @@ function App() {
 
   if (isAdminView) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
         <div className="mx-auto max-w-6xl space-y-4">
           <CompactPageBar
             eyebrow={t.openModeration}
