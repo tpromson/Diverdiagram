@@ -63,14 +63,6 @@ export function PrintReport() {
   const documentTitle = useDiagramStore((state) => state.documentTitle);
   const language = useUIStore((state) => state.language);
 
-  React.useEffect(() => {
-    const originalTitle = document.title;
-    document.title = headers.diagramTitle;
-    return () => {
-      document.title = originalTitle;
-    };
-  }, [headers.diagramTitle]);
-
   const headers = language === "th" ? {
     primary: "ปัจจัยขับเคลื่อนหลัก (Primary Drivers) & KPIs",
     secondary: "ปัจจัยขับเคลื่อนรอง (Secondary Drivers) & KPIs",
@@ -96,6 +88,14 @@ export function PrintReport() {
     secondaryLabel: "Secondary Driver",
     changeLabel: "Change Idea"
   };
+
+  React.useEffect(() => {
+    const originalTitle = document.title;
+    document.title = headers.diagramTitle;
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [headers.diagramTitle]);
 
   // Estimate tree height — each secondary driver row = max(secondary card, sum of change cards)
   const getEstimatedTreeHeight = (diagramData) => {
