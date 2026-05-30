@@ -150,6 +150,11 @@ div::-webkit-scrollbar-track {
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   /* Set root and body overrides for paper-only layout */
   :root,
   body {
@@ -245,7 +250,6 @@ div::-webkit-scrollbar-track {
   }
 
   .text-line {
-    font-style: italic;
     color: #475569;
   }
 
@@ -481,7 +485,6 @@ div::-webkit-scrollbar-track {
 
   .node-kpi {
     font-size: 7.5pt;
-    font-style: italic;
     border-top: 1px dashed rgba(0, 0, 0, 0.12);
     padding-top: 3px;
     margin-top: 1px;
@@ -511,7 +514,8 @@ div::-webkit-scrollbar-track {
     left: 0;
     top: 50%;
     width: 20px;
-    height: 2.5px;
+    height: 0;
+    border-top: 2.5px solid;
     transform: translateY(-50%);
   }
 
@@ -522,7 +526,8 @@ div::-webkit-scrollbar-track {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 2.5px;
+    width: 0;
+    border-left: 2.5px solid;
   }
 
   .tree-item:first-child::after {
@@ -544,35 +549,36 @@ div::-webkit-scrollbar-track {
     right: -20px;
     top: 50%;
     width: 20px;
-    height: 2.5px;
+    height: 0;
+    border-top: 2.5px solid;
     transform: translateY(-50%);
   }
 
   /* Level 1 Line Colors (Pink) */
   .lvl-1-item::before,
   .lvl-1-item::after {
-    background-color: #D11A5B !important;
+    border-color: #D11A5B !important;
   }
   .node-purpose.has-children::after {
-    background-color: #D11A5B !important;
+    border-color: #D11A5B !important;
   }
 
   /* Level 2 Line Colors (Blue) */
   .lvl-2-item::before,
   .lvl-2-item::after {
-    background-color: #1565C0 !important;
+    border-color: #1565C0 !important;
   }
   .node-primary.has-children::after {
-    background-color: #1565C0 !important;
+    border-color: #1565C0 !important;
   }
 
   /* Level 3 Line Colors (Orange) */
   .lvl-3-item::before,
   .lvl-3-item::after {
-    background-color: #ED6C02 !important;
+    border-color: #ED6C02 !important;
   }
   .node-secondary.has-children::after {
-    background-color: #ED6C02 !important;
+    border-color: #ED6C02 !important;
   }
 
   /* Details Table styles */
@@ -658,7 +664,6 @@ div::-webkit-scrollbar-track {
   }
 
   .kpi-lines {
-    font-style: italic;
     color: #64748b;
     font-size: 8.5pt;
   }
