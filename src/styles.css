@@ -596,46 +596,46 @@ div::-webkit-scrollbar-track {
     border-color: #ED6C02 !important;
   }
 
-  /* Arrowheads on nodes — matching incoming line colors */
-  .lvl-1-item > .tree-group > .node-primary::before {
+  /* Arrowheads on parent nodes pointing left — matching outgoing line colors */
+  .node-purpose.has-children::before {
     content: '';
     position: absolute;
-    left: -2px;
+    right: -6px;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 6px solid #D11A5B !important;
+    border-right: 6px solid #D11A5B !important;
     z-index: 12;
   }
 
-  .lvl-2-item > .tree-group > .node-secondary::before {
+  .node-primary.has-children::before {
     content: '';
     position: absolute;
-    left: -2px;
+    right: -6px;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 6px solid #1565C0 !important;
+    border-right: 6px solid #1565C0 !important;
     z-index: 12;
   }
 
-  .lvl-3-item > .tree-group > .node-change::before {
+  .node-secondary.has-children::before {
     content: '';
     position: absolute;
-    left: -2px;
+    right: -6px;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 6px solid #ED6C02 !important;
+    border-right: 6px solid #ED6C02 !important;
     z-index: 12;
   }
 
