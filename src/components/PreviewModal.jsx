@@ -60,6 +60,46 @@ export function PreviewModal() {
     );
   };
 
+  const handleZoomFit = () => {
+    const container = document.querySelector(".fixed.inset-0 .preview-surface");
+    if (!container) return;
+    
+    const svgEl = container.querySelector("svg");
+    if (!svgEl) return;
+    
+    let svgWidth = 0;
+    let svgHeight = 0;
+    
+    const viewBox = svgEl.getAttribute("viewBox");
+    if (viewBox) {
+      const parts = viewBox.split(/\s+/).map(Number);
+      if (parts.length === 4) {
+        svgWidth = parts[2];
+        svgHeight = parts[3];
+      }
+    }
+    
+    if (!svgWidth || !svgHeight) {
+      svgWidth = svgEl.clientWidth || Number(svgEl.getAttribute("width")?.replace("px", "")) || 800;
+      svgHeight = svgEl.clientHeight || Number(svgEl.getAttribute("height")?.replace("px", "")) || 600;
+    }
+    
+    const containerWidth = container.clientWidth - 48; // p-6 = 24px padding on both sides
+    const containerHeight = container.clientHeight - 48;
+    
+    if (svgWidth > 0 && svgHeight > 0 && containerWidth > 0 && containerHeight > 0) {
+      const fitZoom = Math.min(containerWidth / svgWidth, containerHeight / svgHeight);
+      const clampedZoom = Math.max(PREVIEW_ZOOM_MIN, Math.min(PREVIEW_ZOOM_MAX, Number(fitZoom.toFixed(2))));
+      setPreviewZoom(clampedZoom);
+      
+      // Reset scrollbars to let margin: auto center correctly
+      setTimeout(() => {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+      }, 50);
+    }
+  };
+
   if (!shouldRender) return null;
 
   return (
@@ -84,7 +124,7 @@ export function PreviewModal() {
             <p className="mt-1 text-sm text-slate-500">{t.modalDescription}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} labels={t} />
+            <PreviewZoomControls zoom={zoom} onZoomOut={onZoomOut} onZoomIn={onZoomIn} onReset={onReset} onZoomFit={handleZoomFit} labels={t} />
             <button
               onClick={() => onClose(false)}
               data-testid="close-preview-modal-button"

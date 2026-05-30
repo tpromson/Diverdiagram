@@ -326,3 +326,40 @@ export function computeFilteredSavedDiagrams({ savedDiagrams, savedScope, savedS
 
   return sortSavedDiagrams(filtered, savedSort);
 }
+
+export function focusNextInput(currentElement) {
+  if (typeof document === "undefined") return;
+
+  // Query all visible input and textarea elements that can receive focus in the form tab flow
+  const inputs = Array.from(
+    document.querySelectorAll('input[type="text"], input:not([type]), textarea')
+  ).filter((el) => {
+    const style = window.getComputedStyle(el);
+    return (
+      !el.disabled &&
+      !el.readOnly &&
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      el.offsetWidth > 0 &&
+      el.offsetHeight > 0 &&
+      el.getAttribute("tabindex") !== "-1"
+    );
+  });
+
+  // Sort them based on their tabIndex value to maintain correct logical tab order
+  inputs.sort((a, b) => {
+    const aTab = parseInt(a.getAttribute("tabindex") || "0", 10);
+    const bTab = parseInt(b.getAttribute("tabindex") || "0", 10);
+    
+    if (aTab > 0 && bTab > 0) return aTab - bTab;
+    if (aTab > 0) return -1;
+    if (bTab > 0) return 1;
+    return 0;
+  });
+
+  const currentIndex = inputs.indexOf(currentElement);
+  if (currentIndex !== -1) {
+    const nextIndex = (currentIndex + 1) % inputs.length;
+    inputs[nextIndex].focus();
+  }
+}

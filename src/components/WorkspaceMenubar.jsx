@@ -10,6 +10,7 @@ import {
   Copy,
   FolderOpen,
   Sparkles,
+  Printer,
 } from "lucide-react";
 import { HeaderActionButton } from "./actions.jsx";
 import { LanguageToggle } from "./LanguageToggle.jsx";
@@ -55,6 +56,7 @@ export function WorkspaceMenubar() {
   const title = documentTitle.trim() || defaultDocumentTitle;
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef(null);
+  const exportMenuRef2 = useRef(null);
 
   // Track scroll position for smooth collapse
   const [isScrolled, setIsScrolled] = useState(false);
@@ -86,15 +88,24 @@ export function WorkspaceMenubar() {
           : "text-slate-600 bg-slate-50 ring-slate-200";
 
   useEffect(() => {
-    if (!exportMenuOpen) return undefined;
     const handlePointerDown = (e) => {
-      if (!exportMenuRef.current?.contains(e.target)) setExportMenuOpen(false);
+      if (!exportMenuOpen) return;
+      const clickedInside =
+        exportMenuRef.current?.contains(e.target) ||
+        exportMenuRef2.current?.contains(e.target);
+      if (!clickedInside) {
+        setExportMenuOpen(false);
+      }
     };
-    const handleKeyDown = (e) => { if (e.key === "Escape") setExportMenuOpen(false); };
-    window.addEventListener("mousedown", handlePointerDown);
+    const handleKeyDown = (e) => {
+      if (exportMenuOpen && e.key === "Escape") {
+        setExportMenuOpen(false);
+      }
+    };
+    window.addEventListener("click", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("click", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [exportMenuOpen]);
@@ -132,12 +143,17 @@ export function WorkspaceMenubar() {
       <HeaderActionButton variant="violet" onClick={() => runExportAction(downloadDocx)} disabled={exportingDocx}>
         <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
       </HeaderActionButton>
+      <HeaderActionButton variant="primary" onClick={() => runExportAction(() => window.print())}>
+        <Printer size={16} /> {t.printDiagram}
+      </HeaderActionButton>
     </>
   );
 
   return (
     <nav
-      className={`sticky top-3 z-40 rounded-[24px] border transition-all duration-300 ease-in-out backdrop-blur-md overflow-hidden ${
+      className={`sticky top-3 z-40 rounded-[24px] border transition-all duration-300 ease-in-out backdrop-blur-md ${
+        exportMenuOpen ? "" : "overflow-hidden"
+      } ${
         isScrolled 
           ? "px-3 py-1.5 border-white/60 bg-white/70 shadow-md ring-1 ring-slate-200/20" 
           : "px-3 py-3 border-sky-200/60 bg-gradient-to-r from-sky-50/90 via-blue-50/90 to-indigo-50/90 shadow-sm ring-1 ring-sky-100/50"
@@ -195,7 +211,9 @@ export function WorkspaceMenubar() {
         <div className="flex items-center gap-2 shrink-0">
           {/* Compact export/saved strip — fades in when scrolled on md+ */}
           <div
-            className={`hidden md:flex items-center gap-1.5 overflow-hidden transition-all duration-300 ease-in-out ${
+            className={`hidden md:flex items-center gap-1.5 transition-all duration-300 ease-in-out ${
+              exportMenuOpen ? "" : "overflow-hidden"
+            } ${
               isScrolled ? "max-w-[120px] opacity-100 pointer-events-auto" : "max-w-0 opacity-0 pointer-events-none"
             }`}
           >
@@ -263,6 +281,9 @@ export function WorkspaceMenubar() {
               <HeaderActionButton variant="violet" className="w-full justify-start" onClick={downloadDocx} disabled={exportingDocx}>
                 <Download size={16} /> {exportingDocx ? t.exporting : t.exportDocx}
               </HeaderActionButton>
+              <HeaderActionButton variant="primary" className="w-full justify-start" onClick={() => window.print()}>
+                <Printer size={16} /> {t.printDiagram}
+              </HeaderActionButton>
               {authUiActive && (
                 <>
                   <div className="mt-1 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{t.session}</div>
@@ -278,8 +299,10 @@ export function WorkspaceMenubar() {
 
       {/* ── Row 2: Full action buttons — smooth collapse via max-height ── */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isScrolled ? "max-h-0 opacity-0 mt-0" : "max-h-24 opacity-100 mt-3"
+        className={`transition-all duration-300 ease-in-out ${
+          isScrolled 
+            ? "max-h-0 opacity-0 mt-0 overflow-hidden" 
+            : `max-h-24 opacity-100 mt-3 ${exportMenuOpen ? "" : "overflow-hidden"}`
         }`}
       >
         <div className="hidden md:flex flex-wrap items-center gap-2 xl:justify-end">
@@ -309,20 +332,20 @@ export function WorkspaceMenubar() {
           {/* Export + language + saved */}
           <div className="flex items-center gap-2">
             <LanguageToggle language={language} onChange={setLanguage} t={t} exposeTestIds />
-            <div className="relative">
+            <div ref={exportMenuRef2} className="relative">
               <button
                 type="button"
-                aria-expanded={!isScrolled && exportMenuOpen}
-                onClick={() => !isScrolled && setExportMenuOpen((o) => !o)}
+                aria-expanded={exportMenuOpen}
+                onClick={() => setExportMenuOpen((o) => !o)}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold border border-violet-200 bg-violet-50 text-violet-700 shadow-sm hover:bg-violet-100 transition"
               >
                 <Download size={16} />
                 <span className="hidden md:inline">{t.exportAndCode}</span>
-                <ChevronDown size={16} className={`transition-transform duration-200 ${!isScrolled && exportMenuOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={16} className={`transition-transform duration-200 ${exportMenuOpen ? "rotate-180" : ""}`} />
               </button>
               <div
                 className={`absolute right-0 z-50 mt-2 grid min-w-[220px] gap-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-200/80 transition-all duration-200 ease-out ${
-                  !isScrolled && exportMenuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
+                  exportMenuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
                 }`}
               >
                 <ExportDropdownItems />

@@ -1,4 +1,5 @@
 import React from "react";
+import { focusNextInput } from "../utils/helpers.js";
 
 const themeClasses = {
   default: {
@@ -85,6 +86,12 @@ export function TextAreaField({
         onChange={(e) => onChange(e.target.value)}
         onFocus={handleFocus}
         onBlur={onBlur}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            focusNextInput(e.target);
+          }
+        }}
         disabled={disabled}
         rows={1}
         data-testid={testId || undefined}

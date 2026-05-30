@@ -25,23 +25,33 @@ export function PreviewCanvas({ svg, renderError, zoom, className = "", onWheel 
 
   const isZoomed = zoom > 1;
 
+  let svgWidth = "max-content";
+  let svgHeight = "max-content";
+
+  if (svg) {
+    const match = svg.match(/viewBox=["']\s*[\d\.-]+\s+[\d\.-]+\s+([\d\.]+)\s+([\d\.]+)/i);
+    if (match) {
+      svgWidth = `${match[1]}px`;
+      svgHeight = `${match[2]}px`;
+    }
+  }
+
   return (
     <div
       onWheel={onWheel}
       onClick={onClick}
-      className={`preview-surface flex ${isZoomed ? "items-start justify-start" : "items-center justify-center"} overflow-auto rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 transition-colors ${
+      className={`preview-surface flex items-start justify-start overflow-auto rounded-[24px] bg-slate-100 p-6 ring-1 ring-slate-200 transition-colors ${
         onClick ? "cursor-zoom-in hover:bg-slate-200/50" : ""
       } ${className}`}
     >
       <div
         className="diagram-preview"
         style={{ 
-          transform: `scale(${zoom})`,
-          transformOrigin: isZoomed ? "0 0" : "center center",
-          width: "max-content",
-          height: "max-content",
+          width: svgWidth !== "max-content" ? `${parseFloat(svgWidth) * zoom}px` : "max-content",
+          height: svgHeight !== "max-content" ? `${parseFloat(svgHeight) * zoom}px` : "max-content",
+          margin: "auto",
           padding: isZoomed ? "24px" : "0",
-          transition: "transform 0.15s ease-out, padding 0.15s ease-out",
+          transition: "width 0.15s ease-out, height 0.15s ease-out, padding 0.15s ease-out",
         }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />

@@ -1,11 +1,11 @@
 import React from "react";
-import { Minus, Plus, RotateCcw } from "lucide-react";
+import { Minus, Plus, RotateCcw, Maximize } from "lucide-react";
 import { Tooltip, IconActionButton } from "./tooltip.jsx";
 
 const PREVIEW_ZOOM_MIN = 0.5;
 const PREVIEW_ZOOM_MAX = 2;
 
-export function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels }) {
+export function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, onZoomFit, labels }) {
   return (
     <div className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm">
       <IconActionButton
@@ -26,6 +26,15 @@ export function PreviewZoomControls({ zoom, onZoomOut, onZoomIn, onReset, labels
           <RotateCcw size={14} /> {Math.round(zoom * 100)}%
         </button>
       </Tooltip>
+      {onZoomFit && (
+        <IconActionButton
+          label={labels.zoomFit}
+          onClick={onZoomFit}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-50"
+        >
+          <Maximize size={16} />
+        </IconActionButton>
+      )}
       <IconActionButton
         label={labels.zoomIn}
         onClick={onZoomIn}

@@ -4,6 +4,7 @@ import {
   Minus,
   Trash2,
   Copy,
+  Printer,
   Download,
   Target,
   Layers,
@@ -44,10 +45,14 @@ import {
   Users,
   UserPlus,
   ListCollapse,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase, supabasePublishableKey, supabaseUrl } from "./src/supabaseClient.js";
 import { Tooltip, IconActionButton } from "./src/components/tooltip.jsx";
 import { HeaderActionButton, surfaceButtonClass } from "./src/components/actions.jsx";
+import { PrintReport } from "./src/components/PrintReport.jsx";
+
 
 import {
   SHARE_LINK_DURATION_MS,
@@ -101,6 +106,7 @@ import {
   buildStoredThumbnailSvg,
   getStoredThumbnailMarkup,
   getCachedThumbnailMarkup,
+  focusNextInput,
 } from "./src/utils/helpers.js";
 
 import {
@@ -422,6 +428,7 @@ function App() {
   // --- Form Outline & ScrollSpy States ---
   const [isHovered, setIsHovered] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState("");
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
 
   // Scroll window directly to the TOP of a form section, then focus its first textarea
   const scrollToSection = useCallback((id) => {
@@ -1127,6 +1134,46 @@ function App() {
   const zoomPreviewOut = () => zoomOut();
   const resetPreviewZoom = () => resetZoom();
 
+  const handleZoomFit = useCallback(() => {
+    const container = document.querySelector(".preview-surface");
+    if (!container) return;
+    
+    const svgEl = container.querySelector("svg");
+    if (!svgEl) return;
+    
+    let svgWidth = 0;
+    let svgHeight = 0;
+    
+    const viewBox = svgEl.getAttribute("viewBox");
+    if (viewBox) {
+      const parts = viewBox.split(/\s+/).map(Number);
+      if (parts.length === 4) {
+        svgWidth = parts[2];
+        svgHeight = parts[3];
+      }
+    }
+    
+    if (!svgWidth || !svgHeight) {
+      svgWidth = svgEl.clientWidth || Number(svgEl.getAttribute("width")?.replace("px", "")) || 800;
+      svgHeight = svgEl.clientHeight || Number(svgEl.getAttribute("height")?.replace("px", "")) || 600;
+    }
+    
+    const containerWidth = container.clientWidth - 48; // p-6 = 24px padding on both sides
+    const containerHeight = container.clientHeight - 48;
+    
+    if (svgWidth > 0 && svgHeight > 0 && containerWidth > 0 && containerHeight > 0) {
+      const fitZoom = Math.min(containerWidth / svgWidth, containerHeight / svgHeight);
+      const clampedZoom = Math.max(PREVIEW_ZOOM_MIN, Math.min(PREVIEW_ZOOM_MAX, Number(fitZoom.toFixed(2))));
+      setPreviewZoom(clampedZoom);
+      
+      // Reset scrollbars to let margin: auto center correctly
+      setTimeout(() => {
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+      }, 50);
+    }
+  }, [setPreviewZoom]);
+
   const handlePreviewWheel = (event) => {
     if (!event.ctrlKey && !event.metaKey) return;
 
@@ -1255,7 +1302,7 @@ function App() {
             }
           />
 
-          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section data-tour="shared-export-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t.exportAndCode}</div>
@@ -1316,12 +1363,20 @@ function App() {
                         <Download size={16} /> {exportingDocx ? t.exporting : ".docx"}
                       </button>
                     </Tooltip>
+                    <Tooltip label={t.printDiagram}>
+                      <button
+                        onClick={() => window.print()}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                      >
+                        <Printer size={16} /> {t.printDiagramShort}
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
             </div>
           </section>
 
-          <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <section data-tour="shared-output-panel" className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold">{t.output}</h2>
@@ -1334,6 +1389,7 @@ function App() {
                     onZoomOut={zoomPreviewOut}
                     onZoomIn={zoomPreviewIn}
                     onReset={resetPreviewZoom}
+                    onZoomFit={handleZoomFit}
                     labels={t}
                   />
                 ) : null}
@@ -1699,16 +1755,21 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+    <>
+      <div className="min-h-screen bg-slate-50 p-4 text-slate-900 no-print">
       {/* Notion-style Hover-Expand Floating Outline Navigator */}
       <div 
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         data-tour="outline-navigator"
-        className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 transition-all duration-300 ease-in-out flex flex-col hidden lg:flex ${
+        className={`fixed left-4 top-1/2 -translate-y-1/2 z-40 transition-all duration-300 ease-in-out flex flex-col ${
+          editorCollapsed 
+            ? "pointer-events-none opacity-0 scale-95 invisible hidden" 
+            : "hidden lg:flex"
+        } ${
           isHovered 
-            ? "w-64 max-h-[75vh] p-4 rounded-[24px] bg-white/75 backdrop-blur-lg border border-white/40 shadow-xl ring-1 ring-slate-200/30" 
-            : "w-10 py-3 bg-white/30 backdrop-blur-md border border-white/20 shadow-sm ring-1 ring-slate-200/20 items-center rounded-2xl"
+            ? "w-64 max-h-[75vh] p-4 rounded-[24px] bg-white/85 backdrop-blur-lg border border-slate-200 shadow-xl ring-1 ring-slate-200/50 hover:scale-[1.01]" 
+            : "w-10 py-3 bg-white/75 backdrop-blur-md border border-slate-200 shadow-md ring-1 ring-slate-200/40 items-center rounded-2xl hover:scale-105 hover:bg-white/95 hover:shadow-lg"
         }`}
       >
         {!isHovered ? (
@@ -1735,7 +1796,7 @@ function App() {
                   key={`dash-${item.id}`}
                   onClick={() => scrollToSection(item.id)}
                   title={item.label}
-                  className={`rounded-full transition-all duration-300 cursor-pointer ${sizeClass} ${dashColorClass}`}
+                  className={`rounded-full transition-all duration-300 cursor-pointer ${sizeClass} ${dashColorClass} hover:scale-125`}
                 />
               );
             })}
@@ -1768,7 +1829,7 @@ function App() {
                   <button
                     key={item.id}
                     onClick={() => scrollToSection(item.id)}
-                    className={`flex items-center gap-1.5 text-left rounded-xl py-1.5 px-2 transition-all text-xs cursor-pointer ${levelClass} ${activeClass}`}
+                    className={`flex items-center gap-1.5 text-left rounded-xl py-1.5 px-2 transition-all duration-200 text-xs cursor-pointer ${levelClass} ${activeClass} hover:scale-[1.02] hover:translate-x-0.5 active:scale-98`}
                   >
                     {item.color === "pink" && <Target size={12} className={`shrink-0 ${isActive ? "text-pink-600" : "text-slate-400"}`} />}
                     {item.color === "blue" && <Layers size={12} className={`shrink-0 ${isActive ? "text-blue-600" : "text-slate-400"}`} />}
@@ -2059,6 +2120,12 @@ function App() {
                     placeholder={t.documentTitlePlaceholder}
                     tabIndex={1}
                     onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextInput(e.target);
+                      }
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                   />
                   </label>
@@ -2198,10 +2265,17 @@ function App() {
           {exportError ? <div className="mt-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">{exportError}</div> : null}
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-          <section data-tour="editor-form" className="min-w-0 space-y-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className={`grid gap-4 transition-all duration-500 ease-in-out ${editorCollapsed ? "lg:grid-cols-1" : "lg:grid-cols-[0.95fr_1.05fr]"}`}>
+          <section
+            data-tour="editor-form"
+            className={`min-w-0 space-y-4 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 transition-all duration-500 ease-in-out ${
+              editorCollapsed
+                ? "w-0 h-0 opacity-0 p-0 border-0 ring-0 overflow-hidden pointer-events-none"
+                : "w-full p-5 opacity-100"
+            }`}
+          >
             {/* Editor Top Bar Toolbar */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
                   <Target size={18} className="text-pink-600" />
@@ -2220,15 +2294,31 @@ function App() {
                   {autoSaveEnabled ? "AUTO ON" : "AUTO OFF"}
                 </button>
               </div>
-              <HeaderActionButton
-                variant="primary"
-                onClick={saveDiagram}
-                disabled={savingDiagram || !isAuthenticated || userRole === "viewer"}
-                data-testid="save-diagram-button"
-                tabIndex={100}
-              >
-                <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
-              </HeaderActionButton>
+              <div className="flex items-center gap-2">
+                <HeaderActionButton
+                  variant="primary"
+                  onClick={saveDiagram}
+                  disabled={savingDiagram || !isAuthenticated || userRole === "viewer"}
+                  data-testid="save-diagram-button"
+                  tabIndex={100}
+                >
+                  <Save size={16} /> {savingDiagram ? t.saving : t.saveDiagram}
+                </HeaderActionButton>
+
+                <Tooltip label={t.collapseEditor}>
+                  <button
+                    type="button"
+                    onClick={() => setEditorCollapsed(true)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 hover:scale-105 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+            {/* Keyboard shortcuts hint */}
+            <div className="mb-2 rounded-2xl bg-slate-50 px-4 py-2.5 text-xs text-slate-500 border border-slate-100/70 flex items-center gap-2 select-none">
+              <span>{t.navigationHint}</span>
             </div>
 
             {/* Form Container (No inner scrollbar) */}
@@ -2369,9 +2459,22 @@ function App() {
 
           <section data-tour="output-panel" className={`min-w-0 lg:sticky lg:top-4 lg:h-[74vh] xl:h-[70vh] ${workbenchPanelClass}`}>
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h2 className={sectionHeadingClass}>{t.output}</h2>
-                <p className={`mt-1 ${sectionBodyClass}`}>{t.outputDescription}</p>
+              <div className="flex items-start gap-3">
+                {editorCollapsed && (
+                  <Tooltip label={t.expandEditor}>
+                    <button
+                      type="button"
+                      onClick={() => setEditorCollapsed(false)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 hover:scale-105 active:scale-95 transition-all shadow-sm cursor-pointer shrink-0 mt-0.5"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </Tooltip>
+                )}
+                <div>
+                  <h2 className={sectionHeadingClass}>{t.output}</h2>
+                  <p className={`mt-1 ${sectionBodyClass}`}>{t.outputDescription}</p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                 <div className="flex rounded-2xl bg-slate-50 p-1 ring-1 ring-slate-200">
@@ -2396,6 +2499,7 @@ function App() {
                     onZoomOut={zoomPreviewOut}
                     onZoomIn={zoomPreviewIn}
                     onReset={resetPreviewZoom}
+                    onZoomFit={handleZoomFit}
                     labels={t}
                   />
                 ) : null}
@@ -2446,75 +2550,74 @@ function App() {
               </div>
             </div>
 
-            <div className={`mt-4 ${workbenchMutedPanelClass}`}>
-              {!isReadOnlySharedView && (
-                <>
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
-                      <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
-                    </div>
-                    <div className="inline-flex w-fit max-w-full shrink-0 items-center rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
-                      {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
-                    </div>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {!isAuthenticated ? (
-                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                        {t.signInForVersionHistory}
-                      </div>
-                    ) : !currentDiagramId ? (
-                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                        {t.openSavedFirst}
-                      </div>
-                    ) : loadingVersionHistory ? (
-                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                        {t.loadingVersionHistory}
-                      </div>
-                    ) : versionHistory.length ? (
-                      versionHistory.map((version) => (
-                        <div key={version.id} className="flex flex-col gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <History size={14} className="text-slate-400" />
-                              <div className="truncate font-semibold text-slate-900">{version.title || documentTitle || defaultDocumentTitle}</div>
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-600">
-                                {version.save_source}
-                              </span>
-                            </div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              {t.saved}: {formatSavedDateTime(version.created_at, language)}
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 flex-wrap items-center gap-2">
-                            <button
-                              onClick={() => restoreVersion(version)}
-                              disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
-                            >
-                              <History size={14} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
-                            </button>
-                            <button
-                              onClick={() => restoreVersion(version, { saveImmediately: true })}
-                              disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
-                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
-                            >
-                              <RefreshCw size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-                        {t.noVersions}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
           </section>
         </div>
+
+        {!isReadOnlySharedView && (
+          <div data-tour="version-history" className={workbenchMutedPanelClass}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-slate-900">{t.versionHistory}</h2>
+                <p className="mt-0.5 line-clamp-2 text-sm leading-6 text-slate-500">{t.versionHistoryDescription}</p>
+              </div>
+              <div className="inline-flex w-fit max-w-full shrink-0 items-center rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                {currentDiagramId ? `${versionHistory.length} ${t.versions}` : t.openSavedDiagram}
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {!isAuthenticated ? (
+                <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                  {t.signInForVersionHistory}
+                </div>
+              ) : !currentDiagramId ? (
+                <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                  {t.openSavedFirst}
+                </div>
+              ) : loadingVersionHistory ? (
+                <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                  {t.loadingVersionHistory}
+                </div>
+              ) : versionHistory.length ? (
+                versionHistory.map((version) => (
+                  <div key={version.id} className="flex flex-col gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <History size={14} className="text-slate-400" />
+                        <div className="truncate font-semibold text-slate-900">{version.title || documentTitle || defaultDocumentTitle}</div>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-600">
+                          {version.save_source}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        {t.saved}: {formatSavedDateTime(version.created_at, language)}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => restoreVersion(version)}
+                        disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <History size={14} /> {restoringVersionId === version.id ? t.restoring : t.loadToEditor}
+                      </button>
+                      <button
+                        onClick={() => restoreVersion(version, { saveImmediately: true })}
+                        disabled={restoringVersionId === version.id || restoringAndSavingVersionId === version.id}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <RefreshCw size={14} /> {restoringAndSavingVersionId === version.id ? t.saving : t.restoreAndSave}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl bg-white p-3 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+                  {t.noVersions}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         <SavedDiagramsDrawer />
         <PreviewModal />
         <TemplatesModal />
@@ -2531,6 +2634,8 @@ function App() {
         </footer>
       </div>
     </div>
+    <PrintReport />
+  </>
   );
 }
 
