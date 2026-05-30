@@ -207,29 +207,31 @@ div::-webkit-scrollbar-track {
   }
 
   .print-purpose-card {
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 10px 14px;
+    background-color: #f0f9ff !important;
+    border: 1.5px solid #bae6fd !important;
+    border-radius: 12px;
+    padding: 12px 16px;
     font-size: 10pt;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
   }
 
   .purpose-item {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
   }
 
   .purpose-label {
     font-weight: 700;
-    color: #475569;
+    color: #1e3a8a;
     white-space: nowrap;
   }
 
   .purpose-value {
     color: #0f172a;
+    font-weight: 500;
   }
 
   .kpi-item {
@@ -244,7 +246,7 @@ div::-webkit-scrollbar-track {
 
   .text-line {
     font-style: italic;
-    color: #64748b;
+    color: #475569;
   }
 
   /* Diagram styles */
@@ -255,18 +257,18 @@ div::-webkit-scrollbar-track {
   .section-title {
     font-size: 13pt;
     font-weight: 700;
-    color: #334155;
-    margin: 0 0 8px 0;
-    padding-bottom: 4px;
-    border-bottom: 1.5px solid #e2e8f0;
+    color: #1e3a8a;
+    margin: 0 0 10px 0;
+    padding-bottom: 6px;
+    border-bottom: 2.5px solid #1e3a8a;
   }
 
-  /* Column headers — solid fills matching reference */
+  /* Column headers — pill fills matching reference */
   .tree-column-headers {
     display: flex;
     flex-direction: row;
     gap: 0;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     padding: 0;
   }
 
@@ -274,12 +276,12 @@ div::-webkit-scrollbar-track {
     width: 170px;
     margin-right: 20px;
     text-align: center;
-    font-size: 8pt;
+    font-size: 8.5pt;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 7px 8px;
-    border-radius: 6px;
+    letter-spacing: 0.05em;
+    padding: 8px 10px;
+    border-radius: 9999px; /* pill shape */
     border: none;
     box-sizing: border-box;
     color: #ffffff;
@@ -291,19 +293,19 @@ div::-webkit-scrollbar-track {
   }
 
   .col-purpose {
-    background: #EA580C;
+    background-color: #D11A5B !important;
   }
 
   .col-primary {
-    background: #1E40AF;
+    background-color: #1565C0 !important;
   }
 
   .col-secondary {
-    background: #0891B2;
+    background-color: #ED6C02 !important;
   }
 
   .col-change {
-    background: #EA580C;
+    background-color: #ED6C02 !important;
   }
 
   /* Wrapper for headers + tree — zoomed together for alignment */
@@ -335,111 +337,141 @@ div::-webkit-scrollbar-track {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    background: #ffffff !important; /* White backgrounds on all cards */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     border: none;
   }
 
-  /* ── Purpose: dark navy, white text, stretch full height ── */
+  /* ── Purpose (Goal) card ── */
   .node-purpose {
-    background: #1a365d !important;
-    color: #ffffff !important;
-    border: none !important;
+    width: 170px;
+    border: 2.5px solid #D11A5B !important;
+    color: #D11A5B !important;
     align-self: stretch;
     justify-content: center;
     border-radius: 12px;
-    padding: 16px 14px;
-    box-shadow: 0 2px 8px rgba(26, 54, 93, 0.25);
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .node-goal-icon-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+  }
+
+  .goal-icon {
+    color: #D11A5B !important;
   }
 
   .node-purpose .node-title {
     font-size: 9.5pt;
     font-weight: 800;
     line-height: 1.4;
+    color: #D11A5B !important;
   }
 
   .node-purpose .node-kpi {
-    border-top: 1px dashed rgba(255, 255, 255, 0.3);
+    border-top: 1.5px solid #fce4ec !important; /* light pink divider line */
     padding-top: 6px;
-    margin-top: 4px;
-    opacity: 0.85;
+    margin-top: 6px;
     font-size: 7.5pt;
+    color: #475569 !important; /* dark grey kpi text */
+    font-weight: 600;
+    font-style: normal;
   }
 
-  /* ── Primary Driver: blue with white text ── */
+  /* ── Primary Driver card ── */
   .node-primary {
-    background: #2563eb !important;
-    color: #ffffff !important;
-    border: none !important;
+    border: 2.5px solid #1565C0 !important;
+    color: #1565C0 !important;
     border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+    padding: 10px 12px;
   }
 
   .node-primary .node-title {
     font-weight: 700;
     font-size: 8.5pt;
+    color: #0f172a !important; /* black/dark slate text */
   }
 
   .node-primary .node-kpi {
-    border-top: 1px dashed rgba(255, 255, 255, 0.3);
-    opacity: 0.85;
+    border-top: 1px dashed rgba(21, 101, 192, 0.25);
+    color: #64748b !important;
+    font-size: 7.5pt;
   }
 
-  /* ── Secondary Driver: white card, subtle border ── */
+  /* ── Secondary Driver card ── */
   .node-secondary {
-    background: #ffffff !important;
-    border: 1.5px solid #e2e8f0 !important;
-    color: #1e293b !important;
+    border: 2.5px solid #ED6C02 !important;
+    color: #ED6C02 !important;
     border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    padding: 10px 12px;
   }
 
   .node-secondary .node-title {
-    color: #0f172a;
     font-weight: 700;
+    font-size: 8.5pt;
+    color: #0f172a !important; /* black/dark slate text */
   }
 
-  /* ── Change Ideas: white card with orange accent, bullet list ── */
-  .node-change.change-list {
-    background: #ffffff !important;
-    border: 1.5px solid #fed7aa !important;
-    color: #334155 !important;
+  .node-secondary .node-kpi {
+    border-top: 1px dashed rgba(237, 108, 2, 0.25);
+    color: #64748b !important;
+    font-size: 7.5pt;
+  }
+
+  /* ── Change Idea card (individual boxes) ── */
+  .node-change {
     width: 220px;
+    border: 2px solid #ED6C02 !important;
+    color: #334155 !important;
     border-radius: 10px;
-    padding: 8px 10px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-    border-left: 3px solid #EA580C !important;
+    padding: 10px 12px;
   }
 
-  /* Bullet list for change ideas */
-  .change-bullets {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .change-bullets li {
-    position: relative;
-    padding-left: 14px;
-    margin-bottom: 5px;
-    font-size: 8pt;
+  .node-change .node-title {
     font-weight: 600;
-    line-height: 1.4;
-    color: #334155;
+    font-size: 8.5pt;
+    color: #334155 !important;
   }
 
-  .change-bullets li:last-child {
-    margin-bottom: 0;
+  .node-change .node-kpi {
+    border-top: 1px dashed rgba(237, 108, 2, 0.25);
+    color: #64748b !important;
+    font-size: 7.5pt;
   }
 
-  .change-bullets li::before {
-    content: '•';
-    color: #EA580C;
-    font-weight: bold;
-    font-size: 12pt;
-    position: absolute;
-    left: 1px;
-    top: -3px;
+  /* ── Inner card layouts ── */
+  .node-content-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+  }
+
+  .node-icon {
+    flex-shrink: 0;
+  }
+
+  .change-bullet-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 6px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .bullet-char {
+    color: #ED6C02 !important;
+    font-weight: 800;
+    font-size: 14pt;
     line-height: 1;
+    margin-top: -2.5px;
+    flex-shrink: 0;
   }
 
   .node-title {
@@ -480,7 +512,6 @@ div::-webkit-scrollbar-track {
     top: 50%;
     width: 20px;
     height: 2.5px;
-    background-color: #334155;
     transform: translateY(-50%);
   }
 
@@ -492,7 +523,6 @@ div::-webkit-scrollbar-track {
     top: 0;
     bottom: 0;
     width: 2.5px;
-    background-color: #334155;
   }
 
   .tree-item:first-child::after {
@@ -515,8 +545,34 @@ div::-webkit-scrollbar-track {
     top: 50%;
     width: 20px;
     height: 2.5px;
-    background-color: #334155;
     transform: translateY(-50%);
+  }
+
+  /* Level 1 Line Colors (Pink) */
+  .lvl-1-item::before,
+  .lvl-1-item::after {
+    background-color: #D11A5B !important;
+  }
+  .node-purpose.has-children::after {
+    background-color: #D11A5B !important;
+  }
+
+  /* Level 2 Line Colors (Blue) */
+  .lvl-2-item::before,
+  .lvl-2-item::after {
+    background-color: #1565C0 !important;
+  }
+  .node-primary.has-children::after {
+    background-color: #1565C0 !important;
+  }
+
+  /* Level 3 Line Colors (Orange) */
+  .lvl-3-item::before,
+  .lvl-3-item::after {
+    background-color: #ED6C02 !important;
+  }
+  .node-secondary.has-children::after {
+    background-color: #ED6C02 !important;
   }
 
   /* Details Table styles */

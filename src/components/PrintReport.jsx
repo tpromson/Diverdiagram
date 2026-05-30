@@ -1,6 +1,62 @@
 import React from "react";
 import { useDiagramStore } from "../store/useDiagramStore.js";
 import { useUIStore } from "../store/useUIStore.js";
+import {
+  Target,
+  BarChart3,
+  Layers,
+  GitBranch,
+  Ambulance,
+  Stethoscope,
+  TestTube,
+  Users,
+  Clock,
+  ClipboardList,
+  FlaskConical,
+  HeartPulse,
+  RefreshCw,
+} from "lucide-react";
+
+// Helper functions to dynamically map titles to Lucide icons
+const getPrimaryIcon = (title) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes("เข้าถึง") || t.includes("ambulance") || t.includes("ส่งต่อ") || t.includes("เร็ว")) {
+    return <Ambulance size={20} className="node-icon text-blue-600 shrink-0" />;
+  }
+  if (t.includes("คัดกรอง") || t.includes("screen") || t.includes("แพทย์")) {
+    return <Stethoscope size={20} className="node-icon text-blue-600 shrink-0" />;
+  }
+  if (t.includes("วินิจฉัย") || t.includes("dx") || t.includes("ตรวจ") || t.includes("lab")) {
+    return <TestTube size={20} className="node-icon text-blue-600 shrink-0" />;
+  }
+  if (t.includes("รักษา") || t.includes("ดูแล") || t.includes("ทีม") || t.includes("สหสาขา") || t.includes("ต่อเนื่อง")) {
+    return <Users size={20} className="node-icon text-blue-600 shrink-0" />;
+  }
+  return <Layers size={20} className="node-icon text-blue-600 shrink-0" />;
+};
+
+const getSecondaryIcon = (title) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes("ความรู้") || t.includes("knowledge") || t.includes("เวลา")) {
+    return <Clock size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  if (t.includes("คัดกรอง") || t.includes("screen")) {
+    return <ClipboardList size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  if (t.includes("เตรียมยา") || t.includes("ละลายลิ่มเลือด") || t.includes("electrolyte") || t.includes("lab")) {
+    return <FlaskConical size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  if (t.includes("refer") || t.includes("ส่งต่อ")) {
+    return <Users size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  if (t.includes("รักษาเร็ว") || t.includes("acute") || t.includes("heart") || t.includes("รักษา")) {
+    return <HeartPulse size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  if (t.includes("rehabilitation") || t.includes("ฟื้นฟู") || t.includes("กายภาพ")) {
+    return <RefreshCw size={20} className="node-icon text-orange-600 shrink-0" />;
+  }
+  return <GitBranch size={20} className="node-icon text-orange-600 shrink-0" />;
+};
 
 export function PrintReport() {
   const data = useDiagramStore((state) => state.data);
@@ -33,7 +89,7 @@ export function PrintReport() {
     changeLabel: "Change Idea"
   };
 
-  // Estimate tree height — each secondary driver row = max(secondary card, change bullet box)
+  // Estimate tree height — each secondary driver row = max(secondary card, sum of change cards)
   const getEstimatedTreeHeight = (diagramData) => {
     if (!diagramData || !diagramData.primaryDrivers || diagramData.primaryDrivers.length === 0) {
       return 100;
@@ -64,15 +120,18 @@ export function PrintReport() {
       } else {
         primary.secondaryDrivers.forEach((secondary) => {
           const secHeight = estimateCardHeight(secondary.title, secondary.kpi);
-          // Change ideas are now a single bullet-list box
-          let changeBoxHeight = 12;
+          
+          let changeIdeasHeight = 0;
           if (secondary.changeIdeas && secondary.changeIdeas.length > 0) {
             secondary.changeIdeas.forEach((ch) => {
-              const lines = Math.max(1, Math.ceil((ch.title || "").length / changeCharsPerLine));
-              changeBoxHeight += lines * 13 + 5;
+              changeIdeasHeight += estimateCardHeight(ch.title, ch.kpi, changeCharsPerLine) + 12; // gap
             });
+            changeIdeasHeight = Math.max(0, changeIdeasHeight - 12);
+          } else {
+            changeIdeasHeight = estimateCardHeight("", "", changeCharsPerLine);
           }
-          totalHeight += Math.max(secHeight, changeBoxHeight) + itemPadding + gapBetween;
+          
+          totalHeight += Math.max(secHeight, changeIdeasHeight) + itemPadding + gapBetween;
         });
       }
     });
@@ -152,11 +211,13 @@ export function PrintReport() {
           <h1 className="print-doc-title">{documentTitle}</h1>
           <div className="print-purpose-card">
             <div className="purpose-item">
+              <Target size={16} className="text-blue-600 shrink-0" />
               <span className="purpose-label">{headers.purpose}: </span>
               <span className="purpose-value">{data?.purpose?.title || "-"}</span>
             </div>
             {data?.purpose?.kpi && (
               <div className="purpose-item kpi-item">
+                <BarChart3 size={16} className="text-blue-600 shrink-0" />
                 <span className="purpose-label">{headers.purposeKpi}: </span>
                 <div className="purpose-value kpi-list">{formatText(data.purpose.kpi)}</div>
               </div>
@@ -180,6 +241,9 @@ export function PrintReport() {
             <div className="tree-group">
               {/* Level 0: Purpose */}
               <div className={`tree-node node-purpose ${data?.primaryDrivers?.length ? 'has-children' : ''}`}>
+                <div className="node-goal-icon-wrapper">
+                  <Target size={36} className="goal-icon text-pink-600" />
+                </div>
                 <div className="node-title">{formatText(data?.purpose?.title || "-")}</div>
                 {data?.purpose?.kpi && (
                   <div className="node-kpi">
@@ -191,11 +255,14 @@ export function PrintReport() {
               {data?.primaryDrivers?.length > 0 && (
                 <div className="tree-children">
                   {data.primaryDrivers.map((primary) => (
-                    <div key={primary.id} className="tree-item">
+                    <div key={primary.id} className="tree-item lvl-1-item">
                       <div className="tree-group">
                         {/* Level 1: Primary Driver */}
                         <div className={`tree-node node-primary ${primary.secondaryDrivers?.length ? 'has-children' : ''}`}>
-                          <div className="node-title">{formatText(primary.title || "-")}</div>
+                          <div className="node-content-row">
+                            {getPrimaryIcon(primary.title)}
+                            <div className="node-title">{formatText(primary.title || "-")}</div>
+                          </div>
                           {primary.kpi && (
                             <div className="node-kpi">
                               {formatText(primary.kpi)}
@@ -206,11 +273,14 @@ export function PrintReport() {
                         {primary.secondaryDrivers?.length > 0 && (
                           <div className="tree-children">
                             {primary.secondaryDrivers.map((secondary) => (
-                              <div key={secondary.id} className="tree-item">
+                              <div key={secondary.id} className="tree-item lvl-2-item">
                                 <div className="tree-group">
                                   {/* Level 2: Secondary Driver */}
                                   <div className={`tree-node node-secondary ${secondary.changeIdeas?.length ? 'has-children' : ''}`}>
-                                    <div className="node-title">{formatText(secondary.title || "-")}</div>
+                                    <div className="node-content-row">
+                                      {getSecondaryIcon(secondary.title)}
+                                      <div className="node-title">{formatText(secondary.title || "-")}</div>
+                                    </div>
                                     {secondary.kpi && (
                                       <div className="node-kpi">
                                         {formatText(secondary.kpi)}
@@ -220,16 +290,22 @@ export function PrintReport() {
 
                                   {secondary.changeIdeas?.length > 0 && (
                                     <div className="tree-children">
-                                      <div className="tree-item">
-                                        {/* Level 3: Change Ideas — grouped as bullet list */}
-                                        <div className="tree-node node-change change-list">
-                                          <ul className="change-bullets">
-                                            {secondary.changeIdeas.map((change) => (
-                                              <li key={change.id}>{change.title || "-"}</li>
-                                            ))}
-                                          </ul>
+                                      {secondary.changeIdeas.map((change) => (
+                                        <div key={change.id} className="tree-item lvl-3-item">
+                                          {/* Level 3: Change Idea */}
+                                          <div className="tree-node node-change">
+                                            <div className="change-bullet-content">
+                                              <span className="bullet-char">•</span>
+                                              <div className="node-title">{formatText(change.title || "-")}</div>
+                                            </div>
+                                            {change.kpi && (
+                                              <div className="node-kpi">
+                                                {formatText(change.kpi)}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
+                                      ))}
                                     </div>
                                   )}
                                 </div>
