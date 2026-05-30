@@ -165,10 +165,10 @@ export function PrintReport() {
   const availableWidth = 1046; // 277mm usable width at 96 DPI
   const availableHeight = 480;
   
-  // Calculate zoom to FILL the page — allow zooming UP (>1) to spread the diagram
+  // Calculate zoom to FILL the page — cap at 1.0 to keep height natural/compact while scaling down if height exceeds A4 bounds
   const zoomW = availableWidth / treeNaturalWidth;
   const zoomH = availableHeight / estimatedHeight;
-  const zoomLevel = Math.min(zoomW, zoomH, 1.6);
+  const zoomLevel = Math.min(zoomW, zoomH, 1.0);
   
   const treeWrapperStyle = {
     zoom: zoomLevel,
