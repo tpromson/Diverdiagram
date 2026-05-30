@@ -227,6 +227,10 @@ function mergeDiagramData(base, local, external) {
 }
 
 function App() {
+  if (typeof window !== "undefined") {
+    window.useDiagramStore = useDiagramStore;
+    window.useUIStore = useUIStore;
+  }
   // --- UI Store Hooks ---
   const language = useUIStore((state) => state.language);
   const setLanguage = useUIStore((state) => state.setLanguage);
@@ -1457,6 +1461,7 @@ function App() {
             </div>
           </section>
           <PreviewModal />
+          <PrintReport />
         </div>
       </div>
     );
