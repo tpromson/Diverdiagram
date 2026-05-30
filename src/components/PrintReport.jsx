@@ -21,41 +21,49 @@ import {
 const getPrimaryIcon = (title) => {
   const t = (title || "").toLowerCase();
   if (t.includes("เข้าถึง") || t.includes("ambulance") || t.includes("ส่งต่อ") || t.includes("เร็ว")) {
-    return <Ambulance size={20} className="node-icon text-blue-600 shrink-0" />;
+    return <Ambulance size={32} strokeWidth={2.8} className="node-icon text-blue-700 shrink-0" />;
   }
   if (t.includes("คัดกรอง") || t.includes("screen") || t.includes("แพทย์")) {
-    return <Stethoscope size={20} className="node-icon text-blue-600 shrink-0" />;
+    return <Stethoscope size={32} strokeWidth={2.8} className="node-icon text-blue-700 shrink-0" />;
   }
   if (t.includes("วินิจฉัย") || t.includes("dx") || t.includes("ตรวจ") || t.includes("lab")) {
-    return <TestTube size={20} className="node-icon text-blue-600 shrink-0" />;
+    return <TestTube size={32} strokeWidth={2.8} className="node-icon text-blue-700 shrink-0" />;
   }
   if (t.includes("รักษา") || t.includes("ดูแล") || t.includes("ทีม") || t.includes("สหสาขา") || t.includes("ต่อเนื่อง")) {
-    return <Users size={20} className="node-icon text-blue-600 shrink-0" />;
+    return <Users size={32} strokeWidth={2.8} className="node-icon text-blue-700 shrink-0" />;
   }
-  return <Layers size={20} className="node-icon text-blue-600 shrink-0" />;
+  return <Layers size={32} strokeWidth={2.8} className="node-icon text-blue-700 shrink-0" />;
 };
 
 const getSecondaryIcon = (title) => {
   const t = (title || "").toLowerCase();
   if (t.includes("ความรู้") || t.includes("knowledge") || t.includes("เวลา")) {
-    return <Clock size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <Clock size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
   if (t.includes("คัดกรอง") || t.includes("screen")) {
-    return <ClipboardList size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <ClipboardList size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
   if (t.includes("เตรียมยา") || t.includes("ละลายลิ่มเลือด") || t.includes("electrolyte") || t.includes("lab")) {
-    return <FlaskConical size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <FlaskConical size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
   if (t.includes("refer") || t.includes("ส่งต่อ")) {
-    return <Users size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <Users size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
   if (t.includes("รักษาเร็ว") || t.includes("acute") || t.includes("heart") || t.includes("รักษา")) {
-    return <HeartPulse size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <HeartPulse size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
   if (t.includes("rehabilitation") || t.includes("ฟื้นฟู") || t.includes("กายภาพ")) {
-    return <RefreshCw size={20} className="node-icon text-orange-600 shrink-0" />;
+    return <RefreshCw size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
   }
-  return <GitBranch size={20} className="node-icon text-orange-600 shrink-0" />;
+  return <GitBranch size={34} strokeWidth={2.8} className="node-icon text-orange-600 shrink-0" />;
+};
+
+export const getKpiDisplayLines = (text) => {
+  const lines = String(text || "")
+    .split("\n")
+    .filter((line) => line.trim());
+
+  return lines.map((line, index) => (index === 0 ? `KPI : ${line}` : line));
 };
 
 export function PrintReport() {
@@ -114,10 +122,10 @@ export function PrintReport() {
       return 100;
     }
     
-    const charsPerLine = 15; // Thai characters are ~1.5x wider than Latin (increased for 220px width)
-    const changeCharsPerLine = 20; // change column is wider (increased for 270px width)
-    const itemPadding = 12;
-    const gapBetween = 12;
+    const charsPerLine = 20;
+    const changeCharsPerLine = 29;
+    const itemPadding = 20;
+    const gapBetween = 22;
     
     const estimateCardHeight = (title, kpi, cpl = charsPerLine) => {
       const titleText = title || "";
@@ -128,7 +136,7 @@ export function PrintReport() {
           kpiLines += Math.max(1, Math.ceil(seg.length / cpl));
         });
       }
-      return 14 + (titleLines * 13) + (kpiLines * 11);
+      return Math.max(76, 30 + (titleLines * 17) + (kpiLines * 13));
     };
 
     let totalHeight = 0;
@@ -155,15 +163,15 @@ export function PrintReport() {
       }
     });
 
-    return Math.max(100, Math.round((totalHeight - gapBetween) * 1.15));
+    return Math.max(100, Math.round((totalHeight - gapBetween) * 0.9));
   };
 
   const estimatedHeight = getEstimatedTreeHeight(data);
-  const treeNaturalWidth = 1020; // 220+30+220+30+220+30+270
+  const treeNaturalWidth = 1440; // 260+52+300+52+330+42+404
   
   // A4 landscape usable dimensions
   const availableWidth = 1046; // 277mm usable width at 96 DPI
-  const availableHeight = 480;
+  const availableHeight = 520;
   
   // Calculate zoom to FILL the page — cap at 1.0 to keep height natural/compact while scaling down if height exceeds A4 bounds
   const zoomW = availableWidth / treeNaturalWidth;
@@ -209,11 +217,13 @@ export function PrintReport() {
   }
 
   // Format multi-line text (like titles or KPIs) into separate lines inside cards/table cells
-  const formatText = (text) => {
+  const formatText = (text, options = {}) => {
     if (!text) return null;
-    return String(text)
+    const lines = options.prefixKpi ? getKpiDisplayLines(text) : String(text)
       .split("\n")
-      .filter((line) => line.trim())
+      .filter((line) => line.trim());
+
+    return lines
       .map((line, index) => (
         <div key={index} className="text-line">
           {line}
@@ -227,22 +237,22 @@ export function PrintReport() {
       <div className="print-page print-page-diagram">
         {/* Document Header */}
         <div className="print-header">
-          <h1 className="print-doc-title">{headers.diagramTitle}</h1>
-          <h2 className="print-doc-subtitle">{documentTitle}</h2>
+          <h1 className="print-doc-title">{documentTitle}</h1>
           <div className="print-purpose-card">
             <div className="purpose-item">
-              <Target size={16} className="text-blue-600 shrink-0" />
+              <Target size={24} strokeWidth={3} className="text-blue-700 shrink-0" />
               <span className="purpose-label">{headers.purpose}: </span>
               <span className="purpose-value">{data?.purpose?.title || "-"}</span>
             </div>
             {data?.purpose?.kpi && (
               <div className="purpose-item kpi-item">
-                <BarChart3 size={16} className="text-blue-600 shrink-0" />
+                <BarChart3 size={24} strokeWidth={3} className="text-blue-700 shrink-0" />
                 <span className="purpose-label">{headers.purposeKpi}: </span>
-                <div className="purpose-value kpi-list">{formatText(data.purpose.kpi)}</div>
+                <div className="purpose-value kpi-list">{formatText(data.purpose.kpi, { prefixKpi: true })}</div>
               </div>
             )}
           </div>
+          <h2 className="print-doc-subtitle">{headers.diagramTitle}</h2>
         </div>
 
         {/* HTML-Native Tree Diagram */}
@@ -266,7 +276,7 @@ export function PrintReport() {
                 <div className="node-title">{formatText(data?.purpose?.title || "-")}</div>
                 {data?.purpose?.kpi && (
                   <div className="node-kpi">
-                    {formatText(data.purpose.kpi)}
+                    {formatText(data.purpose.kpi, { prefixKpi: true })}
                   </div>
                 )}
               </div>
@@ -284,7 +294,7 @@ export function PrintReport() {
                           </div>
                           {primary.kpi && (
                             <div className="node-kpi">
-                              {formatText(primary.kpi)}
+                              {formatText(primary.kpi, { prefixKpi: true })}
                             </div>
                           )}
                         </div>
@@ -302,7 +312,7 @@ export function PrintReport() {
                                     </div>
                                     {secondary.kpi && (
                                       <div className="node-kpi">
-                                        {formatText(secondary.kpi)}
+                                        {formatText(secondary.kpi, { prefixKpi: true })}
                                       </div>
                                     )}
                                   </div>
@@ -319,7 +329,7 @@ export function PrintReport() {
                                             </div>
                                             {change.kpi && (
                                               <div className="node-kpi">
-                                                {formatText(change.kpi)}
+                                                {formatText(change.kpi, { prefixKpi: true })}
                                               </div>
                                             )}
                                           </div>
@@ -364,8 +374,7 @@ export function PrintReport() {
                       <div className="cell-title">{row.primary.title || "-"}</div>
                       {row.primary.kpi && (
                         <div className="cell-kpi">
-                          <span className="kpi-tag">KPI:</span>
-                          <div className="kpi-lines">{formatText(row.primary.kpi)}</div>
+                          <div className="kpi-lines">{formatText(row.primary.kpi, { prefixKpi: true })}</div>
                         </div>
                       )}
                     </td>
@@ -375,8 +384,7 @@ export function PrintReport() {
                       <div className="cell-title">{row.secondary.title || "-"}</div>
                       {row.secondary.kpi && (
                         <div className="cell-kpi">
-                          <span className="kpi-tag">KPI:</span>
-                          <div className="kpi-lines">{formatText(row.secondary.kpi)}</div>
+                          <div className="kpi-lines">{formatText(row.secondary.kpi, { prefixKpi: true })}</div>
                         </div>
                       )}
                     </td>
@@ -385,8 +393,7 @@ export function PrintReport() {
                     <div className="cell-title">{row.change.title || "-"}</div>
                     {row.change.kpi && (
                       <div className="cell-kpi">
-                        <span className="kpi-tag">KPI:</span>
-                        <div className="kpi-lines">{formatText(row.change.kpi)}</div>
+                        <div className="kpi-lines">{formatText(row.change.kpi, { prefixKpi: true })}</div>
                       </div>
                     )}
                   </td>
