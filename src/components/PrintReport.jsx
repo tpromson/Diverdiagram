@@ -90,12 +90,23 @@ export function PrintReport() {
   };
 
   React.useEffect(() => {
-    const originalTitle = document.title;
-    document.title = headers.diagramTitle;
-    return () => {
-      document.title = originalTitle;
+    const handleBeforePrint = () => {
+      window._originalTitle = document.title;
+      document.title = " ";
     };
-  }, [headers.diagramTitle]);
+    const handleAfterPrint = () => {
+      if (window._originalTitle !== undefined) {
+        document.title = window._originalTitle;
+      }
+    };
+
+    window.addEventListener("beforeprint", handleBeforePrint);
+    window.addEventListener("afterprint", handleAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+  }, []);
 
   // Estimate tree height — each secondary driver row = max(secondary card, sum of change cards)
   const getEstimatedTreeHeight = (diagramData) => {
@@ -103,8 +114,8 @@ export function PrintReport() {
       return 100;
     }
     
-    const charsPerLine = 12; // Thai characters are ~1.5x wider than Latin
-    const changeCharsPerLine = 16; // change column is wider (220px)
+    const charsPerLine = 15; // Thai characters are ~1.5x wider than Latin (increased for 220px width)
+    const changeCharsPerLine = 20; // change column is wider (increased for 270px width)
     const itemPadding = 12;
     const gapBetween = 12;
     
@@ -148,10 +159,10 @@ export function PrintReport() {
   };
 
   const estimatedHeight = getEstimatedTreeHeight(data);
-  const treeNaturalWidth = 790; // 170+20+170+20+170+20+220
+  const treeNaturalWidth = 1020; // 220+30+220+30+220+30+270
   
   // A4 landscape usable dimensions
-  const availableWidth = 1000;
+  const availableWidth = 1046; // 277mm usable width at 96 DPI
   const availableHeight = 480;
   
   // Calculate zoom to FILL the page — allow zooming UP (>1) to spread the diagram

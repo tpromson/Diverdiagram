@@ -290,8 +290,8 @@ div::-webkit-scrollbar-track {
   }
 
   .col-header {
-    width: 170px;
-    margin-right: 20px;
+    width: 220px;
+    margin-right: 30px;
     text-align: center;
     font-size: 8.5pt;
     font-weight: 800;
@@ -306,7 +306,7 @@ div::-webkit-scrollbar-track {
 
   .col-header:last-child {
     margin-right: 0;
-    width: 220px;
+    width: 270px;
   }
 
   .col-purpose {
@@ -344,7 +344,7 @@ div::-webkit-scrollbar-track {
   /* ── Node base ── */
   .tree-node {
     box-sizing: border-box;
-    width: 170px;
+    width: 220px;
     padding: 10px 12px;
     border-radius: 10px;
     font-size: 8.5pt;
@@ -361,7 +361,7 @@ div::-webkit-scrollbar-track {
 
   /* ── Purpose (Goal) card ── */
   .node-purpose {
-    width: 170px;
+    width: 220px;
     border: 2.5px solid #D11A5B !important;
     color: #D11A5B !important;
     align-self: stretch;
@@ -440,7 +440,7 @@ div::-webkit-scrollbar-track {
 
   /* ── Change Idea card (individual boxes) ── */
   .node-change {
-    width: 220px;
+    width: 270px;
     border: 2px solid #ED6C02 !important;
     color: #334155 !important;
     border-radius: 10px;
@@ -509,7 +509,7 @@ div::-webkit-scrollbar-track {
     flex-direction: column;
     justify-content: center;
     gap: 12px;
-    padding-left: 20px;
+    padding-left: 30px;
     position: relative;
   }
 
@@ -526,7 +526,7 @@ div::-webkit-scrollbar-track {
     position: absolute;
     left: 0;
     top: 50%;
-    width: 20px;
+    width: 30px;
     height: 0;
     border-top: 2.5px solid;
     transform: translateY(-50%);
@@ -561,9 +561,9 @@ div::-webkit-scrollbar-track {
   .tree-node.has-children::after {
     content: '';
     position: absolute;
-    right: -20px;
+    right: -30px;
     top: 50%;
-    width: 20px;
+    width: 30px;
     height: 0;
     border-top: 2.5px solid;
     transform: translateY(-50%);
