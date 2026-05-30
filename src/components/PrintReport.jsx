@@ -63,6 +63,14 @@ export function PrintReport() {
   const documentTitle = useDiagramStore((state) => state.documentTitle);
   const language = useUIStore((state) => state.language);
 
+  React.useEffect(() => {
+    const originalTitle = document.title;
+    document.title = headers.diagramTitle;
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [headers.diagramTitle]);
+
   const headers = language === "th" ? {
     primary: "ปัจจัยขับเคลื่อนหลัก (Primary Drivers) & KPIs",
     secondary: "ปัจจัยขับเคลื่อนรอง (Secondary Drivers) & KPIs",
@@ -208,7 +216,8 @@ export function PrintReport() {
       <div className="print-page print-page-diagram">
         {/* Document Header */}
         <div className="print-header">
-          <h1 className="print-doc-title">{documentTitle}</h1>
+          <h1 className="print-doc-title">{headers.diagramTitle}</h1>
+          <h2 className="print-doc-subtitle">{documentTitle}</h2>
           <div className="print-purpose-card">
             <div className="purpose-item">
               <Target size={16} className="text-blue-600 shrink-0" />
@@ -227,7 +236,6 @@ export function PrintReport() {
 
         {/* HTML-Native Tree Diagram */}
         <div className="print-diagram-section">
-          <h2 className="section-title">{headers.diagramTitle}</h2>
           {/* Single wrapper with zoom — keeps headers + tree perfectly aligned */}
           <div className="print-tree-wrapper" style={treeWrapperStyle}>
             {/* Column headers row */}
