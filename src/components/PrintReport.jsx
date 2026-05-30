@@ -1,6 +1,7 @@
 import React from "react";
 import { useDiagramStore } from "../store/useDiagramStore.js";
 import { useUIStore } from "../store/useUIStore.js";
+export { getPrintReportPdfPageSelectors } from "../utils/printReportPdf.js";
 import {
   Target,
   BarChart3,

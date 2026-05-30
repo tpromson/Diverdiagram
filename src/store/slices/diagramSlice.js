@@ -12,6 +12,11 @@ import {
   buildTemplateSvg,
   parseMermaidCode,
 } from "../../utils/mermaidParser.js";
+import {
+  PRINT_REPORT_PDF_EXPORT_CLASS,
+  createPrintReportPdfStyleElement,
+  getPrintReportPdfPages,
+} from "../../utils/printReportPdf.js";
 
 export const createDiagramSlice = (set, get) => ({
   data: normalizeStoredDiagramData(defaultData),
@@ -142,29 +147,62 @@ export const createDiagramSlice = (set, get) => ({
   downloadPdf: async () => {
     try {
       set({ exportError: "", exportingPdf: true });
-      const { data, codeInput, documentTitle, svgLayoutMode } = get();
-      let exportData = data;
-      try {
-        exportData = parseMermaidCode(sanitizeMermaidCode(codeInput));
-      } catch (_error) {
-        exportData = data;
+      const { documentTitle } = get();
+      if (typeof document === "undefined") {
+        set({ exportError: "Failed to export PDF. Please try again.", exportingPdf: false });
+        return;
       }
 
-      const canvas = document.createElement("canvas");
-      const { renderDiagramToCanvas } = await import("../../utils/canvasRenderer.js");
-      await renderDiagramToCanvas(canvas, exportData, svgLayoutMode);
-
-      const svgWidth = canvas.width / 2;
-      const svgHeight = canvas.height / 2;
-
+      const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
-      const orientation = svgWidth > svgHeight ? "landscape" : "portrait";
-      const pdf = new jsPDF({ orientation, unit: "px", format: [svgWidth, svgHeight] });
-      const imgData = canvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", 0, 0, svgWidth, svgHeight);
-      const pdfBlob = pdf.output("blob");
-      
-      get().triggerBlobDownload(pdfBlob, buildExportFilename(documentTitle, "pdf"));
+      const pdfStyleElement = createPrintReportPdfStyleElement(document);
+      document.head.appendChild(pdfStyleElement);
+      document.body.classList.add(PRINT_REPORT_PDF_EXPORT_CLASS);
+
+      try {
+        if (document.fonts) {
+          await document.fonts.ready;
+        }
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+        const pages = getPrintReportPdfPages(document);
+        if (!pages.length) {
+          throw new Error("Print report pages were not found.");
+        }
+
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pdfWidth = 297;
+        const pdfHeight = 210;
+
+        for (const [index, pageElement] of pages.entries()) {
+          const canvas = await html2canvas(pageElement, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            logging: false,
+          });
+
+          const imgData = canvas.toDataURL("image/png");
+          const widthRatio = pdfWidth / canvas.width;
+          const heightRatio = pdfHeight / canvas.height;
+          const ratio = Math.min(widthRatio, heightRatio);
+          const imgWidth = canvas.width * ratio;
+          const imgHeight = canvas.height * ratio;
+          const offsetX = (pdfWidth - imgWidth) / 2;
+
+          if (index > 0) {
+            pdf.addPage("a4", "landscape");
+          }
+          pdf.addImage(imgData, "PNG", offsetX, 0, imgWidth, imgHeight);
+        }
+
+        const pdfBlob = pdf.output("blob");
+        get().triggerBlobDownload(pdfBlob, buildExportFilename(documentTitle, "pdf"));
+      } finally {
+        document.body.classList.remove(PRINT_REPORT_PDF_EXPORT_CLASS);
+        pdfStyleElement.remove();
+      }
+
       set({ exportingPdf: false });
     } catch (error) {
       console.error("PDF export error:", error);
